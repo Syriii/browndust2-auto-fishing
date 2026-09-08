@@ -1,0 +1,109 @@
+[
+  {
+    "file": "recovered_00034.png",
+    "label": "hit",
+    "source": "110243/frame_00034",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00082.png",
+    "label": "hit",
+    "source": "110243/frame_00082",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00118.png",
+    "label": "fail",
+    "source": "110243/frame_00118",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00120.png",
+    "label": "fail",
+    "source": "110243/frame_00120",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00140.png",
+    "label": "critical",
+    "source": "110243/frame_00140",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00160.png",
+    "label": "critical",
+    "source": "110243/frame_00160",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00038.png",
+    "label": null,
+    "source": "110243/frame_00038",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00050.png",
+    "label": null,
+    "source": "110243/frame_00050",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00066.png",
+    "label": null,
+    "source": "110243/frame_00066",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00092.png",
+    "label": null,
+    "source": "110243/frame_00092",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00106.png",
+    "label": null,
+    "source": "110243/frame_00106",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00114.png",
+    "label": null,
+    "source": "110243/frame_00114",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00136.png",
+    "label": null,
+    "source": "110243/frame_00136",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00150.png",
+    "label": null,
+    "source": "110243/frame_00150",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00170.png",
+    "label": null,
+    "source": "110243/frame_00170",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00190.png",
+    "label": null,
+    "source": "110243/frame_00190",
+    "timestamp_available": false
+  },
+  {
+    "file": "recovered_00226.png",
+    "label": null,
+    "source": "110243/frame_00226",
+    "timestamp_available": false
+  },
+  {
+    "file": "miss.png",
+    "label": "miss",
+    "source": "debug\\qte_live_20260908_110020\\outside_0.2.png"
+  }
+]

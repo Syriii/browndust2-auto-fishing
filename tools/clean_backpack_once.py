@@ -1,0 +1,46 @@
+"""手动集成测试：连接真实游戏窗口并执行一次完整背包清理。"""
+
+from __future__ import annotations
+
+import ctypes
+import sys
+import time
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+import operate
+import ocr.ocr_utils as ocr_utils
+import utils
+import run_control
+
+GAME_TITLE = "BrownDust II"
+
+
+def main() -> None:
+    """等待用户切回游戏后运行真实操作，不供自动化单元测试调用。"""
+    utils.enable_dpi_awareness()
+
+    region = utils.get_window_region(GAME_TITLE)
+    if not region:
+        input(">>> 程序结束，按回车键关闭")
+        raise SystemExit(1)
+
+    config = utils.read_ini()
+    begin_wait_time = config.getfloat("time", "begin_fish_wait_time", fallback=3)
+    print(">>> 将实际执行一次背包清理")
+    print(f">>> 请切换到游戏窗口，{begin_wait_time} 秒后开始")
+    time.sleep(begin_wait_time)
+
+    ocr_context = ocr_utils.build_ocr_context(config, region)
+    with run_control.use_input_guard(utils.WindowGuard(GAME_TITLE, region)), \
+            utils.DxCameraCapture(output_color="BGR", window_region=region) as sct:
+        operate.clear_backpack(region, config, sct, ocr_context)
+
+    print(">>> 背包清理测试完成")
+
+
+if __name__ == "__main__":
+    main()

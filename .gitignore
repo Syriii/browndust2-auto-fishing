@@ -1,0 +1,16 @@
+dxcam_sync/
+debug/
+dist/
+build/
+*.spec
+*.pyc
+auto_fishing/
+.venv/
+desktop/node_modules/
+desktop/.vite/
+desktop/src/renderer/.vite/
+desktop/out/
+desktop/resources/python/
+.pnpm-store/
+desktop/
+*.log
