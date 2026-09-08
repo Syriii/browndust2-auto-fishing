@@ -130,7 +130,7 @@ class DecisionEvidenceTests(unittest.TestCase):
     def test_all_existing_press_branches_and_no_press_keep_input_behavior(self):
         cases = [
             (qte_strategy.FrostStraitQTEStrategy, reason)
-            for reason in ("yellow_overlap", "no_cursor_fallback", "ice_break_attempt", "no_press")
+            for reason in ("yellow_overlap", "no_cursor_fallback", "red_obstruction", "no_press")
         ]
         cases += [
             (qte_strategy.AbyssMawQTEStrategy, reason)
@@ -150,7 +150,7 @@ class DecisionEvidenceTests(unittest.TestCase):
                     )
                     camera = Mock(grab=Mock(return_value=raw))
                     hsv = np.zeros((30, 300, 3), np.uint8)
-                    if reason == "ice_break_attempt":
+                    if reason == "red_obstruction":
                         hsv[:] = strategy.red_range.lower
                     strategy._split_roi_and_time = Mock(return_value=(hsv, hsv))
                     strategy._time_bar_visible_from_masks = Mock(return_value=True)
@@ -175,7 +175,7 @@ class DecisionEvidenceTests(unittest.TestCase):
                     ):
                         with self.assertRaises(run_control.RunStopped):
                             strategy.play_qte(camera)
-                    if reason == "no_press":
+                    if reason in ("no_press", "no_cursor_fallback", "red_obstruction"):
                         press.assert_not_called()
                         observer.begin_press.assert_not_called()
                     else:

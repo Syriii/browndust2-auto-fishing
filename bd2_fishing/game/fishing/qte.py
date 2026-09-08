@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 
 from bd2_fishing.game.fishing.tracing import trace_qte
+from bd2_fishing.game.fishing.trigger_rules import TargetEntryTrigger
 from bd2_fishing.infrastructure import settings as settings
 from bd2_fishing.infrastructure.windows import capture as capture_backend
 from bd2_fishing.infrastructure.windows import input as pydirectinput
@@ -52,7 +53,7 @@ class BaseQTEStrategy:
             50,
             self.pixel_threshold_scale,
         )
-        self.ice_trouble_pixel_threshold = geometry.scale_pixel_threshold(
+        self.red_obstruction_pixel_threshold = geometry.scale_pixel_threshold(
             5,
             self.pixel_threshold_scale,
         )
@@ -63,6 +64,7 @@ class BaseQTEStrategy:
 
         self.white_range = vision.read_hsv_range(config, "roi", "white")
         self.yellow_range = vision.read_hsv_range(config, "roi", "yellow")
+        self.blue_range = vision.read_hsv_range(config, "roi", "blue")
         self.time_green_range = vision.read_hsv_range_from_keys(
             config,
             "roi",
@@ -91,7 +93,7 @@ class BaseQTEStrategy:
         log.info(
             ">>> QTE 像素阈值: "
             f"time_bar_score={self.time_bar_score_threshold}, "
-            f"ice_trouble={self.ice_trouble_pixel_threshold}, "
+            f"red_obstruction={self.red_obstruction_pixel_threshold}, "
             f"abyss_yellow={self.abyss_yellow_pixel_threshold}, "
             f"press_tolerance={self.press_tolerance_pixels}px"
         )
@@ -265,6 +267,9 @@ class BaseQTEStrategy:
             dilate_iterations=2,
         )
 
+    def _blue_mask(self, qte_hsv: np.ndarray) -> np.ndarray:
+        return vision.create_color_mask(self.blue_range.lower, self.blue_range.upper, qte_hsv)
+
     def _on_bar_disappeared(self, no_bar_frames: int) -> bool:
         """连续多帧看不到倒计时条时确认本轮结束，避免单帧闪烁误判。"""
         if no_bar_frames > 80:
@@ -276,7 +281,7 @@ class BaseQTEStrategy:
 
 
 class FrostStraitQTEStrategy(BaseQTEStrategy):
-    """默认钓鱼点：只看黄色条，并处理破冰。"""
+    """默认钓鱼点：优先黄色，持续无黄色时回退蓝区，避开红色遮挡。"""
 
     def __init__(self, config: configparser.ConfigParser, region: Rect) -> None:
         super().__init__(config, region)
@@ -285,6 +290,8 @@ class FrostStraitQTEStrategy(BaseQTEStrategy):
     @trace_qte
     def play_qte(self, sct: capture_backend.DxCameraCapture) -> None:
         no_bar_frames = 0
+        trigger = TargetEntryTrigger()
+        blue_candidate_frames = 0
         qte_started = False
         loading_logged = False
         start_time = time.monotonic()
@@ -293,6 +300,7 @@ class FrostStraitQTEStrategy(BaseQTEStrategy):
             run_control.checkpoint()
             frames = self._grab_qte_frames(sct)
             if frames is None:
+                blue_candidate_frames = 0
                 self._qte_trace.observe("no_frame")
                 self._sleep_loop()
                 continue
@@ -300,6 +308,7 @@ class FrostStraitQTEStrategy(BaseQTEStrategy):
             time_hsv, qte_hsv = self._split_roi_and_time(frames)
             time_green_mask, time_red_mask = self._time_bar_masks(time_hsv)
             if not self._time_bar_visible_from_masks(time_green_mask, time_red_mask):
+                blue_candidate_frames = 0
                 if not qte_started:
                     self._qte_trace.observe("loading")
                     if not loading_logged:
@@ -317,43 +326,57 @@ class FrostStraitQTEStrategy(BaseQTEStrategy):
             qte_started = True
             no_bar_frames = 0
 
-            if self.solve_ice_trouble(qte_hsv):
-                self._qte_trace.observe("ice_break")
-                log.debug("已发送破冰尝试按键；效果尚未核实")
-                self._sleep_loop()
-                continue
-
             mask_yellow = self._yellow_mask(qte_hsv)
             cursor_mask = self._cursor_mask(qte_hsv)
             cursor_x = self._find_cursor_x_from_mask(cursor_mask)
+            if cursor_x is None:
+                blue_candidate_frames = 0
+                self._qte_trace.observe("no_cursor")
+                self._sleep_loop()
+                continue
 
             pressed = False
-            check_x = None
-            if cursor_x is None:
-                self._press_qte("no_cursor_fallback", cursor_x=None, target="unspecified")
-                pressed = True
+            check_x = cursor_x
+            target = "yellow"
+            target_mask = mask_yellow
+            overlap = None
+            if cv2.countNonZero(mask_yellow):
+                blue_candidate_frames = 0
+                overlap = self._mask_column_has_color(mask_yellow, check_x)
             else:
-                check_x = cursor_x
-            if check_x is not None and self._mask_column_has_color(mask_yellow, check_x):
+                target_mask = self._blue_mask(qte_hsv)
+                blue_candidate_frames = (
+                    blue_candidate_frames + 1 if cv2.countNonZero(target_mask) else 0
+                )
+                # 连续检测有蓝无黄才回退；空白、灰色和绿色不能作为普通命中区。
+                if blue_candidate_frames >= 2:
+                    target = "blue"
+                    overlap = self._mask_column_has_color(target_mask, check_x)
+            if self._red_obstruction_at_cursor(qte_hsv, check_x):
+                # 红色只证明此处有红色内容，不能据此认定冰冻并连续按键。
+                # 遮挡也不能作为确认离开目标的证据。
+                overlap = None
+                self._qte_trace.observe("red_obstruction")
+            if trigger.observe(overlap, target):
                 self._press_qte(
-                    "yellow_overlap", cursor_x=cursor_x, check_x=check_x, target="yellow"
+                    "yellow_overlap" if target == "yellow" else "blue_fallback",
+                    cursor_x=cursor_x,
+                    check_x=check_x,
+                    target=target,
                 )
                 pressed = True
             self._qte_trace.observe("tracking", cursor=cursor_x, pressed=pressed)
             self._sleep_loop()
 
-    def solve_ice_trouble(self, roi_hsv: np.ndarray) -> bool:
+    def _red_obstruction_at_cursor(self, roi_hsv: np.ndarray, cursor_x: int) -> bool:
         mask = cv2.inRange(roi_hsv, self.red_range.lower, self.red_range.upper)
-        if cv2.countNonZero(mask) > self.ice_trouble_pixel_threshold:
-            self._press_qte(
-                "ice_break_attempt",
-                target="ice",
-                red_pixels=cv2.countNonZero(mask),
-                red_threshold=self.ice_trouble_pixel_threshold,
-            )
-            run_control.sleep(0.05)
-            return True
-        return False
+        if cv2.countNonZero(mask) <= self.red_obstruction_pixel_threshold:
+            return False
+        # 与目标掩膜使用相同量级的扩张，避免黄/蓝膨胀跨过遮挡边缘。
+        margin = geometry.scale_pixel_length(7, self.pixel_threshold_scale.width_factor, minimum=3)
+        left = max(0, cursor_x - margin - self.press_tolerance_pixels)
+        right = min(mask.shape[1], cursor_x + margin + self.press_tolerance_pixels + 1)
+        return cv2.countNonZero(mask[:, left:right]) > 0
 
 
 class AbyssMawQTEStrategy(BaseQTEStrategy):
@@ -361,7 +384,6 @@ class AbyssMawQTEStrategy(BaseQTEStrategy):
 
     def __init__(self, config: configparser.ConfigParser, region: Rect) -> None:
         super().__init__(config, region)
-        self.blue_range = vision.read_hsv_range(config, "roi", "blue")
         self.blocker_one_range = vision.read_hsv_range(config, "roi", "blocker_one")
         self.blocker_two_range = vision.read_hsv_range(config, "roi", "blocker_two")
         self.blocker_ranges = [self.blocker_one_range, self.blocker_two_range]
@@ -394,6 +416,7 @@ class AbyssMawQTEStrategy(BaseQTEStrategy):
     def play_qte(self, sct: capture_backend.DxCameraCapture) -> None:
         """黄色存在时优先命中黄色，否则在蓝色区域按键刷新下一轮。"""
         no_bar_frames = 0
+        trigger = TargetEntryTrigger()
         qte_started = False
         loading_logged = False
         start_time = time.monotonic()
@@ -451,7 +474,7 @@ class AbyssMawQTEStrategy(BaseQTEStrategy):
             yellow_pixels = self._mask_range_count(yellow_mask, left_x, right_x)
             pressed = False
             if yellow_pixels > self.abyss_yellow_pixel_threshold:
-                if self._mask_column_has_color(yellow_mask, check_x):
+                if trigger.observe(self._mask_column_has_color(yellow_mask, check_x), "yellow"):
                     self._press_qte(
                         "yellow_overlap",
                         cursor_x=cursor_x,
@@ -463,7 +486,12 @@ class AbyssMawQTEStrategy(BaseQTEStrategy):
                         yellow_threshold=self.abyss_yellow_pixel_threshold,
                     )
                     pressed = True
-            elif self._mask_column_has_color(blue_mask, check_x):
+            elif trigger.observe(
+                self._mask_column_has_color(blue_mask, check_x)
+                if self._mask_range_count(blue_mask, left_x, right_x)
+                else None,
+                "blue",
+            ):
                 self._press_qte(
                     "blue_fallback",
                     cursor_x=cursor_x,
@@ -485,9 +513,6 @@ class AbyssMawQTEStrategy(BaseQTEStrategy):
             )
 
             self._sleep_loop()
-
-    def _blue_mask(self, qte_hsv: np.ndarray) -> np.ndarray:
-        return vision.create_color_mask(self.blue_range.lower, self.blue_range.upper, qte_hsv)
 
     def _blocker_mask(self, qte_hsv: np.ndarray) -> np.ndarray:
         """合并挡板在不同画面亮度下的多个 HSV 颜色区间。"""

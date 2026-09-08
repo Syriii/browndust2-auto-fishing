@@ -22,6 +22,7 @@
 - [工具说明](development/tools.md)：每个工具的用途、输入影响和运行命令。
 - [构建与发布](development/releasing.md)：OCR 模型、PyInstaller、GitHub Actions 与部署验收。
 - [当前开发状态](development/status.md)：当前能力、验证边界、暂缓事项与本轮整理记录。
+- [实机问题分类与处理](development/error-triage.md)：错误证据、逐项修复及仍需真实样本的机制。
 - [已验证功能的正式代码核对](development/verified-features.md)：历史测试到当前实现的对应关系、合入结论和未覆盖范围。
 
 ## 参考与历史
