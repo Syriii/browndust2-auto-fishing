@@ -161,13 +161,14 @@ class IntegrationTests(unittest.TestCase):
         config.read_string(settings.DEFAULT_CONFIG_CONTENT)
         return config
 
-    def test_existing_input_call_is_unchanged_and_can_disable_observer(self):
+    def test_old_debug_switch_cannot_disable_evidence_or_change_input(self):
         config = self.config()
         config.set("diagnostics", "qte_feedback_enabled", "false")
         strategy = qte_strategy.FrostStraitQTEStrategy(config, geometry.Rect(0, 0, 875, 492))
-        self.assertFalse(strategy.feedback_enabled)
-        strategy._start_feedback()
-        self.assertIsNone(strategy._feedback_session)
+        self.assertTrue(strategy.feedback_enabled)
+        with patch("bd2_fishing.game.fishing.feedback.FeedbackSession") as session:
+            strategy._start_feedback()
+            session.return_value.start.assert_called_once_with()
         observer = Mock()
         strategy._feedback_session = observer
         with patch.object(qte_strategy.pydirectinput, "press", return_value=True) as press:
@@ -178,8 +179,8 @@ class IntegrationTests(unittest.TestCase):
     def test_source_config_and_defaults_enable_observer_consistently(self):
         source = configparser.ConfigParser()
         source.read(DEFAULT_CONFIG, encoding="utf-8-sig")
-        self.assertTrue(source.getboolean("diagnostics", "qte_feedback_enabled"))
-        self.assertTrue(self.config().getboolean("diagnostics", "qte_feedback_enabled"))
+        self.assertEqual(source.getint("diagnostics", "failure_max_events"), 100)
+        self.assertEqual(self.config().getint("diagnostics", "failure_max_events"), 100)
         source.remove_option("diagnostics", "qte_feedback_enabled")
         self.assertTrue(
             qte_strategy.FrostStraitQTEStrategy(

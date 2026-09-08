@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import itertools
 import json
 import logging
 import queue
@@ -15,13 +14,11 @@ from zipfile import ZIP_STORED, ZipFile
 
 import cv2
 
+from bd2_fishing.infrastructure.diagnostics.retention import evidence_path, prune_evidence
 from bd2_fishing.perception import image as vision
 from bd2_fishing.runtime.context import current_round_id, get_logger
 
 log = logging.getLogger(__name__)
-
-
-_slots = itertools.count()
 
 
 class EvidenceWriter:
@@ -43,7 +40,7 @@ class EvidenceWriter:
         self.log = get_logger(__name__, self.round_id)
         self.capture_backend = capture_backend
         self.max_events = max(1, max_events)
-        self.queue = queue.Queue(maxsize=2)
+        self.queue = queue.Queue(maxsize=8)
         self.done = threading.Event()
         self.thread = threading.Thread(target=self.run, name="qte-evidence", daemon=True)
         self.thread.start()
@@ -67,7 +64,7 @@ class EvidenceWriter:
 
     def save(self, outcome, samples, decision_frame=None):
         self.directory.mkdir(parents=True, exist_ok=True)
-        path = self.directory / f"qte_{next(_slots) % self.max_events + 1:02d}.zip"
+        path = evidence_path(self.directory, "qte")
         temporary = path.with_suffix(".tmp")
         ranges = {
             name: vision.read_hsv_range(self.config, "roi", name)
@@ -137,6 +134,7 @@ class EvidenceWriter:
                     archive.writestr(filename, data.tobytes())
             archive.writestr("metadata.json", json.dumps(metadata, ensure_ascii=False, indent=2))
         temporary.replace(path)
+        prune_evidence(self.directory, self.max_events)
         self.log.debug(
             "QTE 证据已保存: %s；证据ID=%s 按键=%s 帧数=%d",
             path,

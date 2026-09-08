@@ -4,4 +4,4 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests/fixtures"
-DEFAULT_CONFIG = ROOT / "src/bd2_fishing/resources/default.ini"
+DEFAULT_CONFIG = ROOT / "bd2_fishing/resources/default.ini"

@@ -4,7 +4,7 @@
 
 ## 位置与保存
 
-源码运行读取 `.local/config.ini`；便携版读取 EXE 旁的 `config.ini`；普通 wheel 安装读取用户主目录下 `BD2_AutoFishing/config.ini`。配置不存在时，[settings.py](../../src/bd2_fishing/infrastructure/settings.py) 从唯一的[默认配置资源](../../src/bd2_fishing/resources/default.ini)生成。路径不随终端当前目录变化。本次已将原源码 config.ini 原样移入 .local，保留个人取值和注释。
+源码运行读取 `.local/config.ini`；便携版读取 EXE 旁的 `config.ini`；普通 wheel 安装读取用户主目录下 `BD2_AutoFishing/config.ini`。配置不存在时，[settings.py](../../bd2_fishing/infrastructure/settings.py) 从唯一的[默认配置资源](../../bd2_fishing/resources/default.ini)生成。路径不随终端当前目录变化。本次已将原源码 config.ini 原样移入 .local，保留个人取值和注释。
 
 点击开始时保存界面管理的选项并应用到本次任务；保存保留其他配置项及注释。已有配置中的明确取值优先于新版本默认值。手动修改后，在下一次启动任务时应用。
 
@@ -17,8 +17,8 @@
 | `[backpack] auto_clear_enabled` | `true` | 满包后自动出售；关闭则满包停止 |
 | `[ocr] enabled` | `true` | OCR 总开关，影响地点及满包等文字判断 |
 | `[diagnostics] qte_detail_log` | `false` | 逐帧诊断写入文件，不刷页面 |
-| `[diagnostics] qte_feedback_enabled` | `true` | QTE 反馈、失败证据与整条鱼结算观察 |
-| `[diagnostics] enabled` | `true` | 上钩超时诊断，独立于 QTE 留图开关 |
+| `[diagnostics] failure_max_events` | `100` | 各类失败证据分别保留的最大数量 |
+| `[diagnostics] max_events` | `10` | 成功结算证据的最大数量 |
 
 ## 各配置段用途
 
@@ -31,9 +31,9 @@
 | `[scale]` | 像素阈值缩放使用的参考窗口尺寸 | 像素 |
 | `[ocr]` | OCR 开关、自动钓场选择、识别区域、自定义模型 | 区域为客户区百分比 |
 | `[app]` | 页面初始钓场与电源选项 | 见常用开关 |
-| `[diagnostics]` | 日志、反馈与超时留图、保存间隔和槽位数量 | 间隔为秒，数量为诊断包槽位 |
+| `[diagnostics]` | 可选逐帧日志与必要取证的保留数量 | 数量为诊断包 |
 
-完整键名、默认值及注释以 [default.ini](../../src/bd2_fishing/resources/default.ini) 为准；代码直接读取这份资源，不再重复维护缺省配置字符串。截图沿用 BGR 格式，再转换到 OpenCV HSV，不能套用 RGB 色值。
+完整键名、默认值及注释以 [default.ini](../../bd2_fishing/resources/default.ini) 为准；代码直接读取这份资源，不再重复维护缺省配置字符串。截图沿用 BGR 格式，再转换到 OpenCV HSV，不能套用 RGB 色值。
 
 ## 识别调整
 

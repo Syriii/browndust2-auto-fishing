@@ -39,8 +39,11 @@ class HookDiagnosticsTests(unittest.TestCase):
         self.recorder._worker.join(timeout=5)
         self.assertFalse(self.recorder._worker.is_alive())
 
-    def metadata(self, slot=1):
-        with ZipFile(self.output / f"timeout_{slot:02d}.zip") as archive:
+    def latest(self):
+        return max(self.output.glob("*.zip"), key=lambda p: p.stat().st_mtime_ns)
+
+    def metadata(self):
+        with ZipFile(self.latest()) as archive:
             return json.loads(archive.read("metadata.json"))
 
     def test_peak_survives_source_mutation_and_reset(self):
@@ -57,7 +60,7 @@ class HookDiagnosticsTests(unittest.TestCase):
         self.assertEqual(metadata["valid_frames"], 2)
         self.assertEqual(metadata["none_frames"], 1)
         self.assertEqual(metadata["peak_filter_counts"]["full_hsv"], 180)
-        with ZipFile(self.output / "timeout_01.zip") as archive:
+        with ZipFile(self.latest()) as archive:
             peak = cv2.imdecode(
                 np.frombuffer(archive.read("peak_hook.png"), np.uint8), cv2.IMREAD_COLOR
             )
@@ -75,6 +78,49 @@ class HookDiagnosticsTests(unittest.TestCase):
         self.assertEqual(metadata["peak_pixels"], 0)
         self.assertEqual(metadata["valid_frames"], 1)
         self.assertIn("peak_hook.png", metadata["images"])
+
+    def test_existing_incident_frame_is_reused_without_second_capture(self):
+        capture = Mock()
+        frame = self.peak.copy()
+        self.assertTrue(
+            self.recorder.save_timeout(
+                capture,
+                self.region,
+                self.region,
+                self.lower,
+                self.upper,
+                212,
+                "test",
+                context_frame=frame,
+            )
+        )
+        frame[:] = 0
+        self.join()
+        capture.grab.assert_not_called()
+        with ZipFile(self.latest()) as archive:
+            saved = cv2.imdecode(np.frombuffer(archive.read("timeout_game.png"), np.uint8), 1)
+        np.testing.assert_array_equal(saved, self.peak)
+        self.assertEqual(self.metadata()["context_source"], "incident_capture")
+
+    def test_unavailable_incident_frame_does_not_retry_capture(self):
+        capture = Mock()
+        self.recorder.observe(self.peak, 180)
+        self.assertTrue(
+            self.recorder.save_timeout(
+                capture,
+                self.region,
+                self.region,
+                self.lower,
+                self.upper,
+                212,
+                "test",
+                context_frame=None,
+            )
+        )
+        self.join()
+        capture.grab.assert_not_called()
+        self.assertFalse(self.metadata()["context_available"])
+        self.assertIn("peak_hook.png", self.metadata()["images"])
 
     def test_all_none_is_distinguishable_and_capture_error_is_recorded(self):
         self.recorder.observe(None)
@@ -140,7 +186,7 @@ class HookDiagnosticsTests(unittest.TestCase):
         self.save(Mock(grab=Mock(return_value=None)))
         self.join()
         self.assertEqual(len(list(self.output.glob("*.zip"))), 2)
-        with ZipFile(self.output / "timeout_01.zip") as archive:
+        with ZipFile(self.latest()) as archive:
             self.assertEqual(archive.namelist(), ["metadata.json"])
 
     def test_write_failure_releases_writer_and_allows_future_save(self):
@@ -154,13 +200,13 @@ class HookDiagnosticsTests(unittest.TestCase):
                 self.join()
         self.assertTrue(self.save())
         self.join()
-        self.assertTrue((self.output / "timeout_02.zip").exists())
+        self.assertEqual(len(list(self.output.glob("*.zip"))), 1)
 
 
 class TimeoutIntegrationTests(unittest.TestCase):
     def test_snapshot_is_submitted_before_recovery_input(self):
         # 只加载真实 wait_for_bite 方法，避免导入原生输入模块或连接游戏。
-        source = ROOT / "src" / "bd2_fishing" / "app" / "fishing_task.py"
+        source = ROOT / "bd2_fishing" / "app" / "fishing_task.py"
         tree = ast.parse(source.read_text(encoding="utf-8-sig"))
         method = next(
             node
@@ -193,8 +239,9 @@ class TimeoutIntegrationTests(unittest.TestCase):
         )
         exec(compile(ast.fix_missing_locations(module), str(source), "exec"), namespace)
         diagnostics = Mock()
-        diagnostics.save_timeout.side_effect = lambda *args: events.append("snapshot")
+        diagnostics.save_timeout.side_effect = lambda *args, **kwargs: events.append("snapshot")
         bot = SimpleNamespace(
+            _record_incident=Mock(),
             hook_diagnostics=diagnostics,
             bite_pixel_threshold=212,
             region=None,

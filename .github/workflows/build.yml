@@ -39,7 +39,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: BD2_AutoFishing-windows
-          path: .local/releases/BD2_AutoFishing-windows.zip
+          path: dist/BD2_AutoFishing-windows.zip
           if-no-files-found: error
           include-hidden-files: true
 
@@ -47,6 +47,6 @@ jobs:
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: .local/releases/BD2_AutoFishing-windows.zip
+          files: dist/BD2_AutoFishing-windows.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

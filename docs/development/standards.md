@@ -2,9 +2,9 @@
 
 [文档目录](../README.md) · [完整目录布局](../design/repository-layout.md) · [当前状态](status.md)
 
-本项目采用可安装的 src 布局和按功能组织的模块化应用。Python 没有要求所有项目使用同一套业务目录；本项目用明确的依赖方向和自动检查保证结构能持续维护。src 隔离仓库脚本与可导入包，普通 wheel 安装用于检查资源与导入是否完整。[PyPA 布局说明](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/)
+本项目是独立桌面应用，采用仓库根目录直接放 bd2_fishing 的扁平布局。保留统一导入名称和明确的模块依赖边界；pyproject 显式只收集 bd2_fishing 包，普通 wheel 检查资源与导入完整性，不代表向 PyPI 发布第三方库。[PyPA 布局说明](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/)
 
-## src 内职责与依赖
+## 应用包内职责与依赖
 
 | 包 | 职责 | 可导入的本项目部分 |
 | --- | --- | --- |
@@ -19,6 +19,8 @@
 game 中的纯规则和识别模块进一步限制：feedback_rules、settlement_rules、cast_feedback、recognition 和 catalog 不导入具体基础设施、app 或 ui。动作与观察器可以使用当前适配器；需要录制、模拟或替换设备时再通过小型合同注入。当前没有宣称全部 I/O 已实现依赖倒置。
 
 静态规则由 `scripts/checks/check_architecture.py` 执行，覆盖绝对/相对导入、from 别名导入、函数内导入和模块循环。它不执行代码，也不分析运行时动态拼接的 import；新增动态装载必须单独验证。目录名本身不是架构验收。
+
+正式应用不得导入 scripts、tests 或 tools；工具调用应用能力，实验探针不能反向进入正常任务。异常与结算共用 infrastructure/diagnostics/bundle_writer.py，玩法只提交结构化证据。
 
 ## 公共逻辑的抽取原则
 
@@ -35,8 +37,8 @@ game 中的纯规则和识别模块进一步限制：feedback_rules、settlement
 提交前在仓库根目录执行：
 
 ```powershell
-.\.venv\Scripts\python.exe -m ruff check src scripts tests main.py setup.py
-.\.venv\Scripts\python.exe -m ruff format --check src scripts tests main.py setup.py
+.\.venv\Scripts\python.exe -m ruff check bd2_fishing scripts tests main.py setup.py
+.\.venv\Scripts\python.exe -m ruff format --check bd2_fishing scripts tests main.py setup.py
 .\.venv\Scripts\python.exe -X utf8 -B scripts/checks/check_architecture.py
 .\.venv\Scripts\python.exe -X utf8 -B -m unittest discover -s tests -v
 ```

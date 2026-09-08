@@ -42,7 +42,7 @@
 
 ## 当前源码的实际覆盖（2026-09-08）
 
-核对入口：[`main.py`](../../src/bd2_fishing/app/fishing_task.py)、[`qte_strategy.py`](../../src/bd2_fishing/game/fishing/qte.py)、[`qte_feedback.py`](../../src/bd2_fishing/game/fishing/feedback.py)、[`catch_result.py`](../../src/bd2_fishing/game/fishing/settlement.py)。
+核对入口：[`main.py`](../../bd2_fishing/app/fishing_task.py)、[`qte_strategy.py`](../../bd2_fishing/game/fishing/qte.py)、[`qte_feedback.py`](../../bd2_fishing/game/fishing/feedback.py)、[`catch_result.py`](../../bd2_fishing/game/fishing/settlement.py)。
 
 | 当前实现 | 已有行为及限制 |
 | --- | --- |

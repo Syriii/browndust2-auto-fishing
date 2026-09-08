@@ -16,7 +16,7 @@ from bd2_fishing.runtime.geometry import Rect
 from scripts.checks.check_architecture import check_package
 from tests.support import ROOT
 
-PACKAGE = ROOT / "src/bd2_fishing"
+PACKAGE = ROOT / "bd2_fishing"
 
 
 class ArchitectureTests(unittest.TestCase):
@@ -66,6 +66,18 @@ class ArchitectureTests(unittest.TestCase):
                     )
                     for module in modules:
                         self.assertFalse(module.startswith(forbidden), (path, module))
+
+    def test_production_cannot_import_experimental_tools_or_test_helpers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory) / "bd2_fishing"
+            (package / "app").mkdir(parents=True)
+            (package / "app/task.py").write_text(
+                "from scripts.live import record_qte_session\nfrom tests import support\n",
+                encoding="utf-8",
+            )
+            errors, _ = check_package(package)
+            self.assertTrue(any("scripts.live" in item for item in errors))
+            self.assertTrue(any("tests.support" in item for item in errors))
 
     def test_rules_and_catalog_import_without_windows_or_ocr_runtime(self):
         code = """

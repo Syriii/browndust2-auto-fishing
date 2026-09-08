@@ -21,7 +21,7 @@ from bd2_fishing.game.fishing.settlement_rules import (
     distance_value,
 )
 from bd2_fishing.infrastructure import paths as paths
-from bd2_fishing.infrastructure.diagnostics import catch_evidence
+from bd2_fishing.infrastructure.diagnostics import bundle_writer
 from bd2_fishing.infrastructure.windows import window as window
 from bd2_fishing.infrastructure.windows.gdi import FeedbackCapture
 from bd2_fishing.perception.ocr_types import OCRText
@@ -129,7 +129,7 @@ class CatchObserver:
             ):
                 self.readings.append((stamp, int(value.text.strip()), frame.copy(), value.score))
         except Exception:
-            self.log.debug("结算计时器观察失败", exc_info=True)
+            self.log.warning("结算计时器观察失败，保留现场供维护", exc_info=True)
         finally:
             self.lock.release()
 
@@ -282,9 +282,13 @@ class CatchObserver:
             self.log.info(
                 "鱼获：%s，尺寸=%scm（名称为 OCR 读数）", self.result.reward, self.result.size_cm
             )
-        if not catch_evidence.submit(
-            Path(paths.get_diagnostics_path()) / "catch_result",
-            max(1, self.config.getint("diagnostics", "max_events", fallback=10)),
+        if not bundle_writer.submit(
+            Path(paths.get_diagnostics_path())
+            / "catch_result"
+            / ("success" if self.result.status == "caught" else "failures"),
+            max(1, self.config.getint("diagnostics", "max_events", fallback=10))
+            if self.result.status == "caught"
+            else max(1, self.config.getint("diagnostics", "failure_max_events", fallback=100)),
             metadata,
             frames,
             self.save_done,

@@ -18,7 +18,7 @@ def main():
     calls = []
 
     def task(*args, **kwargs):
-        calls.append(args[0].getboolean("diagnostics", "qte_feedback_enabled"))
+        calls.append(args[0].getboolean("diagnostics", "qte_detail_log"))
         run_control.set_status("模拟任务运行中")
         run_control.sleep(60)
 
@@ -45,13 +45,12 @@ def main():
         root.update_idletasks()
         assert not app.controller.running
         for cycle in (1, 2):
-            app.feedback.set(cycle == 2)
+            app.detail_log.set(cycle == 2)
             app.start_button.invoke()
             pump(lambda: app.status.get() == "模拟任务运行中")
             assert app.start_button.instate(["disabled"])
             assert not app.stop_button.instate(["disabled"])
-            assert app.feedback_check.instate(["disabled"])
-            assert app.snapshot.getboolean("diagnostics", "qte_feedback_enabled") == (cycle == 2)
+            assert app.snapshot.getboolean("diagnostics", "qte_detail_log") == (cycle == 2)
             app.stop_button.invoke()
             pump(lambda: app.status.get() == "待机")
             assert not app.controller.running
@@ -80,7 +79,6 @@ def main():
             app.clear_check,
             app.awake_check,
             app.trace_check,
-            app.feedback_check,
         ):
             assert widget.winfo_x() + widget.winfo_width() <= widget.master.winfo_width(), (
                 widget.cget("text") if "text" in widget.keys() else str(widget),
@@ -89,7 +87,7 @@ def main():
                 widget.master.winfo_width(),
             )
         print(
-            "PASS: idle, two start/stop cycles, feedback setting saved/applied, log filtering and minimum-size layout"
+            "PASS: idle, two start/stop cycles, detail log setting saved/applied, log filtering and minimum-size layout"
         )
     finally:
         app.controller.close()

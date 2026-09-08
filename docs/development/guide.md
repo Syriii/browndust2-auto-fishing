@@ -2,7 +2,7 @@
 
 [文档目录](../README.md) · [当前开发状态](status.md) · [架构方案与实施范围](../design/architecture.md)
 
-本页描述已经落地的源码结构。首轮迁移建立功能归属、设备与运行边界，并采用 src 布局；新岛屿、新机制和完整导航尚未实现。
+本页描述已经落地的源码结构。首轮迁移建立功能归属、设备与运行边界，源码包 bd2_fishing 直接位于仓库根目录；新岛屿、新机制和完整导航尚未实现。
 
 ## 环境与入口
 
@@ -32,7 +32,7 @@ Windows、Python 3.12。[pyproject.toml](../../pyproject.toml) 管理元数据�
 
 根目录 `main.py` 调用 bootstrap，导入包不会自动设置 DPI 或启动界面。具体 DPI 初始化在启动/运行入口执行。
 
-| 位置（相对 `src/bd2_fishing/`） | 职责 |
+| 位置（相对 `bd2_fishing/`） | 职责 |
 | --- | --- |
 | `bootstrap.py` | 日志、异常处理、DPI 与桌面启动 |
 | `app/desktop.py`、`app/service.py` | 页面使用的设置与任务服务、单任务工作线程 |
@@ -65,8 +65,8 @@ Windows、Python 3.12。[pyproject.toml](../../pyproject.toml) 管理元数据�
 - 可编辑安装使用 `.local/config.ini`，日志写入 `.local/logs/`，证据写入 `.local/diagnostics/`；路径不随工作目录变化。
 - 普通安装的运行目录为用户主目录下 `BD2_AutoFishing/`，避免向 site-packages 写入；唯一默认配置由 settings 从 `resources/default.ini` 包资源读取。
 - 便携版继续使用 EXE 旁的用户配置和日志；自定义 OCR 相对资源从冻结资源目录解析。
-- 运行时模板随 Python 包和 PyInstaller 收集。包资源与运行目录分开；本机部署已成套归入外层 `deployment/current/`，未升级 EXE。
-- `.local/` 集中配置和生成物，egg-info 及 setuptools 中间文件由 setup.py 固定写入 `.local/build/`；`.venv/` 和 Python 缓存按正常行为生成并忽略。原图与证据保留；完整规则见[统一布局](../design/repository-layout.md)。
+- 运行时模板随 Python 包和 PyInstaller 收集。包资源与运行目录分开；本机部署已成套归入外层 `deployment/`，未升级 EXE。
+- `.local/` 集中配置和生成物，egg-info 及 setuptools 中间文件由 setup.py 固定写入 `build/`；`.venv/` 和 Python 缓存按正常行为生成并忽略。原图与证据保留；完整规则见[统一布局](../design/repository-layout.md)。
 
 ## 修改与验证
 

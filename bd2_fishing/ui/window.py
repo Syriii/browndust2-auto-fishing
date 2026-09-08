@@ -60,9 +60,6 @@ class FishingApp:
         self.detail_log = tk.BooleanVar(
             value=config.getboolean("diagnostics", "qte_detail_log", fallback=False)
         )
-        self.feedback = tk.BooleanVar(
-            value=config.getboolean("diagnostics", "qte_feedback_enabled", fallback=True)
-        )
         self.level = tk.StringVar(value="运行信息")
         self.follow = tk.BooleanVar(value=True)
         self._build(valid_locations)
@@ -149,10 +146,11 @@ class FishingApp:
             settings, text="逐帧诊断写入文件", variable=self.detail_log
         )
         self.trace_check.grid(row=1, column=2, sticky="w", pady=(12, 0))
-        self.feedback_check = ttk.Checkbutton(
-            settings, text="记录 QTE 结果、失败截图和鱼获结算", variable=self.feedback
-        )
-        self.feedback_check.grid(row=2, column=0, columnspan=3, sticky="w", pady=(12, 0))
+        ttk.Label(
+            settings,
+            text="失败、异常和未确认结果自动保存现场，不需要开启逐帧诊断。",
+            style="Hint.TLabel",
+        ).grid(row=2, column=0, columnspan=3, sticky="w", pady=(12, 0))
 
         panel = ttk.Frame(outer, style="Card.TFrame", padding=16)
         panel.pack(fill="both", expand=True)
@@ -213,7 +211,6 @@ class FishingApp:
                         "backpack": {"auto_clear_enabled": str(self.auto_clear.get()).lower()},
                         "diagnostics": {
                             "qte_detail_log": str(self.detail_log.get()).lower(),
-                            "qte_feedback_enabled": str(self.feedback.get()).lower(),
                         },
                         "app": {
                             "location": self.location.get(),
@@ -256,7 +253,7 @@ class FishingApp:
         state = "disabled" if active or self.closing else "normal"
         self.start_button.configure(state=state)
         self.stop_button.configure(state="normal" if active and not self.closing else "disabled")
-        for widget in (self.clear_check, self.awake_check, self.trace_check, self.feedback_check):
+        for widget in (self.clear_check, self.awake_check, self.trace_check):
             widget.configure(state=state)
         self.location_box.configure(state="disabled" if active or self.closing else "readonly")
         if self.closing:

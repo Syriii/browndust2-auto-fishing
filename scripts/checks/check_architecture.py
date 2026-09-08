@@ -7,7 +7,7 @@ from importlib.util import resolve_name
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PACKAGE = ROOT / "src/bd2_fishing"
+PACKAGE = ROOT / "bd2_fishing"
 
 # 当前采用功能模块化结构：game 的动作/观察器允许使用具体适配器；纯规则另行收紧。
 ALLOWED = {
@@ -46,6 +46,8 @@ def check_package(package=PACKAGE):
     for name, path in modules.items():
         layer = name.split(".")[1] if "." in name else ""
         for imported in module_imports(path, name):
+            if imported.split(".")[0] in {"scripts", "tests", "tools"}:
+                errors.add(f"Production imports development code: {name} -> {imported}")
             if not imported.startswith("bd2_fishing."):
                 continue
             target_layer = imported.split(".")[1]

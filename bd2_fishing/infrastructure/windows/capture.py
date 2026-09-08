@@ -7,6 +7,7 @@ import logging
 import cv2
 import numpy as np
 
+from bd2_fishing.infrastructure.diagnostics import incidents
 from bd2_fishing.runtime.geometry import Rect
 
 log = logging.getLogger(__name__)
@@ -44,7 +45,8 @@ class DxCameraCapture:
         if frame is None:
             return None
         if frame.ndim == 3 and frame.shape[2] == 4:
-            return cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+        incidents.observe(frame, region)
         return frame
 
     def __enter__(self) -> "DxCameraCapture":

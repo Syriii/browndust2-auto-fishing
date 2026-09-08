@@ -4,7 +4,7 @@
 
 状态：2026-09-08 已完成首轮架构实施。本文保留完整目标与扩展方向；已经落地的结构和命令以[开发指南](../development/guide.md)为准。本文取代先前以全局 `application/domain/adapters` 四层为主的方案。
 
-已落地：`src` 与可安装 Python 包，app/game/perception/runtime/infrastructure/ui 职责归类，utils/operate/OCR 混合模块拆分，反馈与结算规则独立，证据写入模块持有队列和线程，桌面服务及可注入截图工厂。原 122 项测试及 4 项架构回归通过，Tk 模拟检查、wheel 和 PyInstaller 构建通过。
+已落地：根目录 bd2_fishing 应用包与构建配置，app/game/perception/runtime/infrastructure/ui 职责归类，utils/operate/OCR 混合模块拆分，反馈与结算规则独立，证据写入模块持有队列和线程，桌面服务及可注入截图工厂。原 122 项测试及 4 项架构回归通过，Tk 模拟检查、wheel 和 PyInstaller 构建通过。
 
 仍属目标：完整页面导航、稳定岛屿身份与覆盖清单、组合机制决策、所有设备边界注入、完整任务快照接口、端到端时延基线。默认配置单源化、依赖锁定和运行数据迁移已在[统一布局](repository-layout.md)中实施。当前保留兼容的地点枚举、INI 和原输入时序。部分 game 执行模块仍直接使用基础设施；下文严格依赖图是继续收敛的目标，不能把首轮职责拆分当成全部实现。
 
@@ -42,7 +42,7 @@ repository/
 ├── main.py                     桌面薄入口
 ├── scripts/build_release.py    便携包构建入口
 ├── README.md / AGENTS.md
-├── src/bd2_fishing/
+├── bd2_fishing/
 │   ├── __init__.py              无设备初始化或启动副作用
 │   ├── bootstrap.py             组装具体实现
 │   ├── app/                     用户任务、跨功能协调、状态展示接口
@@ -64,7 +64,7 @@ repository/
 
 这是目标职责图，不要求立即建立所有目录或空类。小功能可先是一个模块，钓鱼已有足够规模才拆成包。包名暂保留 `bd2_fishing`，产品范围扩大不要求同一次迁移改变仓库名、安装名和用户 EXE 名称。
 
-`src` 用于隔离可导入代码与仓库脚本，开发需要可编辑安装，发布检查需要普通安装。它解决导入和包装问题，不会自动解决业务耦合。[PyPA 布局说明](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/)
+独立桌面应用采用 flat layout：bd2_fishing 位于仓库根目录，统一包名服务于内部模块导入。构建显式只收集应用包；工具可通过可编辑安装从任意工作目录调用，wheel 用于校验安装和资源完整性。[PyPA 布局说明](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/)
 
 ## 4. 各部分职责与依赖
 
@@ -178,7 +178,7 @@ QTE 高频路径维持本地函数调用和数组运算，复用同帧特征并�
 
 只读模板和默认值归包资源，按功能靠近所属模块；用户配置、日志与证据归运行目录。路径从入口显式传入，不依赖当前工作目录或各文件猜测父目录。包资源可使用标准资源 API，冻结包仍需验证收集清单。
 
-默认值已归入 `src/bd2_fishing/resources/default.ini`，settings 通过资源 API 读取；个人配置、日志和诊断已迁入 `.local/`。默认值随 wheel 和冻结包收集，已有个人配置不被构建读取或覆盖。类型化配置快照和版本迁移仍按后续需要推进。
+默认值已归入 `bd2_fishing/resources/default.ini`，settings 通过资源 API 读取；个人配置、日志和诊断已迁入 `.local/`。默认值随 wheel 和冻结包收集，已有个人配置不被构建读取或覆盖。类型化配置快照和版本迁移仍按后续需要推进。
 
 pyproject 声明直接依赖和构建工具，requirements 保存已验证 Windows Python 3.12 环境的完整锁定清单。模板、默认配置、OCR 模型和 Tcl/Tk 均作为包装验收内容；构建脚本明确拒绝缺少 Tcl/Tk 的产物。工具、测试、CI 和文档的路径随迁移同步更新，详细归属见[统一布局](repository-layout.md)。
 
@@ -188,7 +188,7 @@ pyproject 声明直接依赖和构建工具，requirements 保存已验证 Windo
 2. **明确运行边界。** 拆分 utils 中的设备、配置、路径与日志，提取取消和最小设备合同，保持现有输入与采样时序。
 3. **按功能收拢现有代码。** OCR 引擎移基础设施，地点读取归 islands，抛竿与 QTE 归 fishing，清包归 inventory；往返刷新由 app 组合。先保留现有策略，再逐项拆识别与判断。
 4. **统一应用入口。** UI 和工具通过 app 服务调用；会话统一资源所有权；增加可回放帧、输入记录器及模拟时钟，减少深层 monkeypatch。
-5. **规范包与交付。** 完成 src、pyproject、工具安装入口和构建检查；运行数据迁移单独处理。
+5. **规范包与交付。** 完成应用包、pyproject、工具安装入口和构建检查；运行数据迁移单独处理。
 6. **逐项实现扩展。** 先页面识别和导航，再岛屿选择与信息读取；新机制按真实样本逐项实现。顺序可随用户优先级调整，每项分别标注支持与验证范围。
 
 每步保持可运行并可独立审查；结构迁移不混入阈值修改或新按键策略。现有真实正负例及停止/资源回归必须继续通过，不能用构建成功代替游戏行为验证。

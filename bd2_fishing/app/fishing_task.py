@@ -21,6 +21,7 @@ from bd2_fishing.game.islands import travel as island_travel
 from bd2_fishing.game.islands.catalog import DEFAULT_LOCATION, FishingLocation
 from bd2_fishing.infrastructure import paths as paths
 from bd2_fishing.infrastructure import settings as settings
+from bd2_fishing.infrastructure.diagnostics import incidents
 from bd2_fishing.infrastructure.windows import input as pydirectinput
 from bd2_fishing.infrastructure.windows import window as window
 from bd2_fishing.infrastructure.windows.capture import DxCameraCapture
@@ -113,9 +114,9 @@ class FishingBot:
         )
         self.hook_diagnostics = HookDiagnostics(
             Path(paths.get_diagnostics_path()) / "hook_timeouts",
-            enabled=config.getboolean("diagnostics", "enabled", fallback=True),
-            interval_seconds=config.getfloat("diagnostics", "interval_seconds", fallback=60),
-            max_events=config.getint("diagnostics", "max_events", fallback=10),
+            enabled=True,
+            interval_seconds=0,
+            max_events=config.getint("diagnostics", "failure_max_events", fallback=100),
         )
 
         log.info(f">>> 当前游戏窗口截图尺寸: {region.width} x {region.height}")
@@ -130,6 +131,20 @@ class FishingBot:
     def _sleep_loop(self) -> None:
         run_control.sleep(self.loop_sleep_seconds)
 
+    def _record_incident(self, capture, event, **details):
+        """仅在异常分支补客户区现场，先检查停止和窗口，再执行恢复动作。"""
+        frame = None
+        try:
+            run_control.checkpoint()
+            window.WindowGuard(GAME_TITLE, self.region, require_foreground=True)()
+            frame = capture.grab(self.region)
+            incidents.observe(frame, self.region, "incident_game")
+        except Exception as exc:
+            details["capture_error"] = f"{type(exc).__name__}: {exc}"
+        finally:
+            incidents.report(event, location=str(self.selected_location_name), **details)
+        return frame
+
     def wait_for_bite(self, sct: DxCameraCapture) -> None:
         """轮询感叹号区域，检测到足够多黄色像素后按空格进入 QTE。"""
         run_control.set_status("等待上钩")
@@ -143,6 +158,9 @@ class FishingBot:
             run_control.checkpoint()
             now = time.monotonic()
             if now - wait_start_time > BITE_TIMEOUT_SECONDS:
+                timeout_frame = self._record_incident(
+                    sct, "bite_timeout", peak_pixels=max_yellow_pixel
+                )
                 log.warning(
                     ">>> 突发情况，尝试恢复钓鱼状态 (本窗口峰值黄色像素=%d，阈值=%d)",
                     max_yellow_pixel,
@@ -156,6 +174,7 @@ class FishingBot:
                     self.hook_yellow_range.upper,
                     self.bite_pixel_threshold,
                     self.selected_location_name,
+                    context_frame=timeout_frame,
                 )
                 run_control.set_status("恢复钓鱼状态")
                 fishing_actions.recover_from_timeout(self.region)
@@ -173,6 +192,9 @@ class FishingBot:
                     and cast_feedback.check_backpack_if_full(sct, self.ocr_context)
                 )
             except cast_feedback.CastPositionBlocked:
+                self._record_incident(
+                    sct, "cast_position_blocked", recovery_attempts=position_recovery_attempts
+                )
                 if position_recovery_attempts >= 1:
                     reason = "自动移动并重抛后仍无法抛竿；请手动调整至船边后重新开始"
                     log.warning("%s；本轮位置恢复次数=%d", reason, position_recovery_attempts)
@@ -188,6 +210,7 @@ class FishingBot:
                 log.info("位置恢复动作已发送，重新检查抛竿提示并等待上钩")
                 continue
             if backpack_full:
+                self._record_incident(sct, "backpack_full", auto_clear=self.auto_clear_backpack)
                 if not self.auto_clear_backpack:
                     log.warning(">>> 背包已满，自动清理已关闭；请手动整理后点击开始钓鱼 重新开始")
                     raise run_control.RunStopped("背包已满，自动清理已关闭；请手动整理后重新开始")

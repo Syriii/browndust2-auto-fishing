@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 def project_root() -> Path | None:
-    candidate = Path(__file__).resolve().parents[3]
+    candidate = Path(__file__).resolve().parents[2]
     return candidate if (candidate / "pyproject.toml").is_file() else None
 
 
@@ -31,7 +31,7 @@ def get_log_path() -> str:
 
 
 def get_diagnostics_path() -> str:
-    name = "debug" if getattr(sys, "frozen", False) else "diagnostics"
+    name = "diagnostics"
     directory = Path(get_base_path()) / name
     directory.mkdir(parents=True, exist_ok=True)
     return str(directory)

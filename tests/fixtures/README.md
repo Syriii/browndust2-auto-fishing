@@ -1,6 +1,6 @@
 # 测试样本目录
 
-此目录保存离线回归使用的原始截图和元数据；运行时匹配模板位于 [game/fishing/assets](../../src/bd2_fishing/game/fishing/assets/README.md)。真实诊断日志和完整录制留在本地 `.local/diagnostics/`（旧记录已归入本机 archive）。
+此目录保存离线回归使用的原始截图和元数据；运行时匹配模板位于 [game/fishing/assets](../../bd2_fishing/game/fishing/assets/README.md)。真实诊断日志和完整录制留在本地 `.local/diagnostics/`（旧记录已归入本机 archive）。
 
 | 样本 | 用途 |
 | --- | --- |

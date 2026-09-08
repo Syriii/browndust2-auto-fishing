@@ -45,7 +45,7 @@ py -3.12 -m venv .venv
 main.py                  桌面启动入口
 setup.py                 构建路径适配，元数据仍在 pyproject
 pyproject.toml           Python 包元数据与安装入口
-src/bd2_fishing/         应用、玩法、通用识别、运行控制、基础设施与界面
+bd2_fishing/         应用、玩法、通用识别、运行控制、基础设施与界面
 tests/                   单元、集成回归与真实截图样本
 scripts/                 构建、环境锁定、检查与实机工具
 requirements/            Windows Python 3.12 完整依赖锁定
@@ -53,7 +53,7 @@ docs/                    使用、开发、设计、参考与历史文档
 .github/workflows/       GitHub 构建流程
 ```
 
-个人配置、日志、诊断与构建产物统一放在 `.local/`，虚拟环境保留 `.venv/`，均不上传。源码首次启动自动生成 `.local/config.ini`；默认值只维护在包资源 `src/bd2_fishing/resources/default.ini`。
+个人配置、日志、诊断与构建产物统一放在 `.local/`，虚拟环境保留 `.venv/`，均不上传。源码首次启动自动生成 `.local/config.ini`；默认值只维护在包资源 `bd2_fishing/resources/default.ini`。
 
 完整目录归属与扩展规则见[统一布局](docs/design/repository-layout.md)，模块职责见[开发指南](docs/development/guide.md)。
 

@@ -34,9 +34,8 @@ class BaseQTEStrategy:
         self._feedback_session = None
         self._decision_frame = None
         self._decision_captured_at = None
-        self.feedback_enabled = config.getboolean(
-            "diagnostics", "qte_feedback_enabled", fallback=True
-        )
+        # 维护取证是正常运行能力；旧配置开关不再关闭失败及结算观察。
+        self.feedback_enabled = True
         self.pixel_threshold_scale = vision.build_pixel_threshold_scale(config, region)
         self.longest_keep_time = settings.read_config_int(config, "time", "longest_keep_time")
         self.fish_end_wait_time = settings.read_config_float(config, "time", "fish_end_wait_time")

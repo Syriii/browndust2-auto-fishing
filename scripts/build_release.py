@@ -14,8 +14,8 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 APP_NAME = "BD2_AutoFishing"
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DIST_DIR = PROJECT_ROOT / ".local" / "releases"
-CONFIG_PATH = PROJECT_ROOT / "src" / "bd2_fishing" / "resources" / "default.ini"
+DIST_DIR = PROJECT_ROOT / "dist"
+CONFIG_PATH = PROJECT_ROOT / "bd2_fishing" / "resources" / "default.ini"
 MODEL_PATH_KEYS = (
     "det_model_path",
     "cls_model_path",
@@ -148,9 +148,9 @@ def build_pyinstaller_command(*, include_nvidia: bool, model_files: list[Path]) 
         "PyInstaller",
         str(PROJECT_ROOT / "main.py"),
         "--workpath",
-        str(PROJECT_ROOT / ".local/build/pyinstaller"),
+        str(PROJECT_ROOT / "build/pyinstaller"),
         "--specpath",
-        str(PROJECT_ROOT / ".local/build/specs"),
+        str(PROJECT_ROOT / "build/specs"),
         "--distpath",
         str(DIST_DIR),
         "--noconfirm",
@@ -192,7 +192,7 @@ def build_pyinstaller_command(*, include_nvidia: bool, model_files: list[Path]) 
     add_data_args(cmd, CONFIG_PATH, "bd2_fishing/resources")
     add_data_args(
         cmd,
-        PROJECT_ROOT / "src" / "bd2_fishing" / "game" / "fishing" / "assets",
+        PROJECT_ROOT / "bd2_fishing" / "game" / "fishing" / "assets",
         "bd2_fishing/game/fishing/assets",
     )
 

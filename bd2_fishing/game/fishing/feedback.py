@@ -16,6 +16,7 @@ import numpy as np
 from bd2_fishing.game.fishing.feedback_rules import OutcomeTracker
 from bd2_fishing.game.fishing.recognition import FeedbackMatcher
 from bd2_fishing.infrastructure import paths as paths
+from bd2_fishing.infrastructure.diagnostics import incidents
 from bd2_fishing.infrastructure.diagnostics.qte_evidence import EvidenceWriter
 from bd2_fishing.infrastructure.windows import window as window
 from bd2_fishing.runtime import control as run_control
@@ -89,7 +90,7 @@ class FeedbackSession:
             self.config,
             self.region,
             self.window,
-            self.config.getint("diagnostics", "max_events", fallback=10),
+            self.config.getint("diagnostics", "failure_max_events", fallback=100),
             capture_backend="GDI screen BitBlt (BGR)",
             round_id=self.round_id,
         )
@@ -210,6 +211,7 @@ class FeedbackSession:
                         break
                     if frame is not None:
                         frame = frame.copy()
+                        incidents.observe(frame, self.region, "qte_feedback")
                         # 仅上方文字区域参与匹配，下方 QTE 条保留在证据帧中。
                         text_height = round(self.window.height * 0.18)
                         label, score = self.matcher.detect(frame[:text_height])

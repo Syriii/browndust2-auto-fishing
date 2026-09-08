@@ -22,6 +22,7 @@
 - [工具说明](development/tools.md)：每个工具的用途、输入影响和运行命令。
 - [构建与发布](development/releasing.md)：OCR 模型、PyInstaller、GitHub Actions 与部署验收。
 - [当前开发状态](development/status.md)：当前能力、验证边界、暂缓事项与本轮整理记录。
+- [已验证功能的正式代码核对](development/verified-features.md)：历史测试到当前实现的对应关系、合入结论和未覆盖范围。
 
 ## 参考与历史
 
@@ -36,4 +37,4 @@
 
 README 只保留项目介绍、快速开始和入口。行为说明归入使用文档；开发命令和实现职责归入 development；架构目标与取舍归入 design；原始实测记录按月份归档，当前结论汇总到开发状态。
 
-配置默认值只维护在 `src/bd2_fishing/resources/default.ini`，settings 从资源读取。个人配置位于 `.local/config.ini`，不提交。文档说明含义及关键开关，避免再次复制整套默认值表。修改路径时同步更新代码导入、测试、工具、构建清单和文档链接。
+配置默认值只维护在 `bd2_fishing/resources/default.ini`，settings 从资源读取。个人配置位于 `.local/config.ini`，不提交。文档说明含义及关键开关，避免再次复制整套默认值表。修改路径时同步更新代码导入、测试、工具、构建清单和文档链接。

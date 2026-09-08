@@ -11,9 +11,11 @@ from zipfile import ZIP_STORED, ZipFile
 
 import cv2
 
+from bd2_fishing.infrastructure.diagnostics.retention import evidence_path, prune_evidence
 from bd2_fishing.runtime.context import current_round_id, get_logger
 
 log = get_logger(__name__)
+_CAPTURE_CONTEXT = object()
 
 
 class HookDiagnostics:
@@ -52,7 +54,18 @@ class HookDiagnostics:
             self._peak_frame = self._last_frame
             self._peak_at = self._last_at
 
-    def save_timeout(self, capture, window_region, hook_region, lower, upper, threshold, location):
+    def save_timeout(
+        self,
+        capture,
+        window_region,
+        hook_region,
+        lower,
+        upper,
+        threshold,
+        location,
+        *,
+        context_frame=_CAPTURE_CONTEXT,
+    ):
         """恢复动作之前额外截一次游戏客户区；所有编码与文件写入交给后台。"""
         now = time.monotonic()
         if not self.enabled or now - self._last_saved_at < self.interval_seconds:
@@ -64,7 +77,11 @@ class HookDiagnostics:
             capture_error = None
             started = time.monotonic()
             try:
-                frame = capture.grab(window_region)
+                frame = (
+                    capture.grab(window_region)
+                    if context_frame is _CAPTURE_CONTEXT
+                    else context_frame
+                )
                 if frame is not None:
                     context = frame.copy()
             except Exception as exc:
@@ -94,12 +111,15 @@ class HookDiagnostics:
                 "last_at_unix": self._last_at,
                 "context_capture_ms": round(capture_ms, 3),
                 "context_capture_error": capture_error,
+                "context_source": "direct_capture"
+                if context_frame is _CAPTURE_CONTEXT
+                else "incident_capture",
                 "context_available": context is not None,
                 "note": "peak_hook and timeout_game are captured at different times; "
                 "None frames mean no image returned, not necessarily a capture error.",
             }
             self._slot = self._slot % self.max_events + 1
-            path = self.output_dir / f"timeout_{self._slot:02d}.zip"
+            path = evidence_path(self.output_dir, "timeout")
             self._worker = threading.Thread(
                 target=self._write_snapshot,
                 args=(path, frames, metadata),
@@ -151,6 +171,7 @@ class HookDiagnostics:
                     "metadata.json", json.dumps(metadata, ensure_ascii=False, indent=2)
                 )
             temporary.replace(path)
+            prune_evidence(path.parent, self.max_events)
             job_log.info(
                 "上钩超时诊断已保存: %s (峰值=%d，有效帧=%d，无新图=%d)",
                 path,
