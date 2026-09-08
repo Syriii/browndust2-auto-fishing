@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import queue
 import threading
 import time
 import uuid
@@ -73,6 +74,11 @@ class FeedbackSession:
         self.tracker = OutcomeTracker()
         self.samples = deque(maxlen=24)
         self.lock = threading.Lock()
+        self.submission_lock = threading.Lock()
+        self.presses = queue.Queue(maxsize=128)
+        self.dropped_presses = 0
+        self.closed = False
+        self.messages = []
         self.done = threading.Event()
         self.thread = None
         self.writer = None
@@ -98,19 +104,53 @@ class FeedbackSession:
         self.thread.start()
 
     def begin_press(self, decision=None, decision_frame=None):
-        # 在原按键调用前只复制小区域；编码与写盘仍由后台完成。
+        """输入前只固定时间与小图并提交；不等观察锁，不归因、不输出日志。"""
+        stamp = time.monotonic()
         snapshot = decision_frame.copy() if decision_frame is not None else None
         decision = dict(decision) if decision is not None else None
-        with self.lock:
-            self.publish(self.tracker.begin(time.monotonic()))
-            self.press_frames[self.tracker.sequence] = list(self.samples)[-4:]
+        with self.submission_lock:
+            if self.done.is_set():
+                return False
+            try:
+                self.presses.put_nowait((stamp, decision, snapshot))
+            except queue.Full:
+                self.dropped_presses += 1
+                return False
+        return True
+
+    def _drain_presses(self):
+        """观察或关闭时持状态锁处理；保留提交时间，不能用出队时间代替按键时间。"""
+        for _ in range(self.presses.maxsize):
+            try:
+                stamp, decision, snapshot = self.presses.get_nowait()
+            except queue.Empty:
+                break
+            self.publish(self.tracker.begin(stamp))
+            self.press_frames[self.tracker.sequence] = [
+                sample for sample in self.samples if sample[0] <= stamp
+            ][-4:]
             self.press_decisions[self.tracker.sequence] = (decision, snapshot)
             if decision is not None:
-                self.log.debug(
+                self._log(
+                    logging.DEBUG,
                     "QTE 按键决策: 按键序号=%d 依据=%s",
                     self.tracker.sequence,
                     json.dumps(decision, ensure_ascii=False),
                 )
+            if self.dropped_presses:
+                # 丢记录后无法完整列举候选按键，本会话余下归属保持未知。
+                self.publish(self.tracker.close(stamp, "按键记录队列溢出，归属不完整"))
+                self.tracker.recent_attempts.clear()
+
+    def _log(self, level, message, *args):
+        self.messages.append((level, message, args))
+
+    def _emit_messages(self):
+        # 只有摘取列表需要状态锁；慢控制台/UI 输出不能占用该锁。
+        with self.lock:
+            messages, self.messages = self.messages, []
+        for level, message, args in messages:
+            self.log.log(level, message, *args)
 
     def publish(self, outcomes):
         for event in self.tracker.feedback_events[self.event_count :]:
@@ -120,13 +160,15 @@ class FeedbackSession:
                 )
             self.observed_counts[event["result"]] += 1
             labels = {"critical": "暴击", "hit": "普通命中", "miss": "未命中"}
-            self.log.info(
+            self._log(
+                logging.INFO,
                 "QTE 反馈 #%d：%s（%s）",
                 event["sequence"],
                 labels[event["result"]],
                 event["feedback"].upper(),
             )
-            self.log.debug(
+            self._log(
+                logging.DEBUG,
                 "QTE 反馈依据: 序号=%d 结果=%s 文字=%s 候选按键=%s 匹配=%.3f",
                 event["sequence"],
                 event["result"],
@@ -147,7 +189,7 @@ class FeedbackSession:
             target[outcome.result] += 1
             level = logging.DEBUG
             labels = {"critical": "暴击", "hit": "普通命中", "miss": "未命中", "unknown": "未确认"}
-            self.log.log(
+            self._log(
                 level,
                 "QTE 按键归属: 按键序号=%s 结果=%s 反馈=%s 原因=%s 匹配=%.3f",
                 outcome.attempt,
@@ -183,11 +225,16 @@ class FeedbackSession:
                 }
                 frames = sorted(frames.items())
                 if frames or decision_frame is not None:
-                    self.writer.submit(
-                        outcome, select_evidence_frames(frames, outcome), decision_frame
-                    )
+                    if (
+                        self.writer is not None
+                        and self.writer.submit(
+                            outcome, select_evidence_frames(frames, outcome), decision_frame
+                        )
+                        is False
+                    ):
+                        self._log(logging.WARNING, "QTE 证据未入队；按键结果仍保留在本轮账本")
                 else:
-                    self.log.warning("QTE 结果无可用截图: 按键序号=%s", outcome.attempt)
+                    self._log(logging.WARNING, "QTE 结果无可用截图: 按键序号=%s", outcome.attempt)
             else:
                 pending.append((deadline, outcome, before, decision_frame))
         self.pending_evidence = pending
@@ -211,40 +258,71 @@ class FeedbackSession:
                         break
                     if frame is not None:
                         frame = frame.copy()
-                        incidents.observe(frame, self.region, "qte_feedback")
                         # 仅上方文字区域参与匹配，下方 QTE 条保留在证据帧中。
                         text_height = round(self.window.height * 0.18)
                         label, score = self.matcher.detect(frame[:text_height])
                         with self.lock:
+                            if self.done.is_set():
+                                break
+                            incidents.observe(frame, self.region, "qte_feedback")
+                            self._drain_presses()
                             self.samples.append((now, frame))
                             self.publish(self.tracker.observe(label, now, score))
                             self.flush_evidence(now)
-                        if self.catch_observer is not None:
+                        self._emit_messages()
+                        if not self.done.is_set() and self.catch_observer is not None:
                             self.catch_observer.observe_timer(frame, now)
                     else:
                         with self.lock:
+                            if self.done.is_set():
+                                break
+                            self._drain_presses()
                             self.publish(self.tracker.expire(now))
                             self.flush_evidence(now)
+                        self._emit_messages()
                     self.done.wait(0.02)
         except run_control.RunStopped as exc:
             self.log.debug("QTE 观察随任务停止: %s", str(exc) or "已停止")
         except BaseException as exc:
-            self.log.error(
-                "QTE 结果观察异常停止: %s；未确认的按键不会当作未命中",
-                str(exc) or type(exc).__name__,
-                exc_info=True,
-            )
+            if not self.done.is_set():
+                self.log.error(
+                    "QTE 结果观察异常停止: %s；未确认的按键不会当作未命中",
+                    str(exc) or type(exc).__name__,
+                    exc_info=True,
+                )
 
     def close(self):
-        self.done.set()
-        if self.thread is not None:
-            self.thread.join(timeout=2)
+        with self.submission_lock:
+            self.done.set()
         with self.lock:
+            if self.closed:
+                return
+            self.closed = True
+            self._drain_presses()
+            if self.dropped_presses:
+                self._log(
+                    logging.WARNING,
+                    "QTE 按键记录队列溢出：丢失=%d；后续按键归属保持未确认",
+                    self.dropped_presses,
+                )
             self.publish(self.tracker.close(time.monotonic()))
             if self.writer is not None:
                 self.flush_evidence(time.monotonic(), force=True)
+            if self.catch_observer is not None:
+                self.catch_observer.stop_observing()
+                self.catch_observer.feedback_diagnostics = dict(
+                    dropped_press_records=self.dropped_presses,
+                    attribution_incomplete=bool(self.dropped_presses),
+                )
+        if self.thread is not None:
+            self.thread.join(timeout=2)
+            if self.catch_observer is not None:
+                self.catch_observer.feedback_diagnostics["reader_still_running"] = (
+                    self.thread.is_alive()
+                )
         if self.writer is not None:
             self.writer.close()
+        self._emit_messages()
         self.log.debug(
             "QTE 按键归属统计: 尝试=%d 暴击=%d 普通命中=%d 未命中=%d 未确认=%d 无对应按键反馈=%s",
             self.tracker.sequence,

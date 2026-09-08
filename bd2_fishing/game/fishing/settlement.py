@@ -7,13 +7,13 @@ import threading
 import time
 import uuid
 from collections import Counter, deque
+from contextlib import contextmanager
 from dataclasses import asdict
 from pathlib import Path
 
 import cv2
 import numpy as np
 
-from bd2_fishing.game.fishing.recognition import white_text
 from bd2_fishing.game.fishing.settlement_rules import (
     CatchResult,
     _evidence_token,
@@ -83,12 +83,14 @@ class CatchObserver:
         self.log = get_logger(__name__, self.round_id)
         self.engine, self.config, self.window = engine, config, window
         self.lock = threading.Lock()
+        self.ocr_lock = threading.Lock()
         self.readings = deque(maxlen=32)
         self.next_timer_at = 0.0
         self.settling = False
         self.result = CatchResult()
         self.game_feedback = []
         self.attempt_outcomes = []
+        self.feedback_diagnostics = {}
         self.last_frame = None
         self.last_frame_at = None
         self.evidence_frames = {}
@@ -96,27 +98,35 @@ class CatchObserver:
         self.finalized = False
         self.save_done = threading.Event()
         self.save_done.set()
-        self.close_template = cv2.imdecode(
+        close_template = cv2.imdecode(
             np.frombuffer(
                 (Path(__file__).with_name("assets") / "settlement_close.png").read_bytes(), np.uint8
             ),
-            1,
+            cv2.IMREAD_GRAYSCALE,
         )
-        self.close_template = cv2.resize(
-            self.close_template,
-            (
-                round(self.close_template.shape[1] * window.width / 875),
-                round(self.close_template.shape[0] * window.height / 492),
-            ),
-        )
+        # 关闭提示是灰字。先套亮白阈值再匹配会把缩放后的模板清空，
+        # TM_CCOEFF_NORMED 对常量模板返回 1，导致任意场景都被判为面板。
+        if close_template is None or close_template.std() < 1:
+            raise ValueError("结算关闭提示模板无有效字形")
+        width = round(close_template.shape[1] * window.width / 875)
+        height = round(close_template.shape[0] * window.height / 492)
+        # 字体栅格化取整与整张图的缩放并不完全一致，限定 ±1 像素搜索。
+        self.close_patterns = [
+            cv2.resize(close_template, (max(2, width + dx), max(2, height + dy)))
+            for dx in (-1, 0, 1)
+            for dy in (-1, 0, 1)
+        ]
 
     def observe_timer(self, frame, stamp):
-        if self.settling or stamp < self.next_timer_at or not self.lock.acquire(blocking=False):
+        if not self.ocr_lock.acquire(blocking=False):
             return
-        self.next_timer_at = stamp + 0.25
         try:
-            # 即使倒计时 OCR 失败，也保留本轮最后一张只读截图。
-            self.last_frame, self.last_frame_at = frame.copy(), stamp
+            with self.lock:
+                if self.settling or stamp < self.next_timer_at:
+                    return
+                self.next_timer_at = stamp + 0.25
+                # 即使倒计时 OCR 失败，也保留本轮最后一张只读截图。
+                self.last_frame, self.last_frame_at = frame.copy(), stamp
             # frame 为原反馈 ROI（客户区 x=30%..70%, y=64%..93%）。
             x1, x2 = round(self.window.width * 0.022), round(self.window.width * 0.070)
             y1, y2 = round(self.window.height * 0.183), round(self.window.height * 0.238)
@@ -127,27 +137,53 @@ class CatchObserver:
                 and value.score >= 0.90
                 and re.fullmatch(r"\d{1,2}", value.text.strip())
             ):
-                self.readings.append((stamp, int(value.text.strip()), frame.copy(), value.score))
+                with self.lock:
+                    if not self.settling:
+                        self.readings.append(
+                            (stamp, int(value.text.strip()), frame.copy(), value.score)
+                        )
         except Exception:
-            self.log.warning("结算计时器观察失败，保留现场供维护", exc_info=True)
+            if not self.settling:
+                self.log.warning("结算计时器观察失败，保留现场供维护", exc_info=True)
         finally:
-            self.lock.release()
+            self.ocr_lock.release()
+
+    def stop_observing(self):
+        """封存观察状态；原生 OCR 迟到返回不能再修改本轮数据。"""
+        with self.lock:
+            self.settling = True
+
+    @contextmanager
+    def _settlement_ocr(self):
+        # 不与后台 OCR 并发调用同一引擎，等待时仍检查取消与窗口保护。
+        deadline = time.monotonic() + 2
+        while not self.ocr_lock.acquire(blocking=False):
+            run_control.checkpoint()
+            if time.monotonic() >= deadline:
+                raise TimeoutError("后台计时器 OCR 未结束，结算保持未确认")
+            run_control.sleep(0.02)
+        try:
+            yield
+        finally:
+            self.ocr_lock.release()
 
     def _panel_open(self, frame):
         roi = frame[
             round(self.window.height * 0.88) : round(self.window.height * 0.97),
             round(self.window.width * 0.40) : round(self.window.width * 0.60),
         ]
-        score = cv2.minMaxLoc(
-            cv2.matchTemplate(
-                white_text(roi), white_text(self.close_template), cv2.TM_CCOEFF_NORMED
-            )
-        )[1]
-        return score >= 0.85
+        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        for pattern in self.close_patterns:
+            if pattern.std() < 1 or any(a < b for a, b in zip(gray.shape, pattern.shape)):
+                continue
+            score = cv2.minMaxLoc(cv2.matchTemplate(gray, pattern, cv2.TM_CCOEFF_NORMED))[1]
+            if score >= 0.85:
+                return True
+        return False
 
     def finish(self):
         """QTE 确认退出后、关闭面板前执行；耗时从原结算等待时间中扣除。"""
-        self.settling = True
+        self.stop_observing()
         run_control.checkpoint()
         guard = window.WindowGuard("BrownDust II", self.window, require_foreground=True)
         guard()
@@ -157,7 +193,7 @@ class CatchObserver:
         # OCR 或取消中途退出时，仍可保存已经取得的现场，不能再截图。
         self.evidence_frames["settlement.png"] = frame
         self.evidence_metadata["captured_at_monotonic"] = captured
-        with self.lock:
+        with self._settlement_ocr():
             readings = list(self.readings)
             panel = self._panel_open(frame)
             reward_texts, distance_texts = [], []
@@ -232,7 +268,7 @@ class CatchObserver:
         if self.finalized:
             return
         self.finalized = True
-        self.settling = True
+        self.stop_observing()
         if reason == "interrupted":
             self.mark_interrupted()
         elif self.result.reason == "尚未观察到结算":
@@ -254,6 +290,7 @@ class CatchObserver:
             last_observed_at_monotonic=self.last_frame_at,
             game_feedback=list(self.game_feedback),
             attempt_outcomes=list(self.attempt_outcomes),
+            feedback_diagnostics=dict(self.feedback_diagnostics),
         )
         metadata.setdefault(
             "timer_readings", [dict(time=t, value=v, score=s) for t, v, _, s in self.readings]

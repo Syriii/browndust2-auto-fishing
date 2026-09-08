@@ -7,11 +7,10 @@ import logging
 import queue
 import threading
 import traceback
-from zipfile import ZIP_STORED, ZipFile
 
 import cv2
 
-from bd2_fishing.infrastructure.diagnostics.retention import evidence_path, prune_evidence
+from bd2_fishing.infrastructure.diagnostics.retention import evidence_archive, evidence_path
 from bd2_fishing.runtime.context import get_logger
 
 log = logging.getLogger(__name__)
@@ -55,10 +54,8 @@ def _save_worker():
                         traceback="".join(traceback.format_exception(*exception_info)),
                     ),
                 )
-            directory.mkdir(parents=True, exist_ok=True)
             path = evidence_path(directory, "event")
-            temporary = path.with_suffix(".tmp")
-            with ZipFile(temporary, "w", compression=ZIP_STORED) as archive:
+            with evidence_archive(path, limit) as archive:
                 for name, frame in frames.items():
                     ok, data = cv2.imencode(".png", frame)
                     if not ok:
@@ -67,8 +64,6 @@ def _save_worker():
                 archive.writestr(
                     "metadata.json", json.dumps(metadata, ensure_ascii=False, indent=2)
                 )
-            temporary.replace(path)
-            prune_evidence(directory, limit)
             job_log.info("维护证据已保存: %s；证据ID=%s", path, metadata["evidence_id"])
         except Exception:
             job_log.exception("维护证据保存失败")

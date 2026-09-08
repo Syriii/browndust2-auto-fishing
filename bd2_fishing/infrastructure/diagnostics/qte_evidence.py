@@ -10,11 +10,10 @@ import time
 import uuid
 from dataclasses import asdict
 from pathlib import Path
-from zipfile import ZIP_STORED, ZipFile
 
 import cv2
 
-from bd2_fishing.infrastructure.diagnostics.retention import evidence_path, prune_evidence
+from bd2_fishing.infrastructure.diagnostics.retention import evidence_archive, evidence_path
 from bd2_fishing.perception import image as vision
 from bd2_fishing.runtime.context import current_round_id, get_logger
 
@@ -42,14 +41,20 @@ class EvidenceWriter:
         self.max_events = max(1, max_events)
         self.queue = queue.Queue(maxsize=8)
         self.done = threading.Event()
+        self.submission_lock = threading.Lock()
         self.thread = threading.Thread(target=self.run, name="qte-evidence", daemon=True)
         self.thread.start()
 
     def submit(self, outcome, samples, decision_frame=None):
-        try:
-            self.queue.put_nowait((outcome, samples, decision_frame))
-        except queue.Full:
-            self.log.warning("QTE 证据保存队列已满；此次未保存截图，按键结果仍保留在日志")
+        # 关闭与提交原子排序；此处不输出可能阻塞调用者的日志。
+        with self.submission_lock:
+            if self.done.is_set():
+                return False
+            try:
+                self.queue.put_nowait((outcome, samples, decision_frame))
+            except queue.Full:
+                return False
+        return True
 
     def run(self):
         while not self.done.is_set() or not self.queue.empty():
@@ -63,9 +68,7 @@ class EvidenceWriter:
                 self.log.exception("QTE 证据保存失败；不改变钓鱼控制")
 
     def save(self, outcome, samples, decision_frame=None):
-        self.directory.mkdir(parents=True, exist_ok=True)
         path = evidence_path(self.directory, "qte")
-        temporary = path.with_suffix(".tmp")
         ranges = {
             name: vision.read_hsv_range(self.config, "roi", name)
             for name in ("white", "yellow", "blue")
@@ -86,7 +89,7 @@ class EvidenceWriter:
             decision_frame_available=decision_frame is not None,
             note="仅 QTE 结果证据；frame_* 是独立观察帧，decision.png（若有）是该次按键的控制决策原图。各自掩膜与原图同帧，原始颜色掩膜不含策略膨胀。不含真假指针判定，不是整条鱼捕获结果。",
         )
-        with ZipFile(temporary, "w", compression=ZIP_STORED) as archive:
+        with evidence_archive(path, self.max_events) as archive:
             if decision_frame is not None:
                 metadata["decision_frame"] = dict(
                     file="decision.png",
@@ -133,8 +136,6 @@ class EvidenceWriter:
                         raise RuntimeError("QTE 证据 PNG 编码失败")
                     archive.writestr(filename, data.tobytes())
             archive.writestr("metadata.json", json.dumps(metadata, ensure_ascii=False, indent=2))
-        temporary.replace(path)
-        prune_evidence(self.directory, self.max_events)
         self.log.debug(
             "QTE 证据已保存: %s；证据ID=%s 按键=%s 帧数=%d",
             path,
@@ -144,7 +145,8 @@ class EvidenceWriter:
         )
 
     def close(self):
-        self.done.set()
+        with self.submission_lock:
+            self.done.set()
         self.thread.join(timeout=2)
         if self.thread.is_alive():
             self.log.warning("QTE 证据仍在后台写入")

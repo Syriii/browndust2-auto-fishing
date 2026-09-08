@@ -70,7 +70,7 @@ Python 3.12 的常规 CPython 线程受 GIL 约束；原生库的并行行为还
 | `config.ini` 与代码缺省配置的 `loop_sleep_seconds = 0.02` | 每轮显式等待 20 ms，此外还有采集、计算和输入耗时；不能称为 50 FPS 保证 |
 | QTE 调用 `controlled_input.press("space")`，未覆盖驱动暂停 | 本地 PyDirectInput 的 `PAUSE = 0.1`，press 内部调用带默认暂停的 keyDown/keyUp，外层还有暂停；正常路径合计请求约 300 ms 暂停，分布在按下、松开和返回之间，不是首次按下前必等 300 ms |
 | `run_control.call_input` 在输入锁内调用驱动 | 驱动暂停同时延长锁占用，停止虽可设置事件，释放输入仍需等待该调用退出 |
-| `_press_qte` 先调用 `FeedbackSession.begin_press` | 输入前有帧复制、反馈锁、事件整理与日志调用，必须分别计时 |
+| `_press_qte` 先调用 `FeedbackSession.begin_press` | 输入前复制小图并向容量 128 的队列非阻塞提交；不等待观察锁，不整理归属或调用日志处理器，仍需测量复制和入队成本 |
 | 文件日志后台输出 | 写盘已移到有界后台，保留结果/错误容量；消息固定、控制台/UI handler 与反馈锁仍需测量 |
 | `_decision_captured_at` 在 grab 返回后记录 | 当前字段不能证明真实源帧时刻；新增测量需要标明时间戳语义 |
 | GDI 观察还会执行定时 OCR | 需测量与控制线程同时运行时的资源争用，而非只跑空载算法基准 |

@@ -2,6 +2,22 @@
 
 import time
 import uuid
+from contextlib import contextmanager
+from zipfile import ZIP_STORED, ZipFile
+
+
+@contextmanager
+def evidence_archive(path, max_events):
+    """后台共用的写入事务；编码或替换失败也清理本次临时文件。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".zip.tmp")
+    try:
+        with ZipFile(temporary, "w", compression=ZIP_STORED) as archive:
+            yield archive
+        temporary.replace(path)
+        prune_evidence(path.parent, max_events)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def evidence_path(directory, prefix):

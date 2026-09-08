@@ -7,11 +7,10 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from zipfile import ZIP_STORED, ZipFile
 
 import cv2
 
-from bd2_fishing.infrastructure.diagnostics.retention import evidence_path, prune_evidence
+from bd2_fishing.infrastructure.diagnostics.retention import evidence_archive, evidence_path
 from bd2_fishing.runtime.context import current_round_id, get_logger
 
 log = get_logger(__name__)
@@ -156,10 +155,7 @@ class HookDiagnostics:
                     "full_hsv": cv2.countNonZero(frames["peak_mask.png"]),
                 }
             metadata["images"] = [name for name, frame in frames.items() if frame is not None]
-            path.parent.mkdir(parents=True, exist_ok=True)
-            temporary = path.with_suffix(".zip.tmp")
-            # 固定槽位循环覆盖，不累积目录；成功后原子替换旧包，避免混入旧截图。
-            with ZipFile(temporary, "w", compression=ZIP_STORED) as archive:
+            with evidence_archive(path, self.max_events) as archive:
                 for name, frame in frames.items():
                     if frame is None:
                         continue
@@ -170,8 +166,6 @@ class HookDiagnostics:
                 archive.writestr(
                     "metadata.json", json.dumps(metadata, ensure_ascii=False, indent=2)
                 )
-            temporary.replace(path)
-            prune_evidence(path.parent, self.max_events)
             job_log.info(
                 "上钩超时诊断已保存: %s (峰值=%d，有效帧=%d，无新图=%d)",
                 path,

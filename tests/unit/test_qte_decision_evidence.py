@@ -46,6 +46,7 @@ class DecisionEvidenceTests(unittest.TestCase):
                 session.begin_press(decision, control)
             control[:] = 0
             decision["reason"] = "changed_after_call"
+            session._drain_presses()
             session.samples.append((10.1, feedback))
             session.publish(session.tracker.observe("miss", 10.1, 0.95))
             session.close()
@@ -96,6 +97,7 @@ class DecisionEvidenceTests(unittest.TestCase):
                 session.begin_press(
                     dict(reason=reason), np.full((4, 5, 3), int(stamp * 10), np.uint8)
                 )
+        session._drain_presses()
         session.publish(session.tracker.observe("hit", 10.3, 0.95))
         session.samples.append((11, np.zeros((4, 5, 3), np.uint8)))
         session.publish(session.tracker.observe("fail", 11, 0.95))
@@ -118,6 +120,7 @@ class DecisionEvidenceTests(unittest.TestCase):
         session = FeedbackSession(self.config, self.window, observer)
         with patch("bd2_fishing.game.fishing.feedback.time.monotonic", return_value=10):
             session.begin_press(dict(reason="yellow_overlap"), np.zeros((4, 5, 3), np.uint8))
+        session._drain_presses()
         session.publish(session.tracker.observe("critical", 10.1, 0.95))
         self.assertFalse(session.press_decisions)
         self.assertFalse(session.pending_evidence)

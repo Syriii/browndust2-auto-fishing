@@ -314,9 +314,13 @@ class FishingBot:
             while True:
                 run_control.checkpoint()
                 if self.should_change_location(sct):
-                    island_travel.change_location(
-                        sct, self.ocr_context, self.selected_location_name
-                    )
+                    try:
+                        island_travel.change_location(
+                            sct, self.ocr_context, self.selected_location_name
+                        )
+                    except island_travel.LocationChangeFailed:
+                        self._record_incident(sct, "location_change_failed")
+                        raise
 
                 from bd2_fishing.runtime.context import fishing_round
 

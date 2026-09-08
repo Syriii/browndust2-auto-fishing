@@ -26,6 +26,10 @@ CHANGE_LOCATION_POLL_TOTAL_SECONDS = 10
 CHANGE_LOCATION_BTN_NAME = "更改"
 
 
+class LocationChangeFailed(RuntimeError):
+    """未能确认返回钓鱼页面，调用方必须停止后续游戏动作。"""
+
+
 MAP_TRANSITIONS = {
     FishingLocation.YANBO_LAKE: [
         {"name": FishingLocation.SHALLOW_SHORE, "position": (0.39, 0.53)},
@@ -108,3 +112,5 @@ def change_location(
         if check_if_have_keyword(sct, ocr_context, CHANGE_LOCATION_BTN_NAME):
             log.info(">>> 已成功切换地点")
             return
+        run_control.sleep(0.2)
+    raise LocationChangeFailed("换岛后未能确认钓鱼页面已恢复；请检查游戏页面后重新开始")
