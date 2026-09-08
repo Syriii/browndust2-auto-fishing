@@ -1,0 +1,190 @@
+"""为 RapidOCR 提供稳定的数据模型和项目内调用接口。"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass
+from typing import Any, Iterable
+
+import numpy as np
+
+from bd2_fishing.perception.ocr_types import OCRBox, OCRText
+from bd2_fishing.perception.tracing import OCRContextFilter
+
+
+def route_rapidocr_logs():
+    """在 RapidOCR 导入后调用；统一交给项目的控制台和滚动文件处理器。"""
+    logger = logging.getLogger("RapidOCR")
+    logger.handlers.clear()
+    logger.propagate = True
+    if not any(isinstance(item, OCRContextFilter) for item in logger.filters):
+        logger.addFilter(OCRContextFilter())
+
+
+@dataclass(frozen=True)
+class _RapidOCRPayload:
+    """把不同 RapidOCR 返回版本归一化后的内部载荷。"""
+
+    boxes: list[OCRBox]
+    texts: list[str]
+    scores: list[float]
+
+
+class RapidOCREngine:
+    """RapidOCR 轻量适配层，使项目不依赖第三方库的具体返回结构。"""
+
+    def __init__(
+        self,
+        *,
+        det_model_path: str | None = None,
+        cls_model_path: str | None = None,
+        rec_model_path: str | None = None,
+        rec_keys_path: str | None = None,
+        use_cls: bool = False,
+        **_: Any,
+    ) -> None:
+        from rapidocr import EngineType, RapidOCR
+
+        route_rapidocr_logs()
+
+        params: dict[str, Any] = {
+            "Global.use_cls": use_cls,
+            "Det.engine_type": EngineType.ONNXRUNTIME,
+            "Cls.engine_type": EngineType.ONNXRUNTIME,
+            "Rec.engine_type": EngineType.ONNXRUNTIME,
+        }
+
+        if det_model_path:
+            params["Det.model_path"] = det_model_path
+        if cls_model_path:
+            params["Cls.model_path"] = cls_model_path
+        if rec_model_path:
+            params["Rec.model_path"] = rec_model_path
+        if rec_keys_path:
+            params["Rec.rec_keys_path"] = rec_keys_path
+
+        self._engine = RapidOCR(params=params)
+        self._use_cls = use_cls
+
+    def detect(self, image: np.ndarray) -> list[OCRBox]:
+        """只执行文字检测，返回文本框而不识别内容。"""
+        payload = self._run(image, use_det=True, use_cls=False, use_rec=False)
+        return payload.boxes
+
+    def recognize(self, image: np.ndarray) -> OCRText | None:
+        """把整张图作为单个文本区域进行识别。"""
+        if image.size == 0:
+            return None
+
+        payload = self._run(image, use_det=False, use_cls=self._use_cls, use_rec=True)
+        if not payload.texts:
+            return None
+
+        text = payload.texts[0].strip()
+        if not text:
+            return None
+
+        score = payload.scores[0] if payload.scores else 0.0
+        return OCRText(text=text, score=score)
+
+    def detect_and_recognize(self, image: np.ndarray) -> list[OCRText]:
+        """检测并识别图中所有文本，并按返回索引关联文本框与置信度。"""
+        if image.size == 0:
+            return []
+
+        payload = self._run(image, use_det=True, use_cls=self._use_cls, use_rec=True)
+        recognized: list[OCRText] = []
+
+        for index, text in enumerate(payload.texts):
+            clean_text = text.strip()
+            if not clean_text:
+                continue
+            score = payload.scores[index] if index < len(payload.scores) else 0.0
+            box = payload.boxes[index] if index < len(payload.boxes) else None
+            recognized.append(OCRText(text=clean_text, score=score, box=box))
+
+        return recognized
+
+    def recognize_region(
+        self,
+        image: np.ndarray,
+        *,
+        left: int,
+        top: int,
+        right: int,
+        bottom: int,
+    ) -> list[OCRText]:
+        """裁剪指定局部区域后执行完整 OCR。"""
+        roi = image[top:bottom, left:right]
+        return self.detect_and_recognize(roi)
+
+    def _run(
+        self,
+        image: np.ndarray,
+        *,
+        use_det: bool,
+        use_cls: bool,
+        use_rec: bool,
+    ) -> _RapidOCRPayload:
+        result = self._engine(image, use_det=use_det, use_cls=use_cls, use_rec=use_rec)
+        return self._extract_payload(result)
+
+    def _extract_payload(self, result: Any) -> _RapidOCRPayload:
+        """兼容 RapidOCR 直接返回结果或 ``(结果, 耗时)`` 元组的形式。"""
+        payload = result[0] if isinstance(result, tuple) else result
+        if payload is None:
+            return _RapidOCRPayload(boxes=[], texts=[], scores=[])
+
+        boxes = self._extract_boxes(payload)
+        texts = self._extract_texts(payload)
+        scores = self._extract_scores(payload)
+        return _RapidOCRPayload(boxes=boxes, texts=texts, scores=scores)
+
+    def _extract_boxes(self, payload: Any) -> list[OCRBox]:
+        raw_boxes = self._extract_value(payload, "boxes", "dt_boxes", default=[])
+        raw_scores = self._extract_value(payload, "scores", default=[])
+        boxes: list[OCRBox] = []
+        for index, raw_box in enumerate(self._as_list(raw_boxes)):
+            if raw_box is None:
+                continue
+            points = tuple(self._normalize_point(point) for point in raw_box)
+            if not points:
+                continue
+            score = float(raw_scores[index]) if index < len(raw_scores) else 0.0
+            boxes.append(OCRBox(points=points, score=score))
+        return boxes
+
+    def _extract_texts(self, payload: Any) -> list[str]:
+        raw_texts = self._extract_value(payload, "txts", "texts", default=[])
+        return [str(text) for text in self._as_list(raw_texts)]
+
+    def _extract_scores(self, payload: Any) -> list[float]:
+        raw_scores = self._extract_value(payload, "scores", default=[])
+        return [float(score) for score in self._as_list(raw_scores)]
+
+    def _extract_value(self, payload: Any, *keys: str, default: Any) -> Any:
+        """同时兼容字典和对象属性，并尝试不同版本使用的字段名。"""
+        if isinstance(payload, dict):
+            for key in keys:
+                if key in payload:
+                    return payload[key]
+            return default
+
+        for key in keys:
+            if hasattr(payload, key):
+                return getattr(payload, key)
+
+        return default
+
+    def _normalize_point(self, point: Iterable[Any]) -> tuple[int, int]:
+        x, y = point
+        return (int(round(float(x))), int(round(float(y))))
+
+    def _as_list(self, value: Any) -> list[Any]:
+        if value is None:
+            return []
+        if isinstance(value, np.ndarray):
+            return value.tolist()
+        if isinstance(value, (list, tuple)):
+            return list(value)
+        return [value]

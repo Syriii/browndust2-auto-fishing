@@ -1,0 +1,35 @@
+name: Python checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.4"
+      - name: Install locked development environment
+        run: |
+          python -m pip install -r requirements/windows-py312.lock.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m pip install --no-deps --no-build-isolation -e .
+      - name: Lint and format
+        run: |
+          python -m ruff check src scripts tests main.py setup.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m ruff format --check src scripts tests main.py setup.py
+      - name: Architecture and offline regression
+        run: |
+          python -X utf8 -B scripts/checks/check_architecture.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -X utf8 -B -m unittest discover -s tests -v
+      - name: Build wheel
+        run: python -m pip wheel --no-deps --no-build-isolation . -w .local/build/wheels
