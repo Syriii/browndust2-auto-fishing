@@ -14,6 +14,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from bd2_fishing.game.fishing.page import FishingPageReader
 from bd2_fishing.game.fishing.settlement_rules import (
     CatchResult,
     _evidence_token,
@@ -23,6 +24,7 @@ from bd2_fishing.game.fishing.settlement_rules import (
 from bd2_fishing.game.fishing.tracing import QTEControlTimeout
 from bd2_fishing.infrastructure import paths as paths
 from bd2_fishing.infrastructure.diagnostics import bundle_writer
+from bd2_fishing.infrastructure.settings import bounded_float
 from bd2_fishing.infrastructure.windows import window as window
 from bd2_fishing.infrastructure.windows.gdi import FeedbackCapture
 from bd2_fishing.perception.ocr_types import OCRText
@@ -117,6 +119,7 @@ class CatchObserver:
             for dx in (-1, 0, 1)
             for dy in (-1, 0, 1)
         ]
+        self.page_reader = FishingPageReader(window)
 
     def observe_timer(self, frame, stamp):
         if not self.ocr_lock.acquire(blocking=False):
@@ -187,14 +190,15 @@ class CatchObserver:
         self.stop_observing()
         run_control.checkpoint()
         guard = window.WindowGuard("BrownDust II", self.window, require_foreground=True)
-        budget = min(4.0, max(0.0, self.config.getfloat("time", "fish_end_wait_time", fallback=4)))
+        budget = bounded_float(self.config, "time", "fish_end_wait_time", 4, 0, 30)
         deadline = time.monotonic() + budget
         frame, captured, panel = None, None, False
         self.evidence_metadata["panel_open"] = False
         samples = []
+        idle_since = None
         with FeedbackCapture(self.window) as capture:
             # 同时限制次数与时间；逐次响应取消/窗口保护，只保留首帧与最新帧。
-            for _ in range(21):
+            for _ in range(151):
                 run_control.checkpoint()
                 guard()
                 candidate = capture.grab()
@@ -202,11 +206,28 @@ class CatchObserver:
                 if candidate is not None:
                     frame, captured = candidate, stamp
                     panel = self._panel_open(frame)
+                    idle, scores = self.page_reader.inspect(frame) if not panel else (False, {})
+                    idle_since = (
+                        stamp if idle and idle_since is None else idle_since if idle else None
+                    )
+                    idle_confirmed = idle_since is not None and stamp - idle_since >= 0.19
                     if "settlement_first.png" not in self.evidence_frames:
                         self.evidence_frames["settlement_first.png"] = frame.copy()
                         self.evidence_metadata["first_settlement_at_monotonic"] = stamp
                     self.evidence_frames["settlement.png"] = frame.copy()
-                    self.evidence_metadata.update(captured_at_monotonic=stamp, panel_open=panel)
+                    self.evidence_metadata.update(
+                        captured_at_monotonic=stamp,
+                        panel_open=panel,
+                        idle_scores=scores,
+                        page_state="panel"
+                        if panel
+                        else "idle"
+                        if idle_confirmed
+                        else "unrecognized",
+                    )
+                else:
+                    idle_since = None
+                    idle_confirmed = False
                 samples.append(
                     dict(
                         captured_at_monotonic=stamp,
@@ -215,7 +236,7 @@ class CatchObserver:
                     )
                 )
                 self.evidence_metadata["settlement_wait_samples"] = samples
-                if panel or stamp >= deadline:
+                if panel or idle_confirmed or stamp >= deadline:
                     break
                 run_control.sleep(min(0.2, max(0, deadline - stamp)))
         if frame is None:
@@ -289,6 +310,49 @@ class CatchObserver:
             self.evidence_frames["last_timer_qte.png"] = readings[-1][2]
         if distance_reading is not None:
             self.evidence_frames["distance_qte.png"] = distance_reading[2]
+
+    def inspect_current_page(self):
+        """动作前重新截图；不沿用等待前的面板判定。"""
+        run_control.checkpoint()
+        window.WindowGuard("BrownDust II", self.window, require_foreground=True)()
+        with FeedbackCapture(self.window) as capture:
+            frame = capture.grab()
+        run_control.checkpoint()
+        stamp = time.monotonic()
+        if frame is None:
+            state, scores = "unavailable", {}
+        else:
+            panel = self._panel_open(frame)
+            idle, scores = self.page_reader.inspect(frame) if not panel else (False, {})
+            state = "panel" if panel else "idle" if idle else "unrecognized"
+            self.evidence_frames["resume_latest.png"] = frame.copy()
+            if "resume_first.png" not in self.evidence_frames:
+                self.evidence_frames["resume_first.png"] = frame.copy()
+        self.evidence_metadata["resume_check"] = dict(
+            state=state, captured_at_monotonic=stamp, idle_scores=scores
+        )
+        return state
+
+    def wait_until_idle(self):
+        """关闭面板后或续钓前，需要两次间隔观察确认操作控件已恢复。"""
+        budget = bounded_float(self.config, "time", "fish_end_wait_time", 4, 0, 30)
+        deadline = time.monotonic() + budget
+        idle_since = None
+        for _ in range(151):
+            state = self.inspect_current_page()
+            stamp = time.monotonic()
+            if state == "idle":
+                if idle_since is not None and stamp - idle_since >= 0.19:
+                    self.evidence_metadata["resume_confirmed"] = True
+                    return
+                idle_since = stamp if idle_since is None else idle_since
+            else:
+                idle_since = None
+            if stamp >= deadline:
+                break
+            run_control.sleep(min(0.2, max(0, deadline - stamp)))
+        self.evidence_metadata["resume_confirmed"] = False
+        raise TimeoutError("未确认钓鱼待机控件恢复，已停止，未重新抛竿")
 
     def finalize(self, reason):
         """观察线程关闭后落盘完整账本；这里只使用缓存，停止后不截图或 OCR。"""
@@ -371,6 +435,20 @@ class CatchObserver:
         if self.result.status == "unknown":
             self.result = CatchResult("interrupted", "任务停止，未完成本轮结算观察")
         self.log.debug("结算观察停止: 状态=%s 原因=%s", self.result.status, self.result.reason)
+
+
+def confirm_ready_for_next_cast(config, region):
+    """轮次间等待/换点之后重新检查，避免用数秒前的待机画面授权抛竿。"""
+    observer = CatchObserver(None, config, region)
+    try:
+        observer.wait_until_idle()
+    except BaseException:
+        try:
+            observer.finalize("resume_unconfirmed")
+            observer.wait_for_evidence()
+        except Exception:
+            log.exception("续钓检查证据收尾失败，保留原停止原因")
+        raise
 
 
 def run_observed_qte(strategy, capture):

@@ -1,7 +1,10 @@
 """桌面页面使用的设置、地点选项与任务服务。"""
 
 import configparser
+import json
+import platform
 import time
+import uuid
 from pathlib import Path
 
 from bd2_fishing.app.preferences import FIELDS, form_values, validate_form
@@ -70,6 +73,26 @@ class DesktopServices:
             scale_percent=round(dpi / 96 * 100) if dpi else None,
             wait_precision=wait_precision,
         )
+
+    def calibrate_timing(self, cancel):
+        from bd2_fishing.app.calibration import measure_waits
+
+        device = self.inspect_device()
+        report = measure_waits(cancel)
+        report.update(device=device, platform=platform.platform(), machine=platform.machine())
+        if cancel.is_set():
+            raise RuntimeError("校准已取消")
+        directory = self.config_path.parent / "calibration"
+        directory.mkdir(parents=True, exist_ok=True)
+        target = directory / "latest.json"
+        temporary = directory / f".{uuid.uuid4().hex}.tmp"
+        try:
+            temporary.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf8")
+            temporary.replace(target)
+        finally:
+            temporary.unlink(missing_ok=True)
+        report["report_path"] = str(target)
+        return report
 
     def create_task(self, target, *, preview=False):
         if preview:

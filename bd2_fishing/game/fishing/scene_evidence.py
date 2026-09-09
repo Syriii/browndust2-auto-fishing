@@ -17,6 +17,7 @@ class SceneRecorder:
     MAX_FRAMES = 80
     MAX_BYTES = 12 * 1024 * 1024
     MAX_FRAME_BYTES = 6 * 1024 * 1024
+    MAX_PARTS = 64
 
     def __init__(self, config, window, region, round_id, directory):
         self.config, self.window, self.region = config, window, region
@@ -43,6 +44,10 @@ class SceneRecorder:
         self.submitted = None
         self.last_observed = None
         self.sample_gaps = 0
+        self.scene_id = uuid.uuid4().hex
+        self.part = 0
+        self.last_flush_attempt = float("-inf")
+        self.rejected_parts = 0
 
     def press(self, attempt, stamp, decision):
         if not self.closed:
@@ -55,6 +60,15 @@ class SceneRecorder:
             if priorities[kind] > priorities[self.frames[stamp][2]]:
                 self.frames[stamp][2] = kind
             return
+        if (
+            self.frames
+            and (len(self.frames) >= self.MAX_FRAMES or self.bytes + frame.nbytes > self.MAX_BYTES)
+            and stamp - self.last_flush_attempt >= 0.5
+            and self.part < self.MAX_PARTS - 1
+        ):
+            # 满段先非阻塞提交后台，保存已有前后文；队列过载时才退回有界淘汰。
+            self.last_flush_attempt = stamp
+            self._submit_part([], "capacity", final=False)
         while self.frames and (
             len(self.frames) >= self.MAX_FRAMES or self.bytes + frame.nbytes > self.MAX_BYTES
         ):
@@ -106,7 +120,10 @@ class SceneRecorder:
             if len(self.events) < 64:
                 self.events.append(
                     dict(
+                        event_id=f"{self.scene_id}-{len(self.events) + 1:03d}",
                         observed_at=stamp,
+                        context_start=self.recent[0][0] if self.recent else stamp,
+                        context_end=stamp + 0.4,
                         candidates=sorted(confirmed),
                         features=features,
                         classification="unconfirmed",
@@ -138,6 +155,14 @@ class SceneRecorder:
             self._keep(self.recent[-1], "final")
         if not self.frames and not self.dropped_frames:
             return
+        try:
+            self._submit_part(feedback, reason, final=True)
+        finally:
+            self.frames.clear()
+            self.recent.clear()
+            self.bytes = 0
+
+    def _submit_part(self, feedback, reason, *, final):
         category = "candidates" if self.events else "routine"
         images, records = {}, []
         for i, (stamp, (frame, features, kind)) in enumerate(sorted(self.frames.items())):
@@ -146,8 +171,25 @@ class SceneRecorder:
             records.append(
                 dict(file=filename, captured_at_monotonic=stamp, selection=kind, features=features)
             )
+        locations = {record["captured_at_monotonic"]: record["file"] for record in records}
+        candidates = []
+        for event in self.events:
+            location = event.get("evidence_location")
+            if event["observed_at"] in locations:
+                location = dict(part=self.part, file=locations[event["observed_at"]])
+            candidates.append(
+                dict(
+                    event,
+                    evidence_file=locations.get(event["observed_at"]),
+                    evidence_location=location,
+                )
+            )
         metadata = dict(
             evidence_id=uuid.uuid4().hex,
+            scene_id=self.scene_id,
+            part=self.part,
+            final_part=final,
+            rejected_part_submissions=self.rejected_parts,
             round_id=self.round_id,
             event="qte_scene_observation",
             saved_at_unix=time.time(),
@@ -157,20 +199,7 @@ class SceneRecorder:
             control_region=self.signals.control_region.as_tuple(),
             crops=self.signals.crops,
             frames=records,
-            candidates=[
-                dict(
-                    event,
-                    evidence_file=next(
-                        (
-                            record["file"]
-                            for record in records
-                            if record["captured_at_monotonic"] == event["observed_at"]
-                        ),
-                        None,
-                    ),
-                )
-                for event in self.events
-            ],
+            candidates=candidates,
             attempts=list(self.attempts),
             feedback=list(feedback),
             close_reason=reason,
@@ -191,19 +220,26 @@ class SceneRecorder:
             "独立观察帧不是控制决策帧。未知、短暂、被遮挡机制可能未触发候选；"
             "时间线补充排查，受采样、内存和磁盘保留上限约束。",
         )
-        try:
-            self.submitted = bundle_writer.submit(
-                self.directory / category,
-                self.config.getint(
-                    "diagnostics",
-                    "scene_max_events" if self.events else "scene_routine_max_events",
-                    fallback=100 if self.events else 10,
-                ),
-                metadata,
-                images,
-                self.done,
-            )
-        finally:
+        done = threading.Event()
+        self.submitted = bundle_writer.submit(
+            self.directory / category,
+            self.config.getint(
+                "diagnostics",
+                "scene_max_events" if self.events else "scene_routine_max_events",
+                fallback=100 if self.events else 10,
+            ),
+            metadata,
+            images,
+            done,
+        )
+        if self.submitted:
+            self.last_flush_attempt = float("-inf")
+            self.done = done
+            self.part += 1
+            for event, saved in zip(self.events, candidates):
+                if saved["evidence_location"] is not None:
+                    event["evidence_location"] = saved["evidence_location"]
             self.frames.clear()
-            self.recent.clear()
             self.bytes = 0
+        else:
+            self.rejected_parts += 1

@@ -124,6 +124,9 @@ class CatchResultTests(unittest.TestCase):
         strategy = qte_strategy.FrostStraitQTEStrategy(self.config(), geometry.Rect(0, 0, 875, 492))
         strategy.fish_end_wait_time = 4
         strategy.catch_observer = Mock()
+        strategy.catch_observer.evidence_metadata = {"panel_open": True}
+        strategy.catch_observer.result.status = "caught"
+        strategy.catch_observer.inspect_current_page.return_value = "panel"
         with (
             patch.object(qte_strategy.time, "monotonic", side_effect=[10, 11.5]),
             patch.object(run_control, "sleep") as sleep,
@@ -134,6 +137,7 @@ class CatchResultTests(unittest.TestCase):
         self.assertEqual(sleep.call_args_list[0].args, (2.5,))
         move.assert_called_once_with(437, 246)
         click.assert_called_once_with()
+        strategy.catch_observer.wait_until_idle.assert_called_once()
 
     def test_stop_during_settlement_cannot_reach_click(self):
         strategy = qte_strategy.FrostStraitQTEStrategy(self.config(), geometry.Rect(0, 0, 875, 492))
@@ -227,6 +231,7 @@ class CatchResultTests(unittest.TestCase):
             patch("bd2_fishing.game.fishing.settlement.window.WindowGuard"),
             patch("bd2_fishing.game.fishing.settlement.FeedbackCapture") as capture,
             patch.object(observer, "_panel_open", return_value=True),
+            patch.object(observer, "wait_until_idle"),
             patch(
                 "bd2_fishing.game.fishing.settlement.read_settlement_texts",
                 side_effect=ValueError("OCR test"),

@@ -13,16 +13,20 @@ class PreferencesDialog:
         self.services, self.preview = services, preview
         self.window = tk.Toplevel(parent)
         self.window.title("设备与时延设置")
-        self.window.geometry("690x640")
-        self.window.minsize(650, 620)
+        self.window.geometry("690x760")
+        self.window.minsize(650, 720)
         self.window.transient(parent)
         self.window.grab_set()
+        self.cancel_event = threading.Event()
+        self._poll_id = None
+        self.window.protocol("WM_DELETE_WINDOW", self.close)
         self.values = {k: tk.StringVar(value=v) for k, v in services.preference_values().items()}
         self.mode = tk.StringVar(value="自动适配")
         self._sync_mode()
         self.results = queue.Queue(maxsize=1)
         self.busy = False
         self.device = None
+        self.calibration = None
         self.device_text = tk.StringVar(
             value="点击检测，读取游戏客户区、所在显示器及 DPI；不发送游戏输入。"
         )
@@ -81,13 +85,25 @@ class PreferencesDialog:
             wraplength=580,
             style="Hint.TLabel",
         ).grid(row=8, column=0, columnspan=3, sticky="w", pady=14)
+        self.calibrate_button = ttk.Button(timing, text="自动校准基础间隔", command=self.calibrate)
+        self.calibrate_button.grid(row=9, column=0, sticky="w")
+        self.apply_calibration_button = ttk.Button(
+            timing, text="填入建议值", command=self.apply_calibration, state="disabled"
+        )
+        self.apply_calibration_button.grid(row=9, column=1, columnspan=2, sticky="w")
+        self.calibration_text = tk.StringVar(
+            value="测量约 2 秒，只调整检测/反馈间隔建议；按住时间需实测。"
+        )
+        ttk.Label(
+            timing, textvariable=self.calibration_text, wraplength=580, style="Hint.TLabel"
+        ).grid(row=10, column=0, columnspan=3, sticky="w", pady=8)
         ttk.Label(outer, text="保存后在下次开始生效；运行期间不能调整。", style="Hint.TLabel").pack(
             anchor="w", pady=12
         )
         buttons = ttk.Frame(outer)
         buttons.pack(fill="x")
         ttk.Button(buttons, text="恢复表单默认值", command=self.defaults).pack(side="left")
-        ttk.Button(buttons, text="取消", command=self.window.destroy).pack(side="right")
+        ttk.Button(buttons, text="取消", command=self.close).pack(side="right")
         ttk.Button(buttons, text="保存设置", command=self.save).pack(side="right", padx=8)
 
     def _sync_mode(self):
@@ -111,7 +127,42 @@ class PreferencesDialog:
         except Exception as exc:
             messagebox.showerror("无法保存设置", str(exc), parent=self.window)
             return
+        self.close()
+
+    def close(self):
+        self.cancel_event.set()
+        if self._poll_id is not None:
+            self.window.after_cancel(self._poll_id)
+            self._poll_id = None
         self.window.destroy()
+
+    def calibrate(self):
+        if self.busy or self.preview:
+            return
+        self.calibration = None
+        self.apply_calibration_button.configure(state="disabled")
+        self.calibration_text.set("正在测量本机等待精度…")
+        self._start_job("calibration", lambda: self.services.calibrate_timing(self.cancel_event))
+
+    def apply_calibration(self):
+        if self.calibration:
+            for key, value in self.calibration["recommendation"].items():
+                self.values[key].set(value)
+
+    def _start_job(self, kind, action):
+        self.busy = True
+        self.detect_button.configure(state="disabled")
+        self.calibrate_button.configure(state="disabled")
+
+        def inspect():
+            try:
+                result = action()
+            except Exception as exc:
+                result = str(exc)
+            self.results.put_nowait((kind, result))
+
+        threading.Thread(target=inspect, name="device-inspector", daemon=True).start()
+        self._poll_id = self.window.after(80, self._poll)
 
     def detect(self):
         if self.busy:
@@ -119,30 +170,41 @@ class PreferencesDialog:
         if self.preview:
             self.device_text.set("界面验证模式不连接游戏。")
             return
-        self.busy = True
         self.device = None
-        self.detect_button.configure(state="disabled")
         self.use_button.configure(state="disabled")
         self.device_text.set("正在检测游戏窗口与显示器…")
 
-        def inspect():
-            try:
-                result = self.services.inspect_device()
-            except Exception as exc:
-                result = str(exc)
-            self.results.put(result)
-
-        threading.Thread(target=inspect, name="device-inspector", daemon=True).start()
-        self.window.after(80, self._poll)
+        self._start_job("device", self.services.inspect_device)
 
     def _poll(self):
+        self._poll_id = None
         try:
-            result = self.results.get_nowait()
+            kind, result = self.results.get_nowait()
         except queue.Empty:
-            self.window.after(80, self._poll)
+            self._poll_id = self.window.after(80, self._poll)
             return
         self.busy = False
         self.detect_button.configure(state="normal")
+        self.calibrate_button.configure(state="normal")
+        if kind == "calibration":
+            if isinstance(result, str):
+                self.calibration_text.set(result)
+            else:
+                self.calibration = result
+                recommendation = result["recommendation"]
+                self.calibration_text.set(
+                    (
+                        f"建议检测 {recommendation['loop_sleep_seconds']}ms、反馈 {recommendation['feedback_poll_seconds']}ms。\n"
+                        if recommendation
+                        else ""
+                    )
+                    + result["reason"]
+                    + "\n"
+                    + result["limitation"]
+                )
+                if recommendation:
+                    self.apply_calibration_button.configure(state="normal")
+            return
         if isinstance(result, str):
             self.device_text.set(result)
         else:

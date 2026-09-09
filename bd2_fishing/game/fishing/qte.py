@@ -250,6 +250,8 @@ class BaseQTEStrategy:
     def _finish_fishing(self) -> None:
         started = time.monotonic()
         catch_observer = getattr(self, "catch_observer", None)
+        if catch_observer is None:
+            raise RuntimeError("结算观察器不可用，已停止，未关闭页面或重新抛竿")
         if catch_observer is not None:
             try:
                 catch_observer.finish()
@@ -260,13 +262,41 @@ class BaseQTEStrategy:
                     "unknown", f"结算观察失败：{type(exc).__name__}"
                 )
                 log.exception("结算观察失败；不把 QTE 退出当作捕获成功")
-            if catch_observer.evidence_metadata.get("panel_open") is False:
+                if (
+                    catch_observer.evidence_metadata.get("panel_open") is not True
+                    and catch_observer.evidence_metadata.get("page_state") != "idle"
+                ):
+                    raise RuntimeError("结算观察失败，已停止，未操作页面") from exc
+            if (
+                catch_observer.evidence_metadata.get("panel_open") is not True
+                and catch_observer.evidence_metadata.get("page_state") != "idle"
+            ):
                 raise TimeoutError("等待后仍未确认结算面板，已停止；请确认游戏页面后重新开始")
+        unconfirmed = (
+            0
+            if catch_observer.result.status == "caught"
+            else getattr(self, "_unconfirmed_rounds", 0) + 1
+        )
+        self._unconfirmed_rounds = unconfirmed
+        limit = self._feedback_config.getint("recovery", "max_unconfirmed_rounds", fallback=2)
+        if not 0 <= limit <= 5:
+            raise ValueError("未确认续钓上限必须为 0–5")
+        if unconfirmed > limit:
+            raise RuntimeError("连续未确认轮次达到续钓上限，已停止，请检查证据")
         run_control.sleep(max(0, self.fish_end_wait_time - (time.monotonic() - started)))
+        page = catch_observer.inspect_current_page()
+        if page == "idle":
+            catch_observer.wait_until_idle()
+            return
+        if page != "panel":
+            raise TimeoutError("结算页面已变化，已停止，未发送关闭点击")
         window_center_x, window_center_y = self.region.center
         pydirectinput.moveTo(window_center_x, window_center_y)
         run_control.sleep(0.2)
+        if catch_observer.inspect_current_page() != "panel":
+            raise TimeoutError("关闭前未再次确认面板，已停止，未发送点击")
         pydirectinput.click()
+        catch_observer.wait_until_idle()
 
     def _on_control_timeout(self, sct) -> None:
         """期限后只读核对现场并停止；不因循环结束而关闭未知页面或重抛。"""

@@ -83,6 +83,7 @@ class LoggingPolicyTests(unittest.TestCase):
             ),
             patch("bd2_fishing.app.fishing_task.window.WindowGuard"),
             patch("bd2_fishing.app.fishing_task.DxCameraCapture"),
+            patch("bd2_fishing.game.fishing.settlement.confirm_ready_for_next_cast"),
             patch("bd2_fishing.runtime.control.sleep"),
             patch(
                 "bd2_fishing.game.fishing.actions.cast_rod",

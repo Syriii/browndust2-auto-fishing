@@ -46,6 +46,9 @@ def main():
         assert not app.controller.running
         app.preferences_button.invoke()
         dialog = app.preferences
+        # 主窗口隐藏时，解除 transient 才能实际布局独立设置页。
+        dialog.window.transient("")
+        dialog.window.deiconify()
         dialog.window.update_idletasks()
         services.inspect_device = lambda: dict(
             width=945,
@@ -61,6 +64,25 @@ def main():
         pump(lambda: dialog.device is not None)
         dialog.use_button.invoke()
         assert dialog.values["expected_window_width"].get() == "945"
+        services.calibrate_timing = lambda cancel: dict(
+            recommendation={"loop_sleep_seconds": "5", "feedback_poll_seconds": "10"},
+            reason="模拟时钟校准",
+            limitation="只验证页面，不操作游戏",
+        )
+        dialog.calibrate_button.invoke()
+        pump(lambda: dialog.calibration is not None)
+        dialog.apply_calibration_button.invoke()
+        assert dialog.values["loop_sleep_seconds"].get() == "5"
+        assert dialog.values["qte_hold_seconds"].get() == "100"
+        assert services.load_settings().getfloat("time", "loop_sleep_seconds") == 0.02
+        dialog.calibrate_button.master.master.select(dialog.calibrate_button.master)
+        dialog.window.update_idletasks()
+        for widget in (dialog.calibrate_button, dialog.apply_calibration_button):
+            assert widget.winfo_y() + widget.winfo_height() <= widget.master.winfo_height(), (
+                widget.winfo_y(),
+                widget.winfo_height(),
+                widget.master.winfo_height(),
+            )
         dialog.values["loop_sleep_seconds"].set("10")
         dialog.values["qte_hold_seconds"].set("80")
         dialog.save()

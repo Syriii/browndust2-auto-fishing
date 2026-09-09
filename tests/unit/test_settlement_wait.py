@@ -7,8 +7,10 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import cv2
+import numpy as np
 
 from bd2_fishing.game.fishing import qte, settlement
+from bd2_fishing.game.fishing.page import FishingPageReader
 from bd2_fishing.infrastructure import settings
 from bd2_fishing.perception.ocr_types import OCRText
 from bd2_fishing.runtime import control
@@ -25,6 +27,7 @@ class SettlementWaitTests(unittest.TestCase):
         root = Path(__file__).parents[1] / "fixtures" / "catch_result"
         self.loading = cv2.imread(str(root / "loading_945.png"))
         self.caught = cv2.imread(str(root / "caught_ready_20260909.png"))
+        self.idle = cv2.imread(str(root / "idle_20260909.png"))
         self.clock = 0.0
         self.stack = ExitStack()
         self.addCleanup(self.stack.close)
@@ -96,3 +99,88 @@ class SettlementWaitTests(unittest.TestCase):
         self.assertEqual(self.camera.grab.call_count, 3)
         self.assertFalse(self.observer.evidence_metadata["panel_open"])
         self.ocr.assert_not_called()
+
+    def test_configured_long_budget_really_observes_after_four_seconds(self):
+        self.config.set("time", "fish_end_wait_time", "6")
+        self.camera.grab.side_effect = [self.loading] * 25 + [self.caught]
+        self.observer.finish()
+        self.assertGreater(self.clock, 4)
+        self.assertEqual(self.observer.result.status, "caught")
+
+    def test_idle_requires_two_separated_valid_frames_and_keeps_unknown(self):
+        self.camera.grab.side_effect = [self.idle, None, self.idle]
+        self.observer.finish()
+        self.assertNotEqual(self.observer.evidence_metadata["page_state"], "idle")
+        self.camera.grab.side_effect = None
+        self.camera.grab.return_value = self.idle
+        self.observer.finish()
+        self.assertEqual(self.observer.evidence_metadata["page_state"], "idle")
+        self.assertEqual(self.observer.result.status, "unknown")
+
+    def test_missing_or_partial_controls_never_enable_recovery(self):
+        for frame in (self.loading, self.caught, np.zeros_like(self.idle), self.idle[:100]):
+            self.assertFalse(self.observer.page_reader.inspect(frame)[0])
+        frame = self.idle.copy()
+        frame[:, :200] = 0
+        self.assertFalse(self.observer.page_reader.inspect(frame)[0])
+
+    def test_real_idle_variants_and_independent_frame_match_without_reward_false_positive(self):
+        root = Path(__file__).parents[1] / "fixtures" / "catch_result"
+        for name in (
+            "normal.png",
+            "normal_945.png",
+            "escaped_scene.png",
+            "idle_holdout_20260909.png",
+        ):
+            frame = cv2.imread(str(root / name))
+            height, width = frame.shape[:2]
+            self.assertTrue(FishingPageReader(Rect(0, 0, width, height)).inspect(frame)[0], name)
+
+    def test_idle_recovery_does_not_click_and_continuation_is_bounded(self):
+        strategy = qte.FrostStraitQTEStrategy(self.config, self.region)
+        strategy.catch_observer = self.observer
+        self.camera.grab.return_value = self.idle
+        with patch.object(qte.pydirectinput, "click") as click:
+            strategy._finish_fishing()
+            strategy._finish_fishing()
+            with self.assertRaisesRegex(RuntimeError, "续钓上限"):
+                strategy._finish_fishing()
+        click.assert_not_called()
+        self.assertTrue(self.observer.evidence_metadata["resume_confirmed"])
+        self.assertEqual(self.observer.result.status, "unknown")
+
+    def test_page_change_before_click_never_clicks(self):
+        strategy = qte.FrostStraitQTEStrategy(self.config, self.region)
+        strategy.catch_observer = self.observer
+        self.camera.grab.side_effect = [self.caught, self.caught, self.loading]
+        with (
+            patch.object(qte.pydirectinput, "moveTo"),
+            patch.object(qte.pydirectinput, "click") as click,
+        ):
+            with self.assertRaisesRegex(TimeoutError, "关闭前"):
+                strategy._finish_fishing()
+        click.assert_not_called()
+
+    def test_panel_still_visible_after_click_does_not_repeat_click(self):
+        strategy = qte.FrostStraitQTEStrategy(self.config, self.region)
+        strategy.catch_observer = self.observer
+        self.camera.grab.return_value = self.caught
+        with (
+            patch.object(qte.pydirectinput, "moveTo"),
+            patch.object(qte.pydirectinput, "click") as click,
+        ):
+            with self.assertRaisesRegex(TimeoutError, "未确认钓鱼待机"):
+                strategy._finish_fishing()
+        click.assert_called_once()
+        self.assertEqual(self.observer.result.status, "caught")
+
+    def test_observer_failure_without_page_evidence_never_clicks(self):
+        strategy = qte.FrostStraitQTEStrategy(self.config, self.region)
+        strategy.catch_observer = self.observer
+        with (
+            patch.object(self.observer, "finish", side_effect=ValueError("broken")),
+            patch.object(qte.pydirectinput, "click") as click,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "结算观察失败"):
+                strategy._finish_fishing()
+        click.assert_not_called()

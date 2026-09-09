@@ -126,8 +126,11 @@ class SceneEvidenceTests(unittest.TestCase):
         recorder.MAX_FRAMES = 5
         recorder.MAX_BYTES = self.frame().nbytes * 3
         special = self.frame(special=True)
-        for i in range(100):
-            recorder.observe(special, i * 0.1)
+        with patch(
+            "bd2_fishing.game.fishing.scene_evidence.bundle_writer.submit", return_value=False
+        ):
+            for i in range(100):
+                recorder.observe(special, i * 0.1)
         self.assertLessEqual(len(recorder.frames), 3)
         self.assertLessEqual(recorder.bytes, recorder.MAX_BYTES)
         self.assertGreater(recorder.dropped_frames, 0)
@@ -147,16 +150,26 @@ class SceneEvidenceTests(unittest.TestCase):
         recorder = self.recorder()
         frame = self.frame(special=True)
         recorder.MAX_BYTES = frame.nbytes * 4
-        for i in range(101):
-            recorder.observe(frame, i * 0.1)
-        with patch("bd2_fishing.game.fishing.scene_evidence.bundle_writer.submit") as submit:
+        with patch(
+            "bd2_fishing.game.fishing.scene_evidence.bundle_writer.submit", return_value=True
+        ) as submit:
+            for i in range(101):
+                recorder.observe(frame, i * 0.1)
             recorder.close([], "cancelled")
         metadata = submit.call_args.args[2]
-        frames = metadata["frames"]
-        self.assertLessEqual(len(frames), 4)
+        parts = [call.args[2] for call in submit.call_args_list]
+        self.assertGreater(len(parts), 1)
+        frames = [frame for part in parts for frame in part["frames"]]
+        self.assertTrue(all(len(part["frames"]) <= 4 for part in parts))
         self.assertIn(0.1, [f["captured_at_monotonic"] for f in frames])
         self.assertEqual(frames[-1]["captured_at_monotonic"], 10)
-        self.assertIsNotNone(metadata["candidates"][0]["evidence_file"])
+        location = metadata["candidates"][0]["evidence_location"]
+        self.assertIsNotNone(location)
+        linked = parts[location["part"]]["frames"]
+        self.assertTrue(
+            any(f["file"] == location["file"] and f["captured_at_monotonic"] == 0.1 for f in linked)
+        )
+        self.assertTrue(metadata["final_part"])
         self.assertEqual(
             sum(metadata["dropped_frame_reasons"].values()), metadata["dropped_frames"]
         )
@@ -167,9 +180,62 @@ class SceneEvidenceTests(unittest.TestCase):
         recorder.MAX_BYTES = frame.nbytes * 2
         recorder._keep((1, frame, {}), "first_candidate")
         recorder._keep((2, frame, {}), "candidate")
-        recorder._keep((3, frame, {}), "periodic")
+        with patch(
+            "bd2_fishing.game.fishing.scene_evidence.bundle_writer.submit", return_value=False
+        ):
+            recorder._keep((3, frame, {}), "periodic")
         self.assertEqual(set(recorder.frames), {1, 2})
         self.assertEqual(recorder.drop_reasons["rejected_periodic"], 1)
+
+    def test_healthy_rollover_preserves_every_selected_frame_and_caps_parts(self):
+        recorder = self.recorder()
+        recorder.MAX_FRAMES = 4
+        frame = self.frame()
+        with patch(
+            "bd2_fishing.game.fishing.scene_evidence.bundle_writer.submit", return_value=True
+        ) as submit:
+            for i in range(20):
+                recorder._keep((i * 0.02, frame.copy(), {}), "candidate")
+            recorder.close([], "finished")
+        parts = [call.args[2] for call in submit.call_args_list]
+        self.assertEqual(len(parts), 5)
+        self.assertEqual(len({part["scene_id"] for part in parts}), 1)
+        stamps = [f["captured_at_monotonic"] for part in parts for f in part["frames"]]
+        self.assertEqual(stamps, [i * 0.02 for i in range(20)])
+        self.assertEqual(recorder.dropped_frames, 0)
+        recorder = self.recorder()
+        recorder.MAX_FRAMES, recorder.MAX_PARTS = 4, 3
+        with patch(
+            "bd2_fishing.game.fishing.scene_evidence.bundle_writer.submit", return_value=True
+        ) as submit:
+            for i in range(20):
+                recorder._keep((i * 0.02, frame.copy(), {}), "candidate")
+            recorder.close([], "finished")
+        self.assertEqual(submit.call_count, 3)
+        self.assertGreater(recorder.dropped_frames, 0)
+
+    def test_multiple_parts_are_written_with_intact_pixels_and_final_marker(self):
+        recorder = self.recorder()
+        recorder.MAX_FRAMES = 4
+        for index in range(8):
+            recorder._keep((index * 0.02, np.full((12, 12, 3), index, np.uint8), {}), "periodic")
+        recorder.close([], "finished")
+        self.assertTrue(recorder.done.wait(3))
+        parts = {}
+        values = []
+        for path in Path(self.temp.name).rglob("*.zip"):
+            with ZipFile(path) as archive:
+                self.assertIsNone(archive.testzip())
+                meta = json.loads(archive.read("metadata.json"))
+                parts[meta["part"]] = meta
+                for frame in meta["frames"]:
+                    pixels = cv2.imdecode(np.frombuffer(archive.read(frame["file"]), np.uint8), 1)
+                    self.assertTrue(np.all(pixels == pixels[0, 0, 0]))
+                    values.append(int(pixels[0, 0, 0]))
+        self.assertEqual(sorted(values), list(range(8)))
+        self.assertEqual(set(parts), {0, 1})
+        self.assertFalse(parts[0]["final_part"])
+        self.assertTrue(parts[1]["final_part"])
 
     def test_adjacent_pointer_edges_are_retained_but_not_multiple_pointer_event(self):
         frame = self.frame()

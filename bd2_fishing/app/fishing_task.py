@@ -311,6 +311,7 @@ class FishingBot:
             qte_strategy = self.choose_strategy(sct)
             log.info(">>> 使用策略: %s", type(qte_strategy).__name__)
             run_control.sleep(self.begin_fish_wait_time)
+            completed_rounds = 0
             while True:
                 run_control.checkpoint()
                 if self.should_change_location(sct):
@@ -326,6 +327,10 @@ class FishingBot:
 
                 with fishing_round():
                     log.info("开始本轮钓鱼")
+                    if completed_rounds:
+                        from bd2_fishing.game.fishing.settlement import confirm_ready_for_next_cast
+
+                        confirm_ready_for_next_cast(self.config, self.region)
                     fishing_actions.cast_rod()
                     self.wait_for_bite(sct)
                     qte_strategy.catch_observer = None
@@ -341,6 +346,7 @@ class FishingBot:
                     from bd2_fishing.game.fishing.settlement import run_observed_qte
 
                     run_observed_qte(qte_strategy, sct)
+                    completed_rounds += 1
                     run_control.set_status("等待下一轮")
                     catch_observer = getattr(qte_strategy, "catch_observer", None)
                     if catch_observer is None:
