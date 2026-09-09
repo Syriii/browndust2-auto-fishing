@@ -73,6 +73,20 @@ class QTEControlTests(unittest.TestCase):
                 calls = self.run_frames(self.make_strategy(), [hsv] * 3)
                 self.assertFalse(calls)
 
+    def test_u07_user_confirmed_blue_only_frame_can_trigger_blue(self):
+        raw = cv2.imread(str(self.fixtures / "u07_observer_control.png"))
+        hsv = cv2.cvtColor(raw, cv2.COLOR_BGR2HSV)
+        strategy = self.make_strategy()
+        # 第一帧指针尚在蓝区外；下一张真实观察帧进入蓝区后才允许按键。
+        inside = cv2.cvtColor(
+            cv2.imread(str(self.fixtures / "u07_blue_overlap.png")), cv2.COLOR_BGR2HSV
+        )
+        self.assertFalse(self.run_frames(strategy, [hsv, hsv]))
+        calls = self.run_frames(strategy, [hsv, inside, inside])
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0].args, ("blue_fallback",))
+        self.assertEqual(calls[0].kwargs["cursor_x"], 148)
+
     def test_blue_fallback_rejects_flicker_unknown_gray_green_and_red_overlap(self):
         def make_frame(color):
             hsv = np.zeros((30, 200, 3), np.uint8)

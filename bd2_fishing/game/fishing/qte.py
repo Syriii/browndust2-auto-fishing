@@ -8,6 +8,7 @@ import time
 import cv2
 import numpy as np
 
+from bd2_fishing.game.fishing.pointer import read_pointer
 from bd2_fishing.game.fishing.tracing import trace_qte
 from bd2_fishing.game.fishing.trigger_rules import TargetEntryTrigger
 from bd2_fishing.infrastructure import settings as settings
@@ -35,6 +36,7 @@ class BaseQTEStrategy:
         self._feedback_session = None
         self._decision_frame = None
         self._decision_captured_at = None
+        self._pointer_reading = None
         # 维护取证是正常运行能力；旧配置开关不再关闭失败及结算观察。
         self.feedback_enabled = True
         self.pixel_threshold_scale = vision.build_pixel_threshold_scale(config, region)
@@ -141,6 +143,17 @@ class BaseQTEStrategy:
                         qte_crop_percent=self.qte_pos_tuples,
                         coordinate_space="QTE crop local pixels",
                         press_tolerance_pixels=self.press_tolerance_pixels,
+                        pointer=None
+                        if self._pointer_reading is None
+                        else dict(
+                            reason=self._pointer_reading.reason,
+                            candidates=[
+                                dict(x=p.x, brightness=p.brightness)
+                                for p in self._pointer_reading.candidates
+                            ],
+                            minimum_brightness=200,
+                            minimum_separation=12,
+                        ),
                         **details,
                     )
                     self._feedback_session.begin_press(decision, self._decision_frame)
@@ -214,15 +227,8 @@ class BaseQTEStrategy:
         )
 
     def _find_cursor_x(self, roi_hsv: np.ndarray) -> int | None:
-        mask_cursor = self._cursor_mask(roi_hsv)
-        return self._find_cursor_x_from_mask(mask_cursor)
-
-    def _find_cursor_x_from_mask(self, mask_cursor: np.ndarray) -> int | None:
-        """使用白色像素最多的一列作为光标横坐标。"""
-        col_sums = np.sum(mask_cursor, axis=0)
-        if np.max(col_sums) <= 0:
-            return None
-        return int(np.argmax(col_sums))
+        self._pointer_reading = read_pointer(roi_hsv)
+        return self._pointer_reading.x
 
     def _mask_column_has_color(self, mask: np.ndarray, x: int) -> bool:
         """检查整列及其左右容差窗口内是否有颜色，容忍光标在采样间隔内跨越色条。"""
@@ -327,8 +333,7 @@ class FrostStraitQTEStrategy(BaseQTEStrategy):
             no_bar_frames = 0
 
             mask_yellow = self._yellow_mask(qte_hsv)
-            cursor_mask = self._cursor_mask(qte_hsv)
-            cursor_x = self._find_cursor_x_from_mask(cursor_mask)
+            cursor_x = self._find_cursor_x(qte_hsv)
             if cursor_x is None:
                 blue_candidate_frames = 0
                 self._qte_trace.observe("no_cursor")
@@ -450,7 +455,7 @@ class AbyssMawQTEStrategy(BaseQTEStrategy):
             qte_started = True
             no_bar_frames = 0
             cursor_mask = self._cursor_mask(qte_hsv)
-            cursor_x = self._find_cursor_x_from_mask(cursor_mask)
+            cursor_x = self._find_cursor_x(qte_hsv)
             if cursor_x is None:
                 self._qte_trace.observe("no_cursor")
                 self._sleep_loop()

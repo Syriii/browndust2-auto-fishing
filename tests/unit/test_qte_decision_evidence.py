@@ -158,6 +158,9 @@ class DecisionEvidenceTests(unittest.TestCase):
                     if reason != "no_cursor_fallback":
                         cursor[:, 50] = 255
                     strategy._cursor_mask = Mock(return_value=cursor)
+                    strategy._find_cursor_x = Mock(
+                        return_value=None if reason == "no_cursor_fallback" else 50
+                    )
                     target = np.zeros_like(cursor)
                     if reason == "yellow_overlap":
                         target[:, 40:80] = 255

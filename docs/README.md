@@ -13,6 +13,7 @@
 - [工作区与仓库统一布局](design/repository-layout.md)：源码、部署、归档、默认配置、脚本、测试与文档的完整归属。
 - [架构规划](design/architecture.md)：面向岛屿玩法的功能边界、岛屿与机制扩展及迁移范围；首轮职责拆分已实施，后续目标单独标明。
 - [QTE 时延设计与验收](design/qte-performance.md)：关键路径、帧新鲜度、输入暂停、后台争用与性能基线；尚未完成时延实测。
+- [特殊机制处理与看图确认](design/special-mechanism-handling.md)：逐项机制方案、冰冻处理缺口及不依赖失败结果的取证设计。
 
 ## 开发与发布
 

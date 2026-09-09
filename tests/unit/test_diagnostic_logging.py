@@ -113,6 +113,8 @@ class QTELoggingTests(unittest.TestCase):
                 strategy._time_bar_masks = Mock(return_value=(mask, mask))
                 strategy._time_bar_visible_from_masks = Mock(side_effect=[True] + [False] * 81)
                 strategy._cursor_mask = Mock(return_value=mask)
+                strategy._find_cursor_x = Mock(return_value=20)
+                strategy._start_feedback = Mock()  # 明确禁止离线检查连接真实采集器。
                 strategy._yellow_mask = Mock(return_value=mask)
                 strategy._sleep_loop = Mock()
                 strategy._finish_fishing = Mock()

@@ -16,6 +16,7 @@ import numpy as np
 
 from bd2_fishing.game.fishing.feedback_rules import OutcomeTracker
 from bd2_fishing.game.fishing.recognition import FeedbackMatcher
+from bd2_fishing.game.fishing.scene_evidence import SceneRecorder
 from bd2_fishing.infrastructure import paths as paths
 from bd2_fishing.infrastructure.diagnostics import incidents
 from bd2_fishing.infrastructure.diagnostics.qte_evidence import EvidenceWriter
@@ -89,8 +90,21 @@ class FeedbackSession:
         self.unassigned = Counter()
         self.event_count = 0
         self.observed_counts = Counter()
+        self.scenes = None
+        self.scene_error = None
 
     def start(self):
+        try:
+            self.scenes = SceneRecorder(
+                self.config,
+                self.window,
+                self.region,
+                self.round_id,
+                Path(paths.get_diagnostics_path()) / "qte_scenes",
+            )
+        except Exception as exc:
+            self.scene_error = type(exc).__name__
+            self.log.warning("QTE 场景取证初始化失败，反馈观察继续：%s", self.scene_error)
         self.writer = EvidenceWriter(
             Path(paths.get_diagnostics_path()) / "qte_feedback",
             self.config,
@@ -130,6 +144,8 @@ class FeedbackSession:
                 sample for sample in self.samples if sample[0] <= stamp
             ][-4:]
             self.press_decisions[self.tracker.sequence] = (decision, snapshot)
+            if self.scenes is not None:
+                self.scenes.press(self.tracker.sequence, stamp, decision)
             if decision is not None:
                 self._log(
                     logging.DEBUG,
@@ -267,6 +283,16 @@ class FeedbackSession:
                             incidents.observe(frame, self.region, "qte_feedback")
                             self._drain_presses()
                             self.samples.append((now, frame))
+                            if self.scenes is not None and self.scene_error is None:
+                                try:
+                                    self.scenes.observe(frame, now)
+                                except Exception as exc:
+                                    self.scene_error = type(exc).__name__
+                                    self._log(
+                                        logging.WARNING,
+                                        "QTE 场景观察异常，保留已有帧：%s",
+                                        self.scene_error,
+                                    )
                             self.publish(self.tracker.observe(label, now, score))
                             self.flush_evidence(now)
                         self._emit_messages()
@@ -308,11 +334,24 @@ class FeedbackSession:
             self.publish(self.tracker.close(time.monotonic()))
             if self.writer is not None:
                 self.flush_evidence(time.monotonic(), force=True)
+            if self.scenes is not None:
+                try:
+                    self.scenes.close(
+                        self.tracker.feedback_events, self.scene_error or "qte_observer_closed"
+                    )
+                    if self.scenes.submitted is False:
+                        self._log(logging.WARNING, "QTE 场景证据队列已满，本轮场景记录未保存")
+                except Exception as exc:
+                    self._log(logging.WARNING, "QTE 场景证据提交失败：%s", type(exc).__name__)
             if self.catch_observer is not None:
                 self.catch_observer.stop_observing()
                 self.catch_observer.feedback_diagnostics = dict(
                     dropped_press_records=self.dropped_presses,
                     attribution_incomplete=bool(self.dropped_presses),
+                    scene_observation_error=self.scene_error,
+                    scene_evidence_submitted=self.scenes.submitted
+                    if self.scenes is not None
+                    else None,
                 )
         if self.thread is not None:
             self.thread.join(timeout=2)
@@ -322,6 +361,9 @@ class FeedbackSession:
                 )
         if self.writer is not None:
             self.writer.close()
+        # 仅在本轮观察关闭后有界等待写盘，不阻塞逐帧检测或按键路径。
+        if self.scenes is not None and self.scenes.submitted and not self.scenes.done.wait(1):
+            self.log.warning("QTE 场景证据仍在后台写入")
         self._emit_messages()
         self.log.debug(
             "QTE 按键归属统计: 尝试=%d 暴击=%d 普通命中=%d 未命中=%d 未确认=%d 无对应按键反馈=%s",

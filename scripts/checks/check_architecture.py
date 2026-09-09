@@ -19,7 +19,16 @@ ALLOWED = {
     "ui": {"ui", "app", "runtime"},
     "bootstrap": {"app", "ui", "infrastructure"},
 }
-PURE = {"feedback_rules", "settlement_rules", "cast_feedback", "recognition", "catalog"}
+PURE = {
+    "feedback_rules",
+    "settlement_rules",
+    "cast_feedback",
+    "recognition",
+    "catalog",
+    "pointer",
+    "scene_signals",
+    "trigger_rules",
+}
 
 
 def module_imports(path, module):
