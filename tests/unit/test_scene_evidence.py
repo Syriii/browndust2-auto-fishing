@@ -143,6 +143,44 @@ class SceneEvidenceTests(unittest.TestCase):
         self.assertFalse(recorder.submitted)
         self.assertFalse(recorder.frames)
 
+    def test_first_candidate_survives_later_bursts_and_final_frame_is_retained(self):
+        recorder = self.recorder()
+        frame = self.frame(special=True)
+        recorder.MAX_BYTES = frame.nbytes * 4
+        for i in range(101):
+            recorder.observe(frame, i * 0.1)
+        with patch("bd2_fishing.game.fishing.scene_evidence.bundle_writer.submit") as submit:
+            recorder.close([], "cancelled")
+        metadata = submit.call_args.args[2]
+        frames = metadata["frames"]
+        self.assertLessEqual(len(frames), 4)
+        self.assertIn(0.1, [f["captured_at_monotonic"] for f in frames])
+        self.assertEqual(frames[-1]["captured_at_monotonic"], 10)
+        self.assertIsNotNone(metadata["candidates"][0]["evidence_file"])
+        self.assertEqual(
+            sum(metadata["dropped_frame_reasons"].values()), metadata["dropped_frames"]
+        )
+
+    def test_periodic_frame_cannot_evict_candidate_when_full(self):
+        recorder = self.recorder()
+        frame = self.frame()
+        recorder.MAX_BYTES = frame.nbytes * 2
+        recorder._keep((1, frame, {}), "first_candidate")
+        recorder._keep((2, frame, {}), "candidate")
+        recorder._keep((3, frame, {}), "periodic")
+        self.assertEqual(set(recorder.frames), {1, 2})
+        self.assertEqual(recorder.drop_reasons["rejected_periodic"], 1)
+
+    def test_adjacent_pointer_edges_are_retained_but_not_multiple_pointer_event(self):
+        frame = self.frame()
+        # 真实普通布局中的合成相邻亮线；仅约束外观取证，不修改光标定位。
+        frame[117:136, 211] = frame[117:136, 212]
+        frame[117:136, 210] = (255, 255, 255)
+        frame[117:136, 214] = (220, 220, 220)
+        signals, features = self.recorder().signals.inspect(frame)
+        self.assertNotIn("multiple_pointer_candidates", signals)
+        self.assertGreaterEqual(len(features["pointer_candidates"]), 2)
+
     def test_background_encoding_does_not_run_on_observer_thread(self):
         recorder = self.recorder()
         recorder.observe(self.frame(special=True), 0)

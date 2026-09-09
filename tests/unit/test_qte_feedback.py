@@ -25,6 +25,23 @@ FIXTURES = ROOT / "tests/fixtures/qte_feedback"
 
 
 class FeedbackImageTests(unittest.TestCase):
+    def test_identical_frame_cache_owns_pixels_and_invalidates_on_any_change(self):
+        matcher = FeedbackMatcher(945, 532)
+        frame = cv2.imread(str(FIXTURES / "glare_critical_945.png"))[:96].copy()
+        with patch.object(matcher, "_detect", wraps=matcher._detect) as detect:
+            result = matcher.detect(frame)
+            self.assertEqual(matcher.last_method, "critical_edges")
+            self.assertEqual(matcher.detect(frame.copy()), result)
+            self.assertTrue(matcher.cache_hit)
+            self.assertEqual(detect.call_count, 1)
+            frame[0, 0, 0] ^= 1
+            matcher.detect(frame)
+            self.assertFalse(matcher.cache_hit)
+            self.assertEqual(detect.call_count, 2)
+            matcher.detect(frame[:80])
+            self.assertFalse(matcher.cache_hit)
+            self.assertEqual(detect.call_count, 3)
+
     def test_real_words_and_backgrounds(self):
         matcher = FeedbackMatcher(875, 492)
         verified = set()

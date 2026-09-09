@@ -19,6 +19,41 @@ class PointerReading:
     reason: str
 
 
+class PointerMotion:
+    """记录可信观测之间的位移；不外推不可见光标，也不改变输入位置。"""
+
+    def __init__(self):
+        self.previous = None
+        self.direction = 0
+
+    def observe(self, x, stamp, shape, *, active=True):
+        previous = self.previous
+        self.previous = (x, stamp, shape) if active and x is not None else None
+        if not active or x is None:
+            self.direction = 0
+            return dict(state="unavailable", velocity_pixels_per_second=None)
+        if previous is None:
+            self.direction = 0
+            return dict(state="acquired", velocity_pixels_per_second=None)
+        old_x, old_stamp, old_shape = previous
+        dt = stamp - old_stamp
+        if shape != old_shape or not 0 < dt <= 0.20:
+            self.direction = 0
+            return dict(state="discontinuous", velocity_pixels_per_second=None)
+        delta = x - old_x
+        direction = (delta > 0) - (delta < 0)
+        reversed_direction = bool(direction and self.direction and direction != self.direction)
+        if direction:
+            self.direction = direction
+        return dict(
+            state="observed",
+            delta_pixels=delta,
+            interval_seconds=dt,
+            velocity_pixels_per_second=delta / dt,
+            reversed_direction=reversed_direction,
+        )
+
+
 def read_pointer(hsv: np.ndarray) -> PointerReading:
     """找窄竖直亮线，再比较候选亮度；色条/亮点不参加排序。"""
     h, w = hsv.shape[:2]

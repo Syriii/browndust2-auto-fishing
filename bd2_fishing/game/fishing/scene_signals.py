@@ -78,7 +78,13 @@ class SceneSignals:
         for name in ("red", "purple", "green"):
             if pixels[name] >= threshold:
                 signals.append(f"{name}_content")
-        if len(candidates) > 1:
+        # 两侧抗锯齿/拖影也可能形成相邻亮线，只将间隔超过一个窄光标宽度的候选
+        # 作为多指针外观线索；原始候选完整保留，控制定位仍使用原亮度规则。
+        separated = len(candidates) > 1 and (
+            max(p["x"] for p in candidates) - min(p["x"] for p in candidates)
+            > max(2, round(qte.shape[0] * 0.35))
+        )
+        if separated:
             signals.append("multiple_pointer_candidates")
         if pixels["blue"] or pixels["yellow"]:
             if cursor is None:

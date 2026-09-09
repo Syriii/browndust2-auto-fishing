@@ -25,6 +25,10 @@ class FeedbackMatcher:
         assets = Path(assets or Path(__file__).with_name("assets"))
         self.patterns = {}
         self.critical_edges = []
+        self._last_frame = None
+        self._last_result = None
+        self.last_method = None
+        self.cache_hit = False
         templates = [
             (name, 875, 492) for name in ("critical", "critical_alt", "hit", "miss", "fail")
         ]
@@ -56,8 +60,8 @@ class FeedbackMatcher:
                     )
 
     def _critical_under_glare(self, frame):
-        edges = vertical_text_edges(frame)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        edges = cv2.Sobel(gray.astype(np.float32), cv2.CV_32F, 0, 1, ksize=3)
         best = 0.0
         for pattern, gray_pattern in self.critical_edges:
             h, w = pattern.shape
@@ -79,6 +83,17 @@ class FeedbackMatcher:
         return best
 
     def detect(self, frame):
+        # GDI 可能连续读到相同游戏帧；只复用逐像素相同的匹配结果，时间由调用方记录。
+        self.cache_hit = self._last_frame is not None and np.array_equal(frame, self._last_frame)
+        if self.cache_hit:
+            return self._last_result
+        result = self._detect(frame)
+        self._last_frame = frame.copy() if frame.nbytes <= 6 * 1024 * 1024 else None
+        self._last_result = result
+        return result
+
+    def _detect(self, frame):
+        self.last_method = "white_text"
         mask = white_text(frame)
         scores = []
         for name, patterns in self.patterns.items():
@@ -96,8 +111,11 @@ class FeedbackMatcher:
         if not scores or scores[0][0] < 0.80:
             edge_score = self._critical_under_glare(frame)
             if edge_score:
+                self.last_method = "critical_edges"
                 return "critical", edge_score
+            self.last_method = "unrecognized"
             return None, scores[0][0] if scores else 0.0
         if len(scores) > 1 and scores[0][0] - scores[1][0] < 0.12:
+            self.last_method = "ambiguous"
             return None, scores[0][0]
         return scores[0][1], scores[0][0]

@@ -94,6 +94,10 @@ class FeedbackSession:
         self.scene_error = None
         self.reader_error = None
         self.unknown_categories = Counter()
+        self.match_methods = Counter()
+        self.match_cache_hits = 0
+        self.match_timings = deque(maxlen=128)
+        self.capture_timings = deque(maxlen=128)
 
     def start(self):
         try:
@@ -286,7 +290,9 @@ class FeedbackSession:
             with FeedbackCapture(self.region) as camera:
                 while not self.done.is_set():
                     guard()
+                    capture_started = time.perf_counter()
                     frame = camera.grab()
+                    capture_ms = (time.perf_counter() - capture_started) * 1000
                     now = time.monotonic()
                     if self.done.is_set():
                         break
@@ -294,10 +300,21 @@ class FeedbackSession:
                         frame = frame.copy()
                         # 仅上方文字区域参与匹配，下方 QTE 条保留在证据帧中。
                         text_height = round(self.window.height * 0.18)
+                        match_started = time.perf_counter()
                         label, score = self.matcher.detect(frame[:text_height])
+                        match_ms = (time.perf_counter() - match_started) * 1000
                         with self.lock:
                             if self.done.is_set():
                                 break
+                            self.capture_timings.append(capture_ms)
+                            self.match_timings.append(match_ms)
+                            method = getattr(self.matcher, "last_method", None)
+                            self.match_methods[
+                                method if isinstance(method, str) else "unknown"
+                            ] += 1
+                            self.match_cache_hits += (
+                                getattr(self.matcher, "cache_hit", False) is True
+                            )
                             incidents.observe(frame, self.region, "qte_feedback")
                             self._drain_presses()
                             self.samples.append((now, frame))
@@ -384,6 +401,15 @@ class FeedbackSession:
                     observer_error=self.reader_error,
                     unknown_categories=dict(self.unknown_categories),
                     scene_observation_error=self.scene_error,
+                    observation_performance=dict(
+                        frames=sum(self.match_methods.values()),
+                        match_methods=dict(self.match_methods),
+                        identical_frame_cache_hits=self.match_cache_hits,
+                        sample_limit=128,
+                        capture_ms=self._timing_summary(self.capture_timings),
+                        matching_ms=self._timing_summary(self.match_timings),
+                        note="最后最多128个有效观察的局部耗时，不是控制输入或游戏响应时延",
+                    ),
                     scene_evidence_submitted=self.scenes.submitted
                     if self.scenes is not None
                     else None,
@@ -416,4 +442,15 @@ class FeedbackSession:
             self.observed_counts["critical"],
             self.observed_counts["hit"],
             self.observed_counts["miss"],
+        )
+
+    @staticmethod
+    def _timing_summary(samples):
+        if not samples:
+            return dict(samples=0)
+        return dict(
+            samples=len(samples),
+            p50=float(np.percentile(samples, 50)),
+            p95=float(np.percentile(samples, 95)),
+            max=max(samples),
         )

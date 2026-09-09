@@ -6,10 +6,23 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from bd2_fishing.game.fishing.pointer import read_pointer
+from bd2_fishing.game.fishing.pointer import PointerMotion, read_pointer
 
 
 class PointerTests(unittest.TestCase):
+    def test_motion_direction_and_discontinuities_never_predict_missing_pointer(self):
+        motion = PointerMotion()
+        shape = (19, 244, 3)
+        self.assertEqual(motion.observe(20, 1, shape)["state"], "acquired")
+        moving = motion.observe(30, 1.1, shape)
+        self.assertAlmostEqual(moving["velocity_pixels_per_second"], 100)
+        self.assertTrue(motion.observe(25, 1.2, shape)["reversed_direction"])
+        self.assertIsNone(motion.observe(None, 1.3, shape)["velocity_pixels_per_second"])
+        self.assertEqual(motion.observe(40, 1.4, shape)["state"], "acquired")
+        for stamp, current_shape in ((2, shape), (2, shape), (2.1, (38, 488, 3))):
+            self.assertEqual(motion.observe(50, stamp, current_shape)["state"], "discontinuous")
+        self.assertEqual(motion.observe(60, 2.2, shape, active=False)["state"], "unavailable")
+
     def test_user_confirmed_clones_choose_bright_pointer(self):
         root = Path(__file__).parents[1] / "fixtures" / "qte_control"
         for name, expected in (("f05_observer_control.png", 170), ("f06_observer_control.png", 44)):
