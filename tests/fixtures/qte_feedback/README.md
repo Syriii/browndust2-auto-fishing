@@ -28,3 +28,10 @@ U49/U50 正例参与模板提取，不声称它们是独立训练外验证；同
 
 备用匹配只复用已有 critical / critical_alt 模板；上述新图均不作为运行模板。
 548 张新旧观察图对照新增 23 张 CRITICAL，已逐张看图核验，其余标签不变。
+# 2026-09-09 11:34 新样本
+
+`plain_critical_945.png`：`91b68118-001` 第 6 次按键包 `qte_1788924884029809200_18378911.zip`
+的 frame_03，清晰 CRITICAL；`plain_critical_after_945.png` 为同包 frame_07，字样已消失。
+`plain_critical_holdout_945.png` 为第 5 次按键包 `qte_1788924882654524200_5c53b9ca.zip`
+的 frame_03，CRITICAL 被光柱覆盖；未用于模板，当前仍保留未确认。
+原图均为 945×532 客户区的独立观察 ROI，历史按键账本不随字形修复改写。

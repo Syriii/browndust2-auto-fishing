@@ -101,24 +101,29 @@ class CatchObserver:
         self.finalized = False
         self.save_done = threading.Event()
         self.save_done.set()
-        close_template = cv2.imdecode(
-            np.frombuffer(
-                (Path(__file__).with_name("assets") / "settlement_close.png").read_bytes(), np.uint8
-            ),
-            cv2.IMREAD_GRAYSCALE,
-        )
         # 关闭提示是灰字。先套亮白阈值再匹配会把缩放后的模板清空，
         # TM_CCOEFF_NORMED 对常量模板返回 1，导致任意场景都被判为面板。
-        if close_template is None or close_template.std() < 1:
-            raise ValueError("结算关闭提示模板无有效字形")
-        width = round(close_template.shape[1] * window.width / 875)
-        height = round(close_template.shape[0] * window.height / 492)
-        # 字体栅格化取整与整张图的缩放并不完全一致，限定 ±1 像素搜索。
-        self.close_patterns = [
-            cv2.resize(close_template, (max(2, width + dx), max(2, height + dy)))
-            for dx in (-1, 0, 1)
-            for dy in (-1, 0, 1)
-        ]
+        self.close_patterns = []
+        for name, reference_width, reference_height in (
+            ("settlement_close", 875, 492),
+            ("settlement_close_945", 945, 532),
+        ):
+            close_template = cv2.imdecode(
+                np.frombuffer(
+                    (Path(__file__).with_name("assets") / f"{name}.png").read_bytes(), np.uint8
+                ),
+                cv2.IMREAD_GRAYSCALE,
+            )
+            if close_template is None or close_template.std() < 1:
+                raise ValueError("结算关闭提示模板无有效字形")
+            width = round(close_template.shape[1] * window.width / reference_width)
+            height = round(close_template.shape[0] * window.height / reference_height)
+            # 实际 945 字形补充旧 875 字形的缩放误差，仍限定 ±1 像素和原门槛。
+            self.close_patterns.extend(
+                cv2.resize(close_template, (max(2, width + dx), max(2, height + dy)))
+                for dx in (-1, 0, 1)
+                for dy in (-1, 0, 1)
+            )
         self.page_reader = FishingPageReader(window)
 
     def observe_timer(self, frame, stamp):

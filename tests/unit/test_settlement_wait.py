@@ -70,6 +70,18 @@ class SettlementWaitTests(unittest.TestCase):
         self.sleep.assert_not_called()
         self.camera.grab.assert_called_once()
 
+    def test_reward_recheck_uses_real_945_glyph_with_independent_background(self):
+        root = Path(__file__).parents[1] / "fixtures" / "catch_result"
+        for name in ("caught_close_source_945.png", "caught_close_holdout_945.png"):
+            frame = cv2.imread(str(root / name))
+            self.camera.grab.return_value = frame
+            self.assertEqual(self.observer.inspect_current_page(), "panel", name)
+            # 奖励和大鱼仍在，单独去掉关闭字样不能获准点击。
+            missing_text = frame.copy()
+            missing_text[482:504, 432:515] = 0
+            self.camera.grab.return_value = missing_text
+            self.assertEqual(self.observer.inspect_current_page(), "unrecognized")
+
     def test_persistent_transition_is_bounded_and_never_clicked(self):
         self.camera.grab.return_value = self.loading
         strategy = qte.FrostStraitQTEStrategy(self.config, self.region)
@@ -135,6 +147,19 @@ class SettlementWaitTests(unittest.TestCase):
             frame = cv2.imread(str(root / name))
             height, width = frame.shape[:2]
             self.assertTrue(FishingPageReader(Rect(0, 0, width, height)).inspect(frame)[0], name)
+
+    def test_bright_button_background_keeps_arrow_identity_without_lowering_threshold(self):
+        root = Path(__file__).parents[1] / "fixtures" / "catch_result"
+        frame = cv2.imread(str(root / "idle_bright_background_20260909.png"))
+        ready, scores = self.observer.page_reader.inspect(frame)
+        self.assertTrue(ready, scores)
+        self.assertGreaterEqual(scores["idle_movement"], 0.88)
+        for x, y in FishingPageReader.ARROW_CENTERS.values():
+            partial = frame.copy()
+            partial[y - 8 : y + 9, x - 8 : x + 9] = 0
+            self.assertFalse(self.observer.page_reader.inspect(partial)[0])
+        for value in (0, 190, 255):
+            self.assertFalse(self.observer.page_reader.inspect(np.full_like(frame, value))[0])
 
     def test_idle_recovery_does_not_click_and_continuation_is_bounded(self):
         strategy = qte.FrostStraitQTEStrategy(self.config, self.region)

@@ -32,7 +32,13 @@ class FeedbackMatcher:
         templates = [
             (name, 875, 492) for name in ("critical", "critical_alt", "hit", "miss", "fail")
         ]
-        templates.extend([("hit_effect_945", 945, 532), ("hit_plain_945", 945, 532)])
+        templates.extend(
+            [
+                ("hit_effect_945", 945, 532),
+                ("hit_plain_945", 945, 532),
+                ("critical_plain_945", 945, 532),
+            ]
+        )
         for name, reference_width, reference_height in templates:
             image = cv2.imdecode(np.frombuffer((assets / f"{name}.png").read_bytes(), np.uint8), 1)
             if image is None:
@@ -46,8 +52,8 @@ class FeedbackMatcher:
                 ),
             )
             self.patterns.setdefault(name.split("_")[0], []).append(white_text(image))
-            if name in ("critical", "critical_alt"):
-                # 仅补暴击长字形，采用旧模板而非把待测强光图制作成模板。
+            if name in ("critical", "critical_alt", "critical_plain_945"):
+                # 用清晰暴击字形校验强光变化，不从待测强光帧提取模板。
                 for delta in (-1, 0, 1):
                     resized = cv2.resize(image, (image.shape[1], max(5, image.shape[0] + delta)))
                     if min(resized.shape[:2]) <= 4:

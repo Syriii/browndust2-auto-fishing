@@ -89,6 +89,21 @@ class FeedbackImageTests(unittest.TestCase):
                 frame = cv2.imread(str(FIXTURES / (name + ".png")))
                 self.assertEqual(matcher.detect(frame[:96])[0], expected)
 
+    def test_new_plain_critical_and_its_background_do_not_require_lower_threshold(self):
+        matcher = FeedbackMatcher(945, 532)
+        for name, expected in (
+            ("plain_critical_945", "critical"),
+            ("plain_critical_after_945", None),
+        ):
+            frame = cv2.imread(str(FIXTURES / (name + ".png")))
+            label, score = matcher.detect(frame[:96])
+            self.assertEqual(label, expected)
+            if expected:
+                self.assertGreaterEqual(score, 0.80)
+        # 强光保留样本允许暂未识别，但不允许错认成 HIT/FAIL；不把当前漏检锁成永久预期。
+        holdout = cv2.imread(str(FIXTURES / "plain_critical_holdout_945.png"))
+        self.assertIn(matcher.detect(holdout[:96])[0], (None, "critical"))
+
 
 class OutcomeTests(unittest.TestCase):
     def test_each_new_word_maps_to_actual_feedback_not_geometry(self):
