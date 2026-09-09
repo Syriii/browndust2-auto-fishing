@@ -6,6 +6,7 @@ import ctypes
 
 from bd2_fishing.app import ocr_setup as ocr_setup
 from bd2_fishing.app.fishing_task import FishingBot
+from bd2_fishing.app.preferences import verify_window_size
 from bd2_fishing.game.constants import GAME_TITLE
 from bd2_fishing.infrastructure import settings as settings
 from bd2_fishing.infrastructure.diagnostics import incidents
@@ -27,6 +28,7 @@ def _run_fishing_session(
     log.info(">>> 已定位游戏窗口: %s", region.as_tuple())
 
     config = config if config is not None else settings.read_ini()
+    verify_window_size(config, region)
 
     # 初始化失败也需有现场；只在窗口验证通过后截取游戏客户区。
     run_control.checkpoint()

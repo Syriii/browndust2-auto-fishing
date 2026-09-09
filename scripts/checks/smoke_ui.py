@@ -44,6 +44,27 @@ def main():
     try:
         root.update_idletasks()
         assert not app.controller.running
+        app.preferences_button.invoke()
+        dialog = app.preferences
+        dialog.window.update_idletasks()
+        services.inspect_device = lambda: dict(
+            width=945,
+            height=532,
+            position=(0, 0),
+            display="模拟显示器",
+            display_bounds=(0, 0, 1920, 1080),
+            dpi=96,
+            scale_percent=100,
+            wait_precision=[dict(requested_ms=10, median_ms=11, max_ms=12)],
+        )
+        dialog.detect_button.invoke()
+        pump(lambda: dialog.device is not None)
+        dialog.use_button.invoke()
+        assert dialog.values["expected_window_width"].get() == "945"
+        dialog.values["loop_sleep_seconds"].set("10")
+        dialog.values["qte_hold_seconds"].set("80")
+        dialog.save()
+        assert services.load_settings().getfloat("time", "qte_hold_seconds") == 0.08
         for cycle in (1, 2):
             app.detail_log.set(cycle == 2)
             app.start_button.invoke()
@@ -51,6 +72,8 @@ def main():
             assert app.start_button.instate(["disabled"])
             assert not app.stop_button.instate(["disabled"])
             assert app.snapshot.getboolean("diagnostics", "qte_detail_log") == (cycle == 2)
+            assert app.snapshot.getfloat("time", "qte_hold_seconds") == 0.08
+            assert app.preferences_button.instate(["disabled"])
             app.stop_button.invoke()
             pump(lambda: app.status.get() == "待机")
             assert not app.controller.running
@@ -79,6 +102,7 @@ def main():
             app.clear_check,
             app.awake_check,
             app.trace_check,
+            app.preferences_button,
         ):
             assert widget.winfo_x() + widget.winfo_width() <= widget.master.winfo_width(), (
                 widget.cget("text") if "text" in widget.keys() else str(widget),

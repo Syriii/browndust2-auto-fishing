@@ -101,6 +101,15 @@ def call_input(action, *args, **kwargs):
         return action(*args, **kwargs)
 
 
+def call_release(action, *args, **kwargs):
+    """仅供输入适配器释放按键；与停止释放串行，但不能被停止或失焦检查拦截。"""
+    control = getattr(_local, "control", None)
+    if control is None:
+        return action(*args, **kwargs)
+    with control.input_lock:
+        return action(*args, **kwargs)
+
+
 def console_input(prompt):
     """供实机工具手动选地图，等待输入期间仍响应取消。"""
     if getattr(_local, "control", None) is None:

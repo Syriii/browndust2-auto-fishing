@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import configparser
 import logging
+import math
 import os
 import re
 from importlib.resources import files
@@ -63,6 +64,13 @@ def read_config_int(config: configparser.ConfigParser, section: str, key: str) -
 
 def read_config_float(config: configparser.ConfigParser, section: str, key: str) -> float:
     return config.getfloat(section, key)
+
+
+def bounded_float(config, section, key, fallback, minimum, maximum):
+    value = config.getfloat(section, key, fallback=fallback)
+    if not math.isfinite(value) or not minimum <= value <= maximum:
+        raise ValueError(f"[{section}] {key} 应在 {minimum:g}–{maximum:g} 之间")
+    return value
 
 
 DEFAULT_CONFIG_CONTENT = (

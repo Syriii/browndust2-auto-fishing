@@ -42,10 +42,14 @@ class BaseQTEStrategy:
         self.pixel_threshold_scale = vision.build_pixel_threshold_scale(config, region)
         self.longest_keep_time = settings.read_config_int(config, "time", "longest_keep_time")
         self.fish_end_wait_time = settings.read_config_float(config, "time", "fish_end_wait_time")
-        self.loop_sleep_seconds = config.getfloat(
-            "time",
-            "loop_sleep_seconds",
-            fallback=DEFAULT_LOOP_SLEEP_SECONDS,
+        self.loop_sleep_seconds = settings.bounded_float(
+            config, "time", "loop_sleep_seconds", DEFAULT_LOOP_SLEEP_SECONDS, 0.001, 0.1
+        )
+        self.qte_hold_seconds = settings.bounded_float(
+            config, "time", "qte_hold_seconds", 0.1, 0.005, 0.5
+        )
+        self.qte_settle_seconds = settings.bounded_float(
+            config, "time", "qte_settle_seconds", 0.2, 0, 1
         )
         self.press_tolerance_pixels = geometry.scale_pixel_length(
             config.getint("roi", "qte_press_tolerance_pixels", fallback=4),
@@ -143,6 +147,11 @@ class BaseQTEStrategy:
                         qte_crop_percent=self.qte_pos_tuples,
                         coordinate_space="QTE crop local pixels",
                         press_tolerance_pixels=self.press_tolerance_pixels,
+                        configured_timing=dict(
+                            loop_sleep_seconds=self.loop_sleep_seconds,
+                            hold_seconds=self.qte_hold_seconds,
+                            settle_seconds=self.qte_settle_seconds,
+                        ),
                         pointer=None
                         if self._pointer_reading is None
                         else dict(
@@ -159,7 +168,9 @@ class BaseQTEStrategy:
                     self._feedback_session.begin_press(decision, self._decision_frame)
             except Exception:
                 log.exception("QTE 按键观察记录失败；仍执行原按键调用")
-        # 不改变驱动、按键时长、按键条件或原来的暂停参数。
+        # 缺省沿用旧驱动时序；显式调整时使用可取消等待，不改全局 PAUSE。
+        if (self.qte_hold_seconds, self.qte_settle_seconds) != (0.1, 0.2):
+            return pydirectinput.press_qte(self.qte_hold_seconds, self.qte_settle_seconds)
         return pydirectinput.press("space")
 
     def _sleep_loop(self) -> None:

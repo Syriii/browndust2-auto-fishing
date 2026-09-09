@@ -11,6 +11,7 @@ from tkinter import messagebox, ttk
 
 from bd2_fishing.app.desktop import DesktopServices, FishingLocation
 from bd2_fishing.runtime import control as run_control
+from bd2_fishing.ui.preferences import PreferencesDialog
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ class FishingApp:
         self.snapshot = config
         self.selected_location = None
         self.closing = False
+        self.preferences = None
         self.records = deque(maxlen=1500)
         self.handler = UILogHandler()
         self.controller = self.services.create_task(self._run, preview=preview)
@@ -146,6 +148,10 @@ class FishingApp:
             settings, text="逐帧诊断写入文件", variable=self.detail_log
         )
         self.trace_check.grid(row=1, column=2, sticky="w", pady=(12, 0))
+        self.preferences_button = ttk.Button(
+            settings, text="设备与时延设置", command=self.open_preferences
+        )
+        self.preferences_button.grid(row=3, column=0, columnspan=2, sticky="w", pady=(10, 0))
         ttk.Label(
             settings,
             text="失败、异常和未确认结果自动保存现场，不需要开启逐帧诊断。",
@@ -204,6 +210,8 @@ class FishingApp:
     def start(self):
         if self.closing or self.controller.running:
             return
+        if self.preferences is not None and self.preferences.window.winfo_exists():
+            return
         try:
             if not self.preview:
                 self.snapshot = self.services.save_settings(
@@ -253,7 +261,12 @@ class FishingApp:
         state = "disabled" if active or self.closing else "normal"
         self.start_button.configure(state=state)
         self.stop_button.configure(state="normal" if active and not self.closing else "disabled")
-        for widget in (self.clear_check, self.awake_check, self.trace_check):
+        for widget in (
+            self.clear_check,
+            self.awake_check,
+            self.trace_check,
+            self.preferences_button,
+        ):
             widget.configure(state=state)
         self.location_box.configure(state="disabled" if active or self.closing else "readonly")
         if self.closing:
@@ -315,6 +328,14 @@ class FishingApp:
 
     def open_logs(self):
         os.startfile(str(self.config_path.parent))
+
+    def open_preferences(self):
+        if self.closing or self.controller.running:
+            return
+        if self.preferences is not None and self.preferences.window.winfo_exists():
+            self.preferences.window.lift()
+            return
+        self.preferences = PreferencesDialog(self.root, self.services, preview=self.preview)
 
     def _callback_error(self, exc_type, exc, tb):
         log.error("界面操作异常", exc_info=(exc_type, exc, tb))

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ctypes
+import math
 
 import pydirectinput as _input
 import win32api
@@ -13,6 +14,35 @@ from bd2_fishing.runtime import control as run_control
 
 def press(*args, **kwargs):
     return run_control.call_input(_input.press, *args, **kwargs)
+
+
+def press_qte(hold_seconds, settle_seconds):
+    """自定义 QTE 单键时序；等待不持输入锁，停止期间仅允许释放按键。"""
+    if (
+        not math.isfinite(hold_seconds)
+        or not 0.005 <= hold_seconds <= 0.5
+        or not math.isfinite(settle_seconds)
+        or not 0 <= settle_seconds <= 1
+    ):
+        raise ValueError("QTE 输入时延超出允许范围")
+    try:
+        if not run_control.call_input(_input.keyDown, "space", _pause=False):
+            raise RuntimeError("QTE 按键未被系统接受")
+        run_control.sleep(hold_seconds)
+    finally:
+        run_control.call_release(_release_qte_key)
+    run_control.sleep(settle_seconds)
+    return True
+
+
+def _release_qte_key():
+    # 与停止释放共用输入锁，避免并发恢复全局 FAILSAFE 时覆盖彼此状态。
+    previous = _input.FAILSAFE
+    try:
+        _input.FAILSAFE = False
+        _input.keyUp("space", _pause=False)
+    finally:
+        _input.FAILSAFE = previous
 
 
 def keyDown(*args, **kwargs):

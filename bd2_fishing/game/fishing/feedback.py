@@ -20,6 +20,7 @@ from bd2_fishing.game.fishing.scene_evidence import SceneRecorder
 from bd2_fishing.infrastructure import paths as paths
 from bd2_fishing.infrastructure.diagnostics import incidents
 from bd2_fishing.infrastructure.diagnostics.qte_evidence import EvidenceWriter
+from bd2_fishing.infrastructure.settings import bounded_float
 from bd2_fishing.infrastructure.windows import window as window
 from bd2_fishing.runtime import control as run_control
 from bd2_fishing.runtime import geometry as geometry
@@ -57,6 +58,7 @@ class FeedbackSession:
 
     def __init__(self, config, window, catch_observer=None):
         self.config, self.window = config, window
+        self.poll_seconds = bounded_float(config, "time", "feedback_poll_seconds", 0.02, 0.005, 0.2)
         self.catch_observer = catch_observer
         self.round_id = (
             catch_observer.round_id
@@ -341,7 +343,7 @@ class FeedbackSession:
                             self.publish(self.tracker.expire(now))
                             self.flush_evidence(now)
                         self._emit_messages()
-                    self.done.wait(0.02)
+                    self.done.wait(self.poll_seconds)
         except run_control.RunStopped as exc:
             self.log.debug("QTE 观察随任务停止: %s", str(exc) or "已停止")
         except BaseException as exc:
@@ -402,6 +404,7 @@ class FeedbackSession:
                     unknown_categories=dict(self.unknown_categories),
                     scene_observation_error=self.scene_error,
                     observation_performance=dict(
+                        configured_poll_seconds=self.poll_seconds,
                         frames=sum(self.match_methods.values()),
                         match_methods=dict(self.match_methods),
                         identical_frame_cache_hits=self.match_cache_hits,
