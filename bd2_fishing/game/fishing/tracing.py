@@ -11,6 +11,10 @@ from bd2_fishing.runtime.context import get_logger
 log = get_logger(__name__)
 
 
+class QTEControlTimeout(TimeoutError):
+    """控制期限结束，不代表游戏已退出 QTE；调用者必须终止后续轮次。"""
+
+
 class QTETrace:
     def __init__(self, *, detailed=False, interval=5):
         self.detailed = detailed
@@ -77,7 +81,11 @@ class QTETrace:
 
     def close(self):
         self.report()
-        level = logging.WARNING if self.reason == "longest_keep_time" else logging.DEBUG
+        level = (
+            logging.WARNING
+            if self.reason in ("longest_keep_time", "control_timeout")
+            else logging.DEBUG
+        )
         if self.reason.startswith("exception:"):
             level = logging.ERROR
         log.log(
@@ -108,6 +116,9 @@ def trace_qte(method):
             if start_feedback is not None:
                 start_feedback()
             return method(self, *args, **kwargs)
+        except QTEControlTimeout:
+            trace.reason = "control_timeout"
+            raise
         except run_control.RunStopped:
             trace.reason = "cancelled"
             raise

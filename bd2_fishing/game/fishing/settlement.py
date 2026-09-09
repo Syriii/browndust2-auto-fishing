@@ -20,6 +20,7 @@ from bd2_fishing.game.fishing.settlement_rules import (
     classify_settlement,
     distance_value,
 )
+from bd2_fishing.game.fishing.tracing import QTEControlTimeout
 from bd2_fishing.infrastructure import paths as paths
 from bd2_fishing.infrastructure.diagnostics import bundle_writer
 from bd2_fishing.infrastructure.windows import window as window
@@ -274,7 +275,11 @@ class CatchObserver:
         elif self.result.reason == "尚未观察到结算":
             self.result = CatchResult(
                 "unknown",
-                "QTE 控制超时，未观察到结算" if reason == "returned" else f"QTE 异常退出：{reason}",
+                "QTE 控制超时，未确认退出页面，任务停止"
+                if reason == "control_timeout"
+                else "QTE 已返回，但未观察到结算"
+                if reason == "returned"
+                else f"QTE 异常退出：{reason}",
             )
         frames = dict(self.evidence_frames)
         if self.last_frame is not None:
@@ -347,6 +352,9 @@ def run_observed_qte(strategy, capture):
     reason = "returned"
     try:
         return strategy.play_qte(capture)
+    except QTEControlTimeout:
+        reason = "control_timeout"
+        raise
     except run_control.RunStopped:
         reason = "interrupted"
         raise

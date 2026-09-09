@@ -38,6 +38,7 @@ diagnostics/
 | 满包 | 清包或停止前的现场及自动清包设置 |
 | 换岛确认超时 | 当前游戏画面和错误原因；停止本次任务，不继续抛竿 |
 | QTE 未命中或归属未确认 | 按键前后、反馈发生时的 ROI，以及可用的控制决策原图 |
+| 整轮 QTE 控制达到时间上限 | 只读核对倒计时/结算现场，记录 `control_timeout`，停止任务；不自动关闭面板、补按或进入下一轮 |
 | QTE 特殊外观候选 | 多光标、目标存在但亮光标缺失、蓝黄区异常、红/紫/绿色内容的前后观察帧；无按键或最终成功也保存 |
 | 每轮 QTE | 有上限的低频时间线，供回看尚未识别的机制；不是连续录像 |
 | 整轮未确认、疑似逃脱 | 结算图、计时器/QTE 缓存帧、OCR 依据、逐次反馈与退出原因 |
@@ -50,6 +51,24 @@ CRITICAL 为暴击，HIT 为普通命中，MISS/FAIL 为未命中；按键归属
 整轮包的 feedback_diagnostics 记录按键观察队列丢失数 dropped_press_records、归属是否不完整 attribution_incomplete，以及关闭等待后观察线程是否仍在结束 reader_still_running。过载不阻塞真实按键；发生缺失后，本会话后续按键归属保持未知。关闭时封存记录，迟到的识别不会改写已经汇总的账本。证据写入失败会清理本次临时文件，保留此前完整 ZIP。
 
 ## 原图与时间对应
+
+反馈未确认包的 `outcome.diagnostics` 记录原 0.75 秒窗口内的有效帧数、未匹配帧数、
+旧反馈帧数、最大采样间隔和最高匹配分数。`category` 对应以下观测情况：
+
+| 类别 | 含义 |
+| --- | --- |
+| no_observation / observation_gap | 窗口内无有效观察，或间隔超过 0.20 秒；说明证据不足，不证明游戏丢键 |
+| feedback_not_detected | 有连续观察但未识别到反馈字样，不能区分未显示与漏识别 |
+| feedback_not_renewed | 观察到旧字样，未确认新的反馈 |
+| superseded_by_input / ambiguous_feedback | 下一次输入到来前未确认，或看到反馈但候选输入不唯一 |
+| observer_failed / input_records_dropped | 观察线程异常，或按键观察队列丢失记录 |
+| qte_ended | 本轮结束前尚未确认 |
+
+整轮包的 `feedback_diagnostics.unknown_categories` 汇总上述分类，`observer_error` 记录观察线程异常类型。
+这些数据来自实际观察过程，旧包不具备这些字段；不能从旧包筛选后的八帧伪造实时采集统计。
+整轮超时的 `control_timeout` 保存只读检查状态、原图采集时间/区域、上限及检查错误（若有）；
+`timeout_control.png` 为该次 DXcam 原始控制区，结算检查若执行，另存不同来源/时刻的 `settlement.png`。
+任务会停止并释放输入，即使看到了结算面板也不自动关闭；请确认页面后再开始。
 
 上钩包的 peak_hook.png 与 peak_mask.png 是同帧原图及掩膜，last_hook.png 是该等待周期最后有效 ROI；timeout_game.png 复用异常分支在恢复前取得的客户区，与峰值图时间不同，不再重复截图。元数据包含有效帧数、无新帧次数、阈值、坐标、峰值时间和现场来源；context_source 区分复用与独立采集，复用路径的处理耗时不代表一次新的截图耗时。
 

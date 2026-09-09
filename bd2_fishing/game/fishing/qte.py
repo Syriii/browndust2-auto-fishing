@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 
 from bd2_fishing.game.fishing.pointer import read_pointer
-from bd2_fishing.game.fishing.tracing import trace_qte
+from bd2_fishing.game.fishing.tracing import QTEControlTimeout, trace_qte
 from bd2_fishing.game.fishing.trigger_rules import TargetEntryTrigger
 from bd2_fishing.infrastructure import settings as settings
 from bd2_fishing.infrastructure.windows import capture as capture_backend
@@ -255,6 +255,45 @@ class BaseQTEStrategy:
         run_control.sleep(0.2)
         pydirectinput.click()
 
+    def _on_control_timeout(self, sct) -> None:
+        """期限后只读核对现场并停止；不因循环结束而关闭未知页面或重抛。"""
+        run_control.checkpoint()
+        observer = getattr(self, "catch_observer", None)
+        details = dict(limit_seconds=self.longest_keep_time, state="capture_unavailable")
+        try:
+            frame = sct.grab(self.roi_pos)
+            details["captured_at_monotonic"] = time.monotonic()
+            details["capture_backend"] = "control DXcam (BGR)"
+            details["frame_region"] = self.roi_pos.as_tuple()
+            if frame is not None:
+                if observer is not None:
+                    observer.evidence_frames["timeout_control.png"] = frame.copy()
+                time_hsv, _ = self._split_roi_and_time(cv2.cvtColor(frame, cv2.COLOR_BGR2HSV))
+                if self._time_bar_visible(time_hsv):
+                    details["state"] = "qte_active"
+                else:
+                    details["state"] = "unrecognized_page"
+                    if observer is not None:
+                        # 无倒计时不等于已结算；使用现有面板/奖励识别补充判断，不发输入。
+                        observer.finish()
+                        if observer.evidence_metadata.get("panel_open"):
+                            details["state"] = "settlement_visible"
+        except Exception as exc:
+            details["inspection_error"] = type(exc).__name__
+        finally:
+            if observer is not None:
+                observer.evidence_metadata["control_timeout"] = details
+        labels = {
+            "capture_unavailable": "无法取得有效截图",
+            "qte_active": "游戏倒计时条仍可见",
+            "unrecognized_page": "未确认当前页面",
+            "settlement_visible": "已看到结算面板，尚未关闭",
+        }
+        raise QTEControlTimeout(
+            f"QTE 控制达到 {self.longest_keep_time} 秒上限：{labels[details['state']]}；"
+            "任务已停止，请确认游戏页面后重新开始"
+        )
+
     def _yellow_mask(self, roi_hsv: np.ndarray) -> np.ndarray:
         # 膨胀核随窗口宽度缩放：光标宽度随分辨率变大，核跟着变大才能填掉光标压住黄条挖出的洞。
         kernel_size = geometry.scale_pixel_length(
@@ -372,6 +411,8 @@ class FrostStraitQTEStrategy(BaseQTEStrategy):
                 pressed = True
             self._qte_trace.observe("tracking", cursor=cursor_x, pressed=pressed)
             self._sleep_loop()
+        else:
+            self._on_control_timeout(sct)
 
     def _red_obstruction_at_cursor(self, roi_hsv: np.ndarray, cursor_x: int) -> bool:
         mask = cv2.inRange(roi_hsv, self.red_range.lower, self.red_range.upper)
@@ -518,6 +559,9 @@ class AbyssMawQTEStrategy(BaseQTEStrategy):
             )
 
             self._sleep_loop()
+
+        else:
+            self._on_control_timeout(sct)
 
     def _blocker_mask(self, qte_hsv: np.ndarray) -> np.ndarray:
         """合并挡板在不同画面亮度下的多个 HSV 颜色区间。"""

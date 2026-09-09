@@ -18,16 +18,20 @@ class FeedbackMatcher:
     def __init__(self, width, height, assets=None):
         assets = Path(assets or Path(__file__).with_name("assets"))
         self.patterns = {}
-        for name in ("critical", "critical_alt", "hit", "miss", "fail"):
+        templates = [
+            (name, 875, 492) for name in ("critical", "critical_alt", "hit", "miss", "fail")
+        ]
+        templates.extend([("hit_effect_945", 945, 532), ("hit_plain_945", 945, 532)])
+        for name, reference_width, reference_height in templates:
             image = cv2.imdecode(np.frombuffer((assets / f"{name}.png").read_bytes(), np.uint8), 1)
             if image is None:
                 raise ValueError(f"反馈模板无法解码: {name}")
-            # 模板来自 875×492 客户区；匹配在当前位置搜索，不固定字样的动画坐标。
+            # 按每张原图的客户区缩放；匹配位置不固定，保留反馈动画的字形变体。
             image = cv2.resize(
                 image,
                 (
-                    max(1, round(image.shape[1] * width / 875)),
-                    max(1, round(image.shape[0] * height / 492)),
+                    max(1, round(image.shape[1] * width / reference_width)),
+                    max(1, round(image.shape[0] * height / reference_height)),
                 ),
             )
             self.patterns.setdefault(name.split("_")[0], []).append(white_text(image))

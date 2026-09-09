@@ -92,6 +92,8 @@ class FeedbackSession:
         self.observed_counts = Counter()
         self.scenes = None
         self.scene_error = None
+        self.reader_error = None
+        self.unknown_categories = Counter()
 
     def start(self):
         try:
@@ -155,8 +157,16 @@ class FeedbackSession:
                 )
             if self.dropped_presses:
                 # 丢记录后无法完整列举候选按键，本会话余下归属保持未知。
-                self.publish(self.tracker.close(stamp, "按键记录队列溢出，归属不完整"))
+                self.publish(
+                    self.tracker.close(
+                        stamp, "按键记录队列溢出，归属不完整", category="input_records_dropped"
+                    )
+                )
                 self.tracker.recent_attempts.clear()
+            elif self.reader_error is not None:
+                self.publish(
+                    self.tracker.close(stamp, "反馈观察线程异常退出", category="observer_failed")
+                )
 
     def _log(self, level, message, *args):
         self.messages.append((level, message, args))
@@ -203,6 +213,14 @@ class FeedbackSession:
                 )
             target = self.counts if outcome.attempt is not None else self.unassigned
             target[outcome.result] += 1
+            if outcome.result == "unknown" and outcome.diagnostics is not None:
+                self.unknown_categories[outcome.diagnostics["category"]] += 1
+                self._log(
+                    logging.DEBUG,
+                    "QTE 未确认采样依据: 按键=%s 详情=%s",
+                    outcome.attempt,
+                    outcome.diagnostics,
+                )
             level = logging.DEBUG
             labels = {"critical": "暴击", "hit": "普通命中", "miss": "未命中", "unknown": "未确认"}
             self._log(
@@ -311,6 +329,15 @@ class FeedbackSession:
             self.log.debug("QTE 观察随任务停止: %s", str(exc) or "已停止")
         except BaseException as exc:
             if not self.done.is_set():
+                with self.lock:
+                    if not self.done.is_set():
+                        self.reader_error = type(exc).__name__
+                        self._drain_presses()
+                        self.publish(
+                            self.tracker.close(
+                                time.monotonic(), "反馈观察线程异常退出", category="observer_failed"
+                            )
+                        )
                 self.log.error(
                     "QTE 结果观察异常停止: %s；未确认的按键不会当作未命中",
                     str(exc) or type(exc).__name__,
@@ -331,7 +358,13 @@ class FeedbackSession:
                     "QTE 按键记录队列溢出：丢失=%d；后续按键归属保持未确认",
                     self.dropped_presses,
                 )
-            self.publish(self.tracker.close(time.monotonic()))
+            self.publish(
+                self.tracker.close(
+                    time.monotonic(),
+                    "反馈观察线程异常退出" if self.reader_error else "QTE 退出前未获得明确反馈",
+                    category="observer_failed" if self.reader_error else "qte_ended",
+                )
+            )
             if self.writer is not None:
                 self.flush_evidence(time.monotonic(), force=True)
             if self.scenes is not None:
@@ -348,6 +381,8 @@ class FeedbackSession:
                 self.catch_observer.feedback_diagnostics = dict(
                     dropped_press_records=self.dropped_presses,
                     attribution_incomplete=bool(self.dropped_presses),
+                    observer_error=self.reader_error,
+                    unknown_categories=dict(self.unknown_categories),
                     scene_observation_error=self.scene_error,
                     scene_evidence_submitted=self.scenes.submitted
                     if self.scenes is not None

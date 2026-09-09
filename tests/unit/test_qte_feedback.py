@@ -45,6 +45,20 @@ class FeedbackImageTests(unittest.TestCase):
         for value in (0, 255):
             self.assertEqual(matcher.detect(np.full((89, 350, 3), value, np.uint8))[0], None)
 
+    def test_945_hit_variants_and_same_run_negative_frames(self):
+        matcher = FeedbackMatcher(945, 532)
+        for name, expected in (
+            ("U49-02", "hit"),
+            ("U50-03", "hit"),
+            ("U02-05", None),
+            ("U49-01", None),
+            ("U01-00", "fail"),
+            ("U04-07", "critical"),
+        ):
+            with self.subTest(frame=name):
+                frame = cv2.imread(str(FIXTURES / (name + ".png")))
+                self.assertEqual(matcher.detect(frame[:96])[0], expected)
+
 
 class OutcomeTests(unittest.TestCase):
     def test_each_new_word_maps_to_actual_feedback_not_geometry(self):
