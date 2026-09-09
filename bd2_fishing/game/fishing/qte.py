@@ -249,6 +249,8 @@ class BaseQTEStrategy:
                     "unknown", f"结算观察失败：{type(exc).__name__}"
                 )
                 log.exception("结算观察失败；不把 QTE 退出当作捕获成功")
+            if catch_observer.evidence_metadata.get("panel_open") is False:
+                raise TimeoutError("等待后仍未确认结算面板，已停止；请确认游戏页面后重新开始")
         run_control.sleep(max(0, self.fish_end_wait_time - (time.monotonic() - started)))
         window_center_x, window_center_y = self.region.center
         pydirectinput.moveTo(window_center_x, window_center_y)

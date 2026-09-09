@@ -70,6 +70,12 @@ CRITICAL 为暴击，HIT 为普通命中，MISS/FAIL 为未命中；按键归属
 `timeout_control.png` 为该次 DXcam 原始控制区，结算检查若执行，另存不同来源/时刻的 `settlement.png`。
 任务会停止并释放输入，即使看到了结算面板也不自动关闭；请确认页面后再开始。
 
+正常 QTE 结束后的结算检查在 `fish_end_wait_time` 预算内复查面板，最多等待 4 秒、检查 21 次，
+每次检查响应停止和窗口保护；OCR 耗时另计。首次即就绪时不增加轮询等待，等待时间计入原结算等待。
+仍无面板时停止，不点击或重抛。`settlement_first.png` 与 `settlement.png` 分别保留首个有效帧和最终有效帧，
+时间见 `first_settlement_at_monotonic`、`captured_at_monotonic`；`settlement_wait_samples` 记录各次是否有图及面板就绪状态。
+中断时仅保存已有缓存，无有效图则明确报错；不能用过渡动画推断已经捕获。
+
 上钩包的 peak_hook.png 与 peak_mask.png 是同帧原图及掩膜，last_hook.png 是该等待周期最后有效 ROI；timeout_game.png 复用异常分支在恢复前取得的客户区，与峰值图时间不同，不再重复截图。元数据包含有效帧数、无新帧次数、阈值、坐标、峰值时间和现场来源；context_source 区分复用与独立采集，复用路径的处理耗时不代表一次新的截图耗时。
 
 QTE 失败包最多保留 8 张按键前后及反馈帧。decision.png 若存在，是实际控制决策使用的 ROI；frame_* 是独立观察线程的帧，两者不能混作同一时刻。各掩膜均从各自原图生成，并记录区域及时间。

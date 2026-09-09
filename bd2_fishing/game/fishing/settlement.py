@@ -187,16 +187,41 @@ class CatchObserver:
         self.stop_observing()
         run_control.checkpoint()
         guard = window.WindowGuard("BrownDust II", self.window, require_foreground=True)
-        guard()
+        budget = min(4.0, max(0.0, self.config.getfloat("time", "fish_end_wait_time", fallback=4)))
+        deadline = time.monotonic() + budget
+        frame, captured, panel = None, None, False
+        self.evidence_metadata["panel_open"] = False
+        samples = []
         with FeedbackCapture(self.window) as capture:
-            frame = capture.grab()
-        captured = time.monotonic()
-        # OCR 或取消中途退出时，仍可保存已经取得的现场，不能再截图。
-        self.evidence_frames["settlement.png"] = frame
-        self.evidence_metadata["captured_at_monotonic"] = captured
+            # 同时限制次数与时间；逐次响应取消/窗口保护，只保留首帧与最新帧。
+            for _ in range(21):
+                run_control.checkpoint()
+                guard()
+                candidate = capture.grab()
+                stamp = time.monotonic()
+                if candidate is not None:
+                    frame, captured = candidate, stamp
+                    panel = self._panel_open(frame)
+                    if "settlement_first.png" not in self.evidence_frames:
+                        self.evidence_frames["settlement_first.png"] = frame.copy()
+                        self.evidence_metadata["first_settlement_at_monotonic"] = stamp
+                    self.evidence_frames["settlement.png"] = frame.copy()
+                    self.evidence_metadata.update(captured_at_monotonic=stamp, panel_open=panel)
+                samples.append(
+                    dict(
+                        captured_at_monotonic=stamp,
+                        frame_available=candidate is not None,
+                        panel_open=panel if candidate is not None else False,
+                    )
+                )
+                self.evidence_metadata["settlement_wait_samples"] = samples
+                if panel or stamp >= deadline:
+                    break
+                run_control.sleep(min(0.2, max(0, deadline - stamp)))
+        if frame is None:
+            raise RuntimeError("结算等待期间未取得有效截图")
         with self._settlement_ocr():
             readings = list(self.readings)
-            panel = self._panel_open(frame)
             reward_texts, distance_texts = [], []
             distance_reading = None
             if panel:
@@ -250,6 +275,7 @@ class CatchObserver:
             self.result.remaining_cm,
         )
         self.evidence_metadata = dict(
+            self.evidence_metadata,
             captured_at_monotonic=captured,
             window_region=self.window.as_tuple(),
             panel_open=panel,

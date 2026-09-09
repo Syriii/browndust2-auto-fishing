@@ -59,6 +59,19 @@ class FeedbackImageTests(unittest.TestCase):
                 frame = cv2.imread(str(FIXTURES / (name + ".png")))
                 self.assertEqual(matcher.detect(frame[:96])[0], expected)
 
+    def test_glare_critical_uses_existing_templates_and_rejects_neighbor_frames(self):
+        matcher = FeedbackMatcher(945, 532)
+        for name, expected in (
+            ("glare_critical_945", "critical"),
+            ("glare_holdout_U21", "critical"),
+            ("glare_holdout_U34", "critical"),
+            ("glare_before_945", None),
+            ("glare_after_945", None),
+        ):
+            with self.subTest(frame=name):
+                frame = cv2.imread(str(FIXTURES / (name + ".png")))
+                self.assertEqual(matcher.detect(frame[:96])[0], expected)
+
 
 class OutcomeTests(unittest.TestCase):
     def test_each_new_word_maps_to_actual_feedback_not_geometry(self):
