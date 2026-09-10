@@ -45,7 +45,8 @@ class PortableUpdateTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name)
+        # Windows runner 的 TEMP 可能是 RUNNER~1；故障注入与实现使用同一规范路径。
+        self.root = Path(self.temporary.name).resolve()
         self.install = self.root / "install"
         self.job = self.install / "cache/updates" / ("a" * 32)
         self.stage = self.job / "stage"

@@ -78,7 +78,7 @@ class ProjectLayoutTests(unittest.TestCase):
 
     def test_frozen_config_is_beside_executable_and_resources_are_bundled(self):
         with tempfile.TemporaryDirectory() as temporary:
-            app = Path(temporary)
+            app = Path(temporary).resolve()
             with (
                 patch.object(sys, "frozen", True, create=True),
                 patch.object(sys, "executable", str(app / "BD2_AutoFishing.exe")),

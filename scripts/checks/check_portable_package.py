@@ -119,7 +119,7 @@ def main():
     workspace = Path(__file__).resolve().parents[2]
     base = workspace / ".local/maintenance"
     with tempfile.TemporaryDirectory(prefix="update-exe-check-", dir=base) as temporary:
-        directory = Path(temporary)
+        directory = Path(temporary).resolve()
         unpacked = package.unpack_verified(archive, directory / "unpacked")
         assert unpacked == manifest
         result = exercise_helper(candidate, directory)
