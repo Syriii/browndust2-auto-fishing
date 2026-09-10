@@ -33,7 +33,7 @@ def clear_backpack(
     if not _should_retry_clear_backpack(sct, ocr_context, button_click_interval):
         return
 
-    log.info(">>> 清理背包后未检测到钓鱼地点，再次清理背包")
+    log.info("清理背包后未检测到钓鱼地点，再次清理背包")
     _click_clear_backpack_buttons(region, config, open_backpack=False)
 
 

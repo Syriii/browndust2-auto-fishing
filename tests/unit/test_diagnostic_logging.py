@@ -46,12 +46,12 @@ class OCRLoggingTests(unittest.TestCase):
         capture = Mock(grab=Mock(return_value=np.zeros((4, 8, 3), dtype=np.uint8)))
         engine = Mock(detect_and_recognize=Mock(return_value=[]))
         for optional, purpose, level in (
-            (True, "背包满提示", logging.INFO),
+            (True, "背包满提示", logging.DEBUG),
             (False, "钓场地点", logging.WARNING),
         ):
             with (
                 self.subTest(optional=optional),
-                self.assertLogs("bd2_fishing.perception.ocr", level="INFO") as logs,
+                self.assertLogs("bd2_fishing.perception.ocr", level="DEBUG") as logs,
             ):
                 self.assertEqual(
                     get_result_from_ocr(
@@ -66,7 +66,7 @@ class OCRLoggingTests(unittest.TestCase):
 
     def test_no_new_frame_is_not_reported_as_ocr_failure(self):
         engine = Mock()
-        with self.assertLogs("bd2_fishing.perception.ocr", level="INFO") as logs:
+        with self.assertLogs("bd2_fishing.perception.ocr", level="DEBUG") as logs:
             self.assertIsNone(
                 get_result_from_ocr(Mock(grab=Mock(return_value=None)), engine, Rect(0, 0, 8, 4))
             )

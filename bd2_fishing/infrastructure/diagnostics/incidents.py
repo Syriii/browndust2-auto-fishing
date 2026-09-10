@@ -97,13 +97,22 @@ class IncidentRecorder(logging.Handler):
                 done,
                 exception_info=exception_info,
             ):
-                log.warning("异常证据队列已满，事件仅保留日志: %s", event)
+                log.warning(
+                    "异常证据队列已满，事件仅保留日志: %s",
+                    event,
+                    extra={"user_message": "截图保存任务过多，此次异常仅保留日志。"},
+                )
             else:
                 with self.frame_lock:
                     self.pending = [item for item in self.pending if not item.is_set()]
                     self.pending.append(done)
         except Exception:
-            log.warning("无法提交异常证据: %s", event, exc_info=True)
+            log.warning(
+                "无法提交异常证据: %s",
+                event,
+                exc_info=True,
+                extra={"user_message": "此次异常截图无法提交保存，请保留日志供排查。"},
+            )
 
     def emit(self, record):
         if not record.name.startswith("bd2_fishing."):

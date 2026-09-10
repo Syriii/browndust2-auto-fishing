@@ -25,7 +25,7 @@ def _run_fishing_session(
     region = window.get_window_region(GAME_TITLE)
     if not region:
         raise RuntimeError(f"未找到标题为 '{GAME_TITLE}' 的窗口")
-    log.info(">>> 已定位游戏窗口: %s", region.as_tuple())
+    log.debug("已定位游戏窗口: %s", region.as_tuple())
 
     config = config if config is not None else settings.read_ini()
     verify_window_size(config, region)

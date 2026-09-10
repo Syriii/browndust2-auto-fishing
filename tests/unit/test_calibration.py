@@ -32,6 +32,61 @@ class CalibrationTests(unittest.TestCase):
     def test_large_jitter_refuses_automatic_values(self):
         self.assertEqual(self.measure(0.05)["recommendation"], {})
 
+    def test_rare_large_spike_cannot_hide_below_p95(self):
+        clock = [0.0]
+        counts = {}
+
+        def wait(seconds):
+            counts[seconds] = counts.get(seconds, 0) + 1
+            clock[0] += seconds + (0.08 if counts[seconds] == 12 else 0.001)
+            return False
+
+        report = measure_waits(Mock(wait=Mock(side_effect=wait)), clock=lambda: clock[0])
+        self.assertEqual(report["recommendation"], {})
+        self.assertTrue(all(row["outlier_count"] == 1 for row in report["waits"]))
+        self.assertEqual(report["waits"][0]["p95_ms"], 6)
+
+    def test_invalid_clock_is_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, "计时无效"):
+            measure_waits(Mock(wait=Mock(return_value=False)), clock=lambda: float("nan"))
+
+    def test_feedback_recommendation_must_itself_pass_stability_check(self):
+        clock = [0.0]
+
+        def wait(seconds):
+            clock[0] += seconds + (0.05 if seconds == 0.01 else 0.001)
+            return False
+
+        report = measure_waits(Mock(wait=Mock(side_effect=wait)), clock=lambda: clock[0])
+        self.assertEqual(
+            report["recommendation"], {"loop_sleep_seconds": "5", "feedback_poll_seconds": "20"}
+        )
+
+    def test_no_game_still_saves_calibration_without_creating_config(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.ini"
+            service = DesktopServices(config_path=path)
+            with (
+                patch.object(service, "inspect_device", side_effect=RuntimeError("未找到游戏")),
+                patch(
+                    "bd2_fishing.app.calibration.measure_waits", return_value=self.measure(0.001)
+                ),
+            ):
+                report = service.calibrate_timing(threading.Event())
+            self.assertIsNone(report["device"])
+            self.assertIn("未找到游戏", report["device_error"])
+            self.assertTrue(report["recommendation"])
+            self.assertFalse(path.exists())
+            self.assertTrue(Path(report["report_path"]).exists())
+
+    def test_cancelled_before_start_never_inspects_device(self):
+        cancel = threading.Event()
+        cancel.set()
+        with patch.object(DesktopServices, "inspect_device") as inspect:
+            with self.assertRaisesRegex(RuntimeError, "取消"):
+                DesktopServices().calibrate_timing(cancel)
+            inspect.assert_not_called()
+
     def test_cancellation_interrupts_measurement(self):
         cancel = threading.Event()
         cancel.set()

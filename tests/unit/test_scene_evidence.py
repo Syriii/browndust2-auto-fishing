@@ -71,6 +71,52 @@ class SceneEvidenceTests(unittest.TestCase):
             np.testing.assert_array_equal(restored, special)
         self.assertEqual(recorder.bytes, 0)
 
+    def test_new_mechanism_inside_old_half_second_limit_is_saved_with_lifecycle(self):
+        recorder = self.recorder()
+        raw = self.frame()
+        first = dict(
+            roi_available=True,
+            qte_active=True,
+            qte_shape=[19, 244, 3],
+            appearance_regions={"red_region": ((10, 20),)},
+        )
+        both = dict(
+            first, appearance_regions={"red_region": ((10, 20),), "purple_region": ((50, 60),)}
+        )
+        recorder.signals.inspect = Mock(
+            side_effect=[
+                (("red_content",), dict(first)),
+                (("red_content",), dict(first)),
+                (("red_content", "purple_content"), dict(both)),
+                (("red_content", "purple_content"), dict(both)),
+                (("red_content",), dict(first)),
+                (("red_content",), dict(first)),
+            ]
+        )
+        for stamp in (1, 1.02, 1.04, 1.06, 1.08, 1.1):
+            recorder.observe(raw, stamp)
+        self.assertEqual([event["observed_at"] for event in recorder.events], [1.02, 1.06])
+        recorder.press(3, 1.05, {"reason": "yellow_overlap"})
+        with patch(
+            "bd2_fishing.game.fishing.scene_evidence.bundle_writer.submit", return_value=True
+        ) as submit:
+            recorder.close([], "finished")
+        metadata = submit.call_args.args[2]
+        red, purple = metadata["appearance_lifecycle"]["instances"]
+        self.assertEqual((red["state"], purple["state"]), ("unknown", "disappeared"))
+        self.assertEqual(purple["attempts_in_observed_interval"], [3])
+        self.assertEqual(purple["result"], "unknown")
+        self.assertTrue(
+            any(record["captured_at_monotonic"] == 1.1 for record in metadata["frames"])
+        )
+
+    def test_same_timestamp_does_not_confirm_an_event(self):
+        recorder = self.recorder()
+        for _ in range(3):
+            recorder.observe(self.frame(special=True), 1)
+        self.assertFalse(recorder.events)
+        self.assertEqual(recorder.non_increasing_timestamps, 2)
+
     def test_ordinary_timeline_is_separate_and_buffer_is_owned(self):
         recorder = self.recorder()
         frame = self.frame()

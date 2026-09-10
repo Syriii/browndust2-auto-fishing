@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from dataclasses import dataclass
 from typing import Any, Iterable
 
@@ -10,6 +11,11 @@ import numpy as np
 
 from bd2_fishing.perception.ocr_types import OCRBox, OCRText
 from bd2_fishing.perception.tracing import OCRContextFilter
+from bd2_fishing.runtime import control as run_control
+
+
+class OCRBusyError(TimeoutError):
+    """共享引擎仍有原生调用在执行，本次观察未执行。"""
 
 
 def route_rapidocr_logs():
@@ -65,6 +71,7 @@ class RapidOCREngine:
 
         self._engine = RapidOCR(params=params)
         self._use_cls = use_cls
+        self._call_lock = threading.Lock()
 
     def detect(self, image: np.ndarray) -> list[OCRBox]:
         """只执行文字检测，返回文本框而不识别内容。"""
@@ -126,8 +133,17 @@ class RapidOCREngine:
         use_cls: bool,
         use_rec: bool,
     ) -> _RapidOCRPayload:
-        result = self._engine(image, use_det=use_det, use_cls=use_cls, use_rec=use_rec)
-        return self._extract_payload(result)
+        run_control.checkpoint()
+        # RapidOCR 会修改实例参数；锁属于引擎，覆盖跨轮及所有识别入口。
+        # 忙时不排队，防止旧观察关闭后再执行过期画面的识别。
+        if not self._call_lock.acquire(blocking=False):
+            raise OCRBusyError("文字识别引擎仍忙，本次观察未执行，请等待后重新观察")
+        try:
+            run_control.checkpoint()
+            result = self._engine(image, use_det=use_det, use_cls=use_cls, use_rec=use_rec)
+            return self._extract_payload(result)
+        finally:
+            self._call_lock.release()
 
     def _extract_payload(self, result: Any) -> _RapidOCRPayload:
         """兼容 RapidOCR 直接返回结果或 ``(结果, 耗时)`` 元组的形式。"""

@@ -7,6 +7,8 @@
 | 脚本（相对 `scripts/`） | 用途 | 对游戏的影响 |
 | --- | --- | --- |
 | `checks/check_architecture.py` | 静态导入方向与循环检查 | 不导入设备、不连接游戏 |
+| `checks/replay_mechanisms.py` | 已保存原图的机制定位回放与局部耗时报告 | 不加载相机、窗口或输入模块；只读取原图，输出 JSON |
+| `checks/review_feedback.py` | 只读证据包索引、未确认分类与同轮追溯 | 不连接游戏，不解压或改写原 ZIP；生成 JSON/Markdown |
 | `benchmarks/qte_latency.py` | 合成图像与日志提交时延基准 | 不连接游戏、不发送输入；结果写入 .local/benchmarks |
 | `checks/smoke_ui.py` | 实际 Tk 控件、模拟任务，检查启停、设置及日志筛选；自动结束 | 不连接游戏、不发送输入，设置写入临时配置 |
 | `checks/preview_ui.py` | 带示例日志的手动页面预览 | 不连接游戏、不保存配置 |
@@ -17,6 +19,28 @@
 | `live/clean_backpack_once.py` | 明确执行一次手动清包 | 实际出售背包物品，不受自动清包开关约束 |
 
 ## 常用命令
+
+对指定诊断目录生成反馈索引；可重复传入 `--input-dir`，原包不改写：
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 -B scripts/checks/review_feedback.py --input-dir .local/diagnostics --output-dir .local/maintenance/feedback-index
+```
+
+输出 `index.json` 和 `index.md`。按完整 ZIP 哈希去除重复副本，整轮/场景包只作为同轮上下文，
+不算作新的反馈失败。旧包没有 diagnostics 时保持 legacy_unclassified，并按原原因分组；
+不能从保存的稀疏图片数计算采样率或命中率。工具检查元数据和所引用文件是否存在，
+不解码图片或宣称所有图像完整。坏包单列，存在读取错误时退出码为 1。
+
+特殊机制离线回放（默认输出 `.local/maintenance/mechanism-replay.json`）：
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 -B scripts/checks/replay_mechanisms.py
+```
+
+默认逐一核对 17 张控制原图中的绿色存在状态、未确认起按端和已标注的局部障碍；
+输出原图 SHA-256、裁剪坐标、指针、色区及区域提取耗时，不验证游戏命中率。
+外部 PNG 目录使用 `--input-dir 路径 --crop 上 下 左 右`，同目录图片应使用同一种原始 ROI；
+坐标为半开区间，不猜测截图布局。外部原图仅生成观测报告，不冒充已标注回归通过。
 
 页面集成检查不连接游戏：
 
@@ -54,3 +78,13 @@
 ## 结果判断
 
 工具输出的“检测到上钩”“QTE 结束”和“确认捕获”是不同阶段。截图、反馈和结算证据格式见[日志与诊断](../user/diagnostics.md)。沙箱找不到窗口时先核对桌面会话与权限，不能直接认定游戏未打开；无法实测时如实记录限制。
+
+### 不打扰游戏的 UI 检查
+
+`python scripts/checks/smoke_ui.py --hidden` 保持 Tk 主窗口隐藏，只运行模拟任务与临时配置，验证设置、日志与启停。跳过可视布局检查，不代表实机或 EXE 验收。默认不带参数的 UI 检查仍会打开窗口，请在不影响游戏运行时执行。
+
+`python scripts/checks/smoke_ui.py --short-screen` 显示测试窗口，模拟 125% Tk 缩放和 1366×768 屏幕的工作区，检查原生窗口边界及开始、保存按钮可见性；不能与 `--hidden` 同用。所有模式都覆盖诊断积压分批读取后的时间顺序，以及警告不等待积压清空即可显示。
+
+- `scripts/checks/smoke_updates.py`：隐藏 Tk 更新与存储入口检查，使用临时配置和模拟网络，不下载或替换真实程序，不操作游戏。
+
+- `scripts/checks/check_portable_package.py <候选目录> --report <JSON路径>`：验证 ZIP/文件清单，使用真实更新助手与 C# 测试 EXE 检查替换、重启及恢复；仅创建临时隔离目录，不启动钓鱼程序或操作游戏。需要 Windows .NET Framework csc。

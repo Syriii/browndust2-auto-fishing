@@ -154,7 +154,7 @@ class QTEControlTests(unittest.TestCase):
                     side_effect=[None] * (len(frames) - 1) + [control.RunStopped("end")]
                 )
                 if cls is qte.AbyssMawQTEStrategy:
-                    strategy._blocker_rect = Mock(return_value=None)
+                    strategy._blocker_detector.read = Mock(return_value=None)
                 with patch.object(qte.pydirectinput, "press") as press:
                     with self.assertRaises(control.RunStopped):
                         strategy.play_qte(Mock())

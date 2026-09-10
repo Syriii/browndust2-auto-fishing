@@ -53,7 +53,8 @@ def detect_location_from_ocr(
         )
         matched_location = match_location_name(texts) if texts else None
         if matched_location is not None:
-            log.info(">>> 已检测到地点: %s（第 %d/3 次）", matched_location, attempt)
+            log.info("当前钓场：%s", matched_location.value)
+            log.debug("钓场识别成功：第 %d/3 次", attempt)
             return matched_location
         log.warning(
             "钓场识别未匹配（第 %d/3 次）：ROI=%s，文本=%s；%s",
@@ -61,6 +62,11 @@ def detect_location_from_ocr(
             ocr_context.regions.location.as_tuple(),
             texts,
             "0.5 秒后重新截图识别" if attempt < 3 else "请在程序页面选择钓场后重新开始",
+            extra={
+                "user_message": f"钓场暂未识别，正在重试（{attempt}/3）。"
+                if attempt < 3
+                else "未能识别钓场，请在左侧选择钓场后重新开始。"
+            },
         )
         if attempt < 3:
             run_control.sleep(0.5)
@@ -76,7 +82,7 @@ def check_if_have_keyword(sct: DxCameraCapture, ocr_context: OCRContext, keyword
         sct, ocr_context.engine, ocr_context.regions.map, purpose=f"钓场时间:{keyword}"
     )
     if texts is None:
-        log.info(">>> OCR 没有识别到任何文本")
+        log.debug("OCR 没有识别到任何文本")
         return False
     if any(keyword in text for text in texts):
         return True
@@ -89,7 +95,7 @@ def check_if_time_to_change_location(sct: DxCameraCapture, ocr_context: OCRConte
     if check_if_have_keyword(sct, ocr_context, "时"):
         return False
 
-    log.info(">>> OCR 没有检测到“时”字，可能需要切换钓鱼点")
+    log.debug("OCR 没有检测到“时”字，可能需要切换钓鱼点")
     return True
 
 

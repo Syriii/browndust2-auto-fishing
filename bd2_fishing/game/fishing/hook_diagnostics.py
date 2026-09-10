@@ -172,6 +172,7 @@ class HookDiagnostics:
                 metadata["peak_pixels"],
                 metadata["valid_frames"],
                 metadata["none_frames"],
+                extra={"user_message": "上钩超时截图已保存，可从异常截图入口查看。"},
             )
         except Exception:
             job_log.warning("保存上钩诊断截图失败，继续原有钓鱼流程", exc_info=True)

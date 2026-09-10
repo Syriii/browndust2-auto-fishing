@@ -64,7 +64,7 @@ def _save_worker():
                 archive.writestr(
                     "metadata.json", json.dumps(metadata, ensure_ascii=False, indent=2)
                 )
-            job_log.info("维护证据已保存: %s；证据ID=%s", path, metadata["evidence_id"])
+            job_log.debug("维护证据已保存: %s；证据ID=%s", path, metadata["evidence_id"])
         except Exception:
             job_log.exception("维护证据保存失败")
         finally:

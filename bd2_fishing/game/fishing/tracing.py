@@ -94,6 +94,13 @@ class QTETrace:
             self.reason,
             time.monotonic() - self.started,
             dict(self.total),
+            extra={
+                "user_message": "QTE 等待超时，未确认捕获结果。"
+                if level == logging.WARNING
+                else "QTE 执行异常，正在结束本轮任务。"
+                if level == logging.ERROR
+                else "QTE 控制结束，等待结算确认。"
+            },
         )
 
 
@@ -111,25 +118,39 @@ def trace_qte(method):
             self.longest_keep_time,
             self.qte_detail_log,
         )
+        primary_error = None
         try:
             start_feedback = getattr(self, "_start_feedback", None)
             if start_feedback is not None:
                 start_feedback()
             return method(self, *args, **kwargs)
-        except QTEControlTimeout:
+        except QTEControlTimeout as exc:
+            primary_error = exc
             trace.reason = "control_timeout"
             raise
-        except run_control.RunStopped:
+        except run_control.RunStopped as exc:
+            primary_error = exc
             trace.reason = "cancelled"
             raise
         except BaseException as exc:
+            primary_error = exc
             trace.reason = f"exception:{type(exc).__name__}"
             raise
         finally:
             stop_feedback = getattr(self, "_stop_feedback", None)
-            if stop_feedback is not None:
-                stop_feedback()
-            trace.close()
-            self._qte_trace = None
+            try:
+                if stop_feedback is not None:
+                    stop_feedback()
+            except Exception as exc:
+                if primary_error is None:
+                    trace.reason = f"exception:{type(exc).__name__}"
+                    raise
+                primary_error.add_note(f"QTE 反馈清理另有异常：{type(exc).__name__}: {exc}")
+                log.exception("QTE 反馈清理失败；保留原退出原因，外层继续收尾")
+            finally:
+                try:
+                    trace.close()
+                finally:
+                    self._qte_trace = None
 
     return wrapped

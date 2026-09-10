@@ -2,6 +2,7 @@
 
 import cv2
 
+from bd2_fishing.game.fishing.mechanics.regions import read_mechanism_regions
 from bd2_fishing.game.fishing.pointer import read_pointer
 from bd2_fishing.perception import image as vision
 from bd2_fishing.runtime import geometry
@@ -75,6 +76,9 @@ class SceneSignals:
         cursor = reading.x
         threshold = max(3, round(qte.shape[0] * qte.shape[1] * 0.003))
         signals = []
+        regions = read_mechanism_regions(qte)
+        if regions.bubble_spans:
+            signals.append("bubble_candidate")
         for name in ("red", "purple", "green"):
             if pixels[name] >= threshold:
                 signals.append(f"{name}_content")
@@ -103,4 +107,14 @@ class SceneSignals:
             pointer_candidates=candidates,
             pointer_reason=reading.reason,
             qte_shape=list(qte.shape),
+            bubble_spans=regions.bubble_spans,
+            green_hold_candidate=regions.green_present,
+            appearance_regions={
+                "red_region": regions.red_spans,
+                "purple_region": regions.purple_spans,
+                "bubble_candidate": regions.bubble_spans,
+                "green_region": ()
+                if regions.green is None
+                else ((regions.green.left, regions.green.right),),
+            },
         )

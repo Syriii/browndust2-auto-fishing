@@ -8,9 +8,12 @@ import time
 import cv2
 import numpy as np
 
+from bd2_fishing.game.fishing.mechanics.blockers import BlockerDetector, active_range_for_blocker
+from bd2_fishing.game.fishing.mechanics.blue_target import read_blue_target
+from bd2_fishing.game.fishing.mechanics.policy import MechanismPolicy
+from bd2_fishing.game.fishing.mechanics.regions import read_mechanism_regions
 from bd2_fishing.game.fishing.pointer import read_pointer
 from bd2_fishing.game.fishing.tracing import QTEControlTimeout, trace_qte
-from bd2_fishing.game.fishing.trigger_rules import TargetEntryTrigger
 from bd2_fishing.infrastructure import settings as settings
 from bd2_fishing.infrastructure.windows import capture as capture_backend
 from bd2_fishing.infrastructure.windows import input as pydirectinput
@@ -37,6 +40,10 @@ class BaseQTEStrategy:
         self._decision_frame = None
         self._decision_captured_at = None
         self._pointer_reading = None
+        self._mechanism_policy = MechanismPolicy()
+        self._green_release_pending = False
+        self._green_input_started_at = None
+        self._mechanism_regions = None
         # 维护取证是正常运行能力；旧配置开关不再关闭失败及结算观察。
         self.feedback_enabled = True
         self.pixel_threshold_scale = vision.build_pixel_threshold_scale(config, region)
@@ -96,7 +103,7 @@ class BaseQTEStrategy:
             config.getint("roi", "qte_left_percent"),
             config.getint("roi", "qte_right_percent"),
         )
-        log.info(
+        log.debug(
             ">>> QTE 像素阈值: "
             f"time_bar_score={self.time_bar_score_threshold}, "
             f"red_obstruction={self.red_obstruction_pixel_threshold}, "
@@ -104,8 +111,64 @@ class BaseQTEStrategy:
             f"press_tolerance={self.press_tolerance_pixels}px"
         )
 
+    @trace_qte
     def play_qte(self, sct: capture_backend.DxCameraCapture) -> None:
-        raise NotImplementedError("子类必须实现 play_qte() 方法")
+        self._mechanism_policy = MechanismPolicy()
+        no_bar_frames = 0
+        qte_started = False
+        loading_logged = False
+        start_time = time.monotonic()
+
+        while time.monotonic() - start_time < self.longest_keep_time:
+            run_control.checkpoint()
+            frames = self._grab_qte_frames(sct)
+            if frames is None:
+                self._release_green_on_missing_frame()
+                self._mechanism_policy.targets.invalidate()
+                self._qte_trace.observe("no_frame")
+                self._sleep_loop()
+                continue
+
+            time_hsv, qte_hsv = self._split_roi_and_time(frames)
+            time_green_mask, time_red_mask = self._time_bar_masks(time_hsv)
+            if not self._time_bar_visible_from_masks(time_green_mask, time_red_mask):
+                self._release_green_on_missing_frame()
+                self._mechanism_policy.targets.invalidate()
+                if not qte_started:
+                    self._qte_trace.observe("loading")
+                    if not loading_logged:
+                        log.debug("倒计时条尚未出现，等待 QTE 界面加载")
+                        loading_logged = True
+                    self._sleep_loop()
+                    continue
+                self._qte_trace.observe("no_time_bar")
+                no_bar_frames += 1
+                if self._on_bar_disappeared(no_bar_frames):
+                    break
+                self._sleep_loop()
+                continue
+
+            qte_started = True
+            no_bar_frames = 0
+
+            cursor_x = self._find_cursor_x(qte_hsv)
+            handled, regions = self._mechanism_step(qte_hsv, cursor_x)
+            if handled:
+                self._mechanism_policy.targets.invalidate()
+                self._sleep_loop()
+                continue
+            if cursor_x is None:
+                self._mechanism_policy.targets.invalidate()
+                self._qte_trace.observe("no_cursor")
+                self._sleep_loop()
+                continue
+            self._track_targets(qte_hsv, cursor_x, regions)
+            self._sleep_loop()
+        else:
+            self._on_control_timeout(sct)
+
+    def _track_targets(self, qte_hsv, cursor_x, regions):
+        raise NotImplementedError("子类必须提供地点目标识别")
 
     def _start_feedback(self):
         if not self.feedback_enabled:
@@ -122,6 +185,15 @@ class BaseQTEStrategy:
             self._stop_feedback()
 
     def _stop_feedback(self):
+        # 先释放绿色长按，再等待观察线程封存；异常、取消和超时均经过此处。
+        try:
+            if self._mechanism_policy.green.held or self._green_release_pending:
+                self._mechanism_policy.green.release("green_interrupted")
+                self._release_green_key()
+        finally:
+            self._close_feedback()
+
+    def _close_feedback(self):
         session, self._feedback_session = self._feedback_session, None
         self._decision_frame = None
         self._decision_captured_at = None
@@ -130,6 +202,119 @@ class BaseQTEStrategy:
                 session.close()
             except Exception:
                 log.exception("QTE 结果观察结束失败；不改变本轮控制结果")
+
+    def _mechanism_step(self, qte_hsv, cursor):
+        """识别同一控制帧，由纯策略仲裁，再同步执行唯一动作。"""
+        regions = read_mechanism_regions(qte_hsv, margin=max(3, self.press_tolerance_pixels + 2))
+        self._mechanism_regions = regions
+        decision = self._mechanism_policy.observe(regions, cursor, time.monotonic())
+        if decision.action == "normal":
+            self._cache_first_mechanisms(regions)
+            return False, regions
+        if decision.action == "press":
+            self._cache_first_mechanisms(regions)
+            self._press_qte(
+                decision.reason,
+                cursor_x=cursor,
+                check_x=cursor,
+                target="bubble",
+                bubble_span=decision.bubble_span,
+            )
+            self._cache_mechanism_frame("bubble_press.png")
+            self._qte_trace.observe("bubble_press", cursor=cursor, pressed=True)
+            log.info("已尝试单次命中泡泡球，等待游戏反馈。")
+            return True, regions
+        if decision.action == "down":
+            # 原生调用报错也可能已经部分执行，退出路径仍必须尝试释放。
+            self._green_release_pending = True
+            pydirectinput.qte_key_down()
+            self._green_input_started_at = time.monotonic()
+            self._cache_mechanism_frame("green_start.png")
+        elif decision.action == "up":
+            # 先释放，取证线程或异常不能延迟 keyUp。
+            self._release_green_key()
+            released_at = time.monotonic()
+            self._cache_mechanism_frame("green_release.png")
+            if self._feedback_session is not None:
+                try:
+                    self._feedback_session.begin_press(
+                        dict(
+                            strategy=type(self).__name__,
+                            frame_region=self.roi_pos.as_tuple(),
+                            qte_crop_percent=self.qte_pos_tuples,
+                            capture_backend="control DXcam (BGR)",
+                            stage="after_release_call",
+                            reason=decision.reason,
+                            action_kind="green_hold",
+                            hold_decided_at_monotonic=decision.started_at,
+                            hold_started_at_monotonic=self._green_input_started_at,
+                            release_recorded_at_monotonic=released_at,
+                            input_timestamp_stage="native_call_returned",
+                            result_window_anchor="release",
+                            captured_at_monotonic=self._decision_captured_at,
+                        ),
+                        self._decision_frame,
+                        pressed_at=released_at,
+                    )
+                except Exception:
+                    log.exception("绿色动作观察记录失败；按键已释放")
+            if decision.reason != "green_release_inside":
+                raise RuntimeError(f"绿色长按已释放并停止：{decision.reason}")
+        self._cache_first_mechanisms(regions)
+        self._qte_trace.observe(decision.reason)
+        return True, regions
+
+    def _cache_first_mechanisms(self, regions):
+        for name, present in (
+            ("green", regions.green_present),
+            ("purple", bool(regions.purple_spans)),
+            ("red", bool(regions.red_spans)),
+            ("bubble", bool(regions.bubble_spans)),
+        ):
+            if present:
+                self._cache_mechanism_frame(f"mechanism_first_{name}.png", first_only=True)
+
+    def _cache_mechanism_frame(self, name, *, first_only=False):
+        """每轮最多三张首次机制图及两张动作图；复用帧，仅缓存、不编码写盘。"""
+        observer = getattr(self, "catch_observer", None)
+        if observer is None or self._decision_frame is None:
+            return
+        try:
+            if not first_only or name not in observer.evidence_frames:
+                observer.evidence_frames[name] = self._decision_frame.copy()
+                metadata = getattr(observer, "evidence_metadata", None)
+                if isinstance(metadata, dict):
+                    metadata.setdefault("mechanism_frames", {})[name] = dict(
+                        captured_at_monotonic=self._decision_captured_at,
+                        frame_region=self.roi_pos.as_tuple(),
+                        qte_crop_percent=self.qte_pos_tuples,
+                        capture_backend="control DXcam (BGR)",
+                    )
+        except Exception:
+            log.exception("机制代表帧缓存失败；不改变输入决策")
+
+    def _release_green_key(self):
+        # 与纯决策状态分开：只有原生释放成功才清除待释放标记，失败时 finally 会重试。
+        self._green_release_pending = True
+        pydirectinput.qte_key_up()
+        self._green_release_pending = False
+
+    def _release_green_on_missing_frame(self):
+        decision = self._mechanism_policy.invalidate_observation()
+        if decision.action == "up":
+            self._release_green_key()
+            raise RuntimeError("绿色长按期间画面不可用，已释放并停止")
+
+    @staticmethod
+    def _blue_evidence(target, reading):
+        if target != "blue" or reading is None:
+            return {}
+        return dict(
+            blue_visible_spans=reading.visible_spans,
+            blue_safe_spans=reading.safe_spans,
+            blue_repaired_cursor_gap=reading.repaired_cursor_gap,
+            blue_boundary_policy="raw_columns_inset_no_tolerance",
+        )
 
     def _press_qte(self, reason=None, **details):
         if self._feedback_session is not None:
@@ -147,6 +332,14 @@ class BaseQTEStrategy:
                         qte_crop_percent=self.qte_pos_tuples,
                         coordinate_space="QTE crop local pixels",
                         press_tolerance_pixels=self.press_tolerance_pixels,
+                        mechanism_regions=None
+                        if self._mechanism_regions is None
+                        else dict(
+                            green_present=self._mechanism_regions.green_present,
+                            purple_spans=self._mechanism_regions.purple_spans,
+                            red_spans=self._mechanism_regions.red_spans,
+                            bubble_spans=self._mechanism_regions.bubble_spans,
+                        ),
                         configured_timing=dict(
                             loop_sleep_seconds=self.loop_sleep_seconds,
                             hold_seconds=self.qte_hold_seconds,
@@ -180,7 +373,7 @@ class BaseQTEStrategy:
         """截取完整 QTE 区域并转换为 OpenCV HSV 图像。"""
         frame = sct.grab(self.roi_pos)
         # 只保留当前检测帧引用；真正有按键尝试时由观察器复制，不新增截图。
-        if self._feedback_session is not None:
+        if self._feedback_session is not None or getattr(self, "catch_observer", None) is not None:
             self._decision_frame = frame
             self._decision_captured_at = time.monotonic() if frame is not None else None
         if frame is None:
@@ -356,7 +549,9 @@ class BaseQTEStrategy:
         )
 
     def _blue_mask(self, qte_hsv: np.ndarray) -> np.ndarray:
-        return vision.create_color_mask(self.blue_range.lower, self.blue_range.upper, qte_hsv)
+        return vision.create_color_mask(
+            self.blue_range.lower, self.blue_range.upper, qte_hsv, is_dilate=False
+        )
 
     def _on_bar_disappeared(self, no_bar_frames: int) -> bool:
         """连续多帧看不到倒计时条时确认本轮结束，避免单帧闪烁误判。"""
@@ -375,87 +570,38 @@ class FrostStraitQTEStrategy(BaseQTEStrategy):
         super().__init__(config, region)
         self.red_range = vision.read_hsv_range(config, "roi", "red")
 
-    @trace_qte
-    def play_qte(self, sct: capture_backend.DxCameraCapture) -> None:
-        no_bar_frames = 0
-        trigger = TargetEntryTrigger()
-        blue_candidate_frames = 0
-        qte_started = False
-        loading_logged = False
-        start_time = time.monotonic()
-
-        while time.monotonic() - start_time < self.longest_keep_time:
-            run_control.checkpoint()
-            frames = self._grab_qte_frames(sct)
-            if frames is None:
-                blue_candidate_frames = 0
-                self._qte_trace.observe("no_frame")
-                self._sleep_loop()
-                continue
-
-            time_hsv, qte_hsv = self._split_roi_and_time(frames)
-            time_green_mask, time_red_mask = self._time_bar_masks(time_hsv)
-            if not self._time_bar_visible_from_masks(time_green_mask, time_red_mask):
-                blue_candidate_frames = 0
-                if not qte_started:
-                    self._qte_trace.observe("loading")
-                    if not loading_logged:
-                        log.info(">>> 倒计时条尚未出现，等待 QTE 界面加载")
-                        loading_logged = True
-                    self._sleep_loop()
-                    continue
-                self._qte_trace.observe("no_time_bar")
-                no_bar_frames += 1
-                if self._on_bar_disappeared(no_bar_frames):
-                    break
-                self._sleep_loop()
-                continue
-
-            qte_started = True
-            no_bar_frames = 0
-
-            mask_yellow = self._yellow_mask(qte_hsv)
-            cursor_x = self._find_cursor_x(qte_hsv)
-            if cursor_x is None:
-                blue_candidate_frames = 0
-                self._qte_trace.observe("no_cursor")
-                self._sleep_loop()
-                continue
-
-            pressed = False
-            check_x = cursor_x
-            target = "yellow"
-            target_mask = mask_yellow
-            overlap = None
-            if cv2.countNonZero(mask_yellow):
-                blue_candidate_frames = 0
-                overlap = self._mask_column_has_color(mask_yellow, check_x)
-            else:
-                target_mask = self._blue_mask(qte_hsv)
-                blue_candidate_frames = (
-                    blue_candidate_frames + 1 if cv2.countNonZero(target_mask) else 0
-                )
-                # 连续检测有蓝无黄才回退；空白、灰色和绿色不能作为普通命中区。
-                if blue_candidate_frames >= 2:
-                    target = "blue"
-                    overlap = self._mask_column_has_color(target_mask, check_x)
-            if self._red_obstruction_at_cursor(qte_hsv, check_x):
-                # 红色只证明此处有红色内容，不能据此认定冰冻并连续按键。
-                # 遮挡也不能作为确认离开目标的证据。
-                overlap = None
-                self._qte_trace.observe("red_obstruction")
-            if trigger.observe(overlap, target):
-                self._press_qte(
-                    "yellow_overlap" if target == "yellow" else "blue_fallback",
-                    cursor_x=cursor_x,
-                    check_x=check_x,
-                    target=target,
-                )
-                pressed = True
-            self._qte_trace.observe("tracking", cursor=cursor_x, pressed=pressed)
-            self._sleep_loop()
-        else:
-            self._on_control_timeout(sct)
+    def _track_targets(self, qte_hsv, cursor_x, regions):
+        ordinary_hsv = regions.ordinary_pixels(qte_hsv)
+        yellow_mask = regions.mask_target(self._yellow_mask(ordinary_hsv))
+        yellow_present = bool(cv2.countNonZero(yellow_mask))
+        blue_target = None
+        if not yellow_present:
+            blue_mask = regions.mask_target(self._blue_mask(ordinary_hsv))
+            blue_target = read_blue_target(blue_mask, cursor_x, blocked=regions.blocked)
+        blocked = bool(regions.blocked[cursor_x]) or self._red_obstruction_at_cursor(
+            qte_hsv, cursor_x
+        )
+        if blocked:
+            self._qte_trace.observe(
+                "mechanism_obstruction" if regions.blocked[cursor_x] else "red_obstruction"
+            )
+        target = self._mechanism_policy.targets.observe(
+            yellow_present=yellow_present,
+            yellow_overlap=self._mask_column_has_color(yellow_mask, cursor_x)
+            if yellow_present
+            else None,
+            blue=blue_target,
+            blocked=blocked,
+        )
+        if target is not None:
+            self._press_qte(
+                "yellow_overlap" if target == "yellow" else "blue_fallback",
+                cursor_x=cursor_x,
+                check_x=cursor_x,
+                target=target,
+                **self._blue_evidence(target, blue_target),
+            )
+        self._qte_trace.observe("tracking", cursor=cursor_x, pressed=target is not None)
 
     def _red_obstruction_at_cursor(self, roi_hsv: np.ndarray, cursor_x: int) -> bool:
         mask = cv2.inRange(roi_hsv, self.red_range.lower, self.red_range.upper)
@@ -501,236 +647,54 @@ class AbyssMawQTEStrategy(BaseQTEStrategy):
             ),
         )
 
-    @trace_qte
-    def play_qte(self, sct: capture_backend.DxCameraCapture) -> None:
-        """黄色存在时优先命中黄色，否则在蓝色区域按键刷新下一轮。"""
-        no_bar_frames = 0
-        trigger = TargetEntryTrigger()
-        qte_started = False
-        loading_logged = False
-        start_time = time.monotonic()
-
-        while time.monotonic() - start_time < self.longest_keep_time:
-            run_control.checkpoint()
-            frames = self._grab_qte_frames(sct)
-            if frames is None:
-                self._qte_trace.observe("no_frame")
-                self._sleep_loop()
-                continue
-
-            time_hsv, qte_hsv = self._split_roi_and_time(frames)
-
-            time_green_mask, time_red_mask = self._time_bar_masks(time_hsv)
-            if not self._time_bar_visible_from_masks(time_green_mask, time_red_mask):
-                if not qte_started:
-                    self._qte_trace.observe("loading")
-                    if not loading_logged:
-                        log.info(">>> 倒计时条尚未出现，等待 QTE 界面加载")
-                        loading_logged = True
-                    self._sleep_loop()
-                    continue
-                self._qte_trace.observe("no_time_bar")
-                no_bar_frames += 1
-                if self._on_bar_disappeared(no_bar_frames):
-                    break
-                self._sleep_loop()
-                continue
-
-            qte_started = True
-            no_bar_frames = 0
-            cursor_mask = self._cursor_mask(qte_hsv)
-            cursor_x = self._find_cursor_x(qte_hsv)
-            if cursor_x is None:
-                self._qte_trace.observe("no_cursor")
-                self._sleep_loop()
-                continue
-
-            yellow_mask = self._yellow_mask(qte_hsv)
-            blue_mask = self._blue_mask(qte_hsv)
-            blocker_rect = self._blocker_rect(qte_hsv, cursor_mask)
-
-            left_x, right_x = self._active_range_from_blocker_rect(
-                blocker_rect,
-                cursor_x,
-                yellow_mask.shape[1],
-            )
-            check_x = self._clamp_x_to_range(
-                cursor_x,
-                left_x,
-                right_x,
-            )
-
-            yellow_pixels = self._mask_range_count(yellow_mask, left_x, right_x)
-            pressed = False
-            if yellow_pixels > self.abyss_yellow_pixel_threshold:
-                if trigger.observe(self._mask_column_has_color(yellow_mask, check_x), "yellow"):
-                    self._press_qte(
-                        "yellow_overlap",
-                        cursor_x=cursor_x,
-                        check_x=check_x,
-                        target="yellow",
-                        active_range=(left_x, right_x),
-                        blocker_rect=blocker_rect,
-                        yellow_pixels=yellow_pixels,
-                        yellow_threshold=self.abyss_yellow_pixel_threshold,
-                    )
-                    pressed = True
-            elif trigger.observe(
-                self._mask_column_has_color(blue_mask, check_x)
-                if self._mask_range_count(blue_mask, left_x, right_x)
-                else None,
-                "blue",
-            ):
-                self._press_qte(
-                    "blue_fallback",
-                    cursor_x=cursor_x,
-                    check_x=check_x,
-                    target="blue",
-                    active_range=(left_x, right_x),
-                    blocker_rect=blocker_rect,
-                    yellow_pixels=yellow_pixels,
-                    yellow_threshold=self.abyss_yellow_pixel_threshold,
-                )
-                pressed = True
-            self._qte_trace.observe(
-                "tracking",
-                blocker=blocker_rect,
-                cursor=cursor_x,
-                yellow=yellow_pixels,
-                active=(left_x, right_x),
-                pressed=pressed,
-            )
-
-            self._sleep_loop()
-
-        else:
-            self._on_control_timeout(sct)
-
-    def _blocker_mask(self, qte_hsv: np.ndarray) -> np.ndarray:
-        """合并挡板在不同画面亮度下的多个 HSV 颜色区间。"""
-        blocker_mask = vision.create_color_mask(
-            self.blocker_ranges[0].lower,
-            self.blocker_ranges[0].upper,
-            qte_hsv,
-            is_dilate=False,
+        self._blocker_detector = BlockerDetector(
+            self.blocker_ranges,
+            min_width=self.blocker_shape_min_width,
+            max_width=self.blocker_shape_max_width,
+            min_height=self.blocker_shape_min_height,
+            max_height=self.blocker_shape_max_height,
         )
-        for blocker_range in self.blocker_ranges[1:]:
-            range_mask = vision.create_color_mask(
-                blocker_range.lower,
-                blocker_range.upper,
-                qte_hsv,
-                is_dilate=False,
+
+    def _track_targets(self, qte_hsv, cursor_x, regions):
+        ordinary_hsv = regions.ordinary_pixels(qte_hsv)
+        yellow_mask = regions.mask_target(self._yellow_mask(ordinary_hsv))
+        blue_mask = regions.mask_target(self._blue_mask(ordinary_hsv))
+        blocker_rect = self._blocker_detector.read(qte_hsv, self._cursor_mask(qte_hsv))
+        left_x, right_x = active_range_for_blocker(blocker_rect, cursor_x, yellow_mask.shape[1])
+        check_x = max(left_x, min(cursor_x, right_x))
+        if regions.blocked[check_x]:
+            self._mechanism_policy.targets.invalidate()
+            self._qte_trace.observe("mechanism_obstruction")
+            return
+        yellow_pixels = cv2.countNonZero(yellow_mask[:, left_x : right_x + 1])
+        blue_target = read_blue_target(
+            blue_mask, cursor_x, blocked=regions.blocked, active_range=(left_x, right_x)
+        )
+        yellow_present = yellow_pixels > self.abyss_yellow_pixel_threshold
+        target = self._mechanism_policy.targets.observe(
+            yellow_present=yellow_present,
+            yellow_overlap=self._mask_column_has_color(yellow_mask, check_x)
+            if yellow_present
+            else None,
+            blue=blue_target,
+        )
+        if target is not None:
+            self._press_qte(
+                "yellow_overlap" if target == "yellow" else "blue_fallback",
+                cursor_x=cursor_x,
+                check_x=check_x if target == "yellow" else cursor_x,
+                target=target,
+                active_range=(left_x, right_x),
+                blocker_rect=blocker_rect,
+                yellow_pixels=yellow_pixels,
+                yellow_threshold=self.abyss_yellow_pixel_threshold,
+                **self._blue_evidence(target, blue_target),
             )
-            blocker_mask = cv2.bitwise_or(blocker_mask, range_mask)
-        return blocker_mask
-
-    def _blocker_rect(
-        self,
-        qte_hsv: np.ndarray,
-        cursor_mask: np.ndarray,
-    ) -> tuple[int, int, int, int] | None:
-        """先排除高亮光标，再从修补后的挡板遮罩中寻找候选矩形。"""
-        kernel = np.ones((3, 3), np.uint8)
-        # 轻微扩张可覆盖光标抗锯齿边缘，避免残留白边被识别成挡板。
-        cursor_mask_for_overlap = cv2.dilate(cursor_mask, kernel, iterations=1)
-
-        without_cursor_mask = qte_hsv.copy()
-        # HSV 的零值代表黑色，不会落入当前挡板的高亮颜色范围。
-        without_cursor_mask[cursor_mask_for_overlap > 0] = [0, 0, 0]
-        blocker_mask = self._filtered_blocker_mask(self._blocker_mask(without_cursor_mask))
-        blocker_rect = self._find_blocker(blocker_mask)
-        return blocker_rect
-
-    def _filtered_blocker_mask(self, blocker_mask: np.ndarray) -> np.ndarray:
-        """用闭运算填补挡板内部孔洞，同时尽量保持外轮廓尺寸。"""
-        # 核高大于核宽，更适合修补瘦高挡板纵向上的断裂。
-        kernel = np.ones((6, 4), np.uint8)
-        filtered_mask = cv2.morphologyEx(blocker_mask, cv2.MORPH_CLOSE, kernel)
-        return filtered_mask
-
-    def _find_blocker(self, closed_mask: np.ndarray) -> tuple[int, int, int, int] | None:
-        """按轮廓宽高和长宽比筛选挡板，并返回首个匹配边界框。"""
-        contours, _ = cv2.findContours(closed_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        for cnt in contours:
-            x, y, w, h = cv2.boundingRect(cnt)
-
-            # 挡板应为瘦高矩形：宽高范围读取配置，比例用于排除形状相近的干扰。
-            aspect_ratio = float(h) / w
-
-            if (
-                self.blocker_shape_min_width < w < self.blocker_shape_max_width
-                and self.blocker_shape_min_height < h < self.blocker_shape_max_height
-                and 2.0 < aspect_ratio < 7.0
-            ):
-                return x, y, w, h
-
-        return None
-
-    def _active_range_from_blocker(
-        self,
-        blocker_mask: np.ndarray,
-        cursor_x: int,
-    ) -> tuple[int, int]:
-        """按挡板像素列选择光标所在一侧的有效范围（兼容旧调试逻辑）。"""
-        width = blocker_mask.shape[1]
-        blocker_columns = [
-            index for index, value in enumerate(np.sum(blocker_mask, axis=0)) if value > 0
-        ]
-        if not blocker_columns:
-            return 0, width - 1
-
-        left_columns = [column for column in blocker_columns if column < cursor_x]
-        right_columns = [column for column in blocker_columns if column > cursor_x]
-        left_boundary = left_columns[-1] if left_columns else None
-        right_boundary = right_columns[0] if right_columns else None
-
-        if left_boundary is None:
-            if right_boundary is None:
-                return 0, width - 1
-            return 0, max(0, right_boundary - 1)
-        if right_boundary is None:
-            return min(width - 1, left_boundary + 1), width - 1
-
-        if cursor_x - left_boundary <= right_boundary - cursor_x:
-            return min(width - 1, left_boundary + 1), width - 1
-        return 0, max(0, right_boundary - 1)
-
-    def _active_range_from_blocker_rect(
-        self,
-        blocker_rect: tuple[int, int, int, int] | None,
-        cursor_x: int,
-        mask_width: int,
-    ) -> tuple[int, int]:
-        """将挡板矩形当作边界，只保留光标当前能够活动的一侧。"""
-        if blocker_rect is None:
-            return 0, mask_width - 1
-
-        x, _y, w, _h = blocker_rect
-        blocker_left = max(0, x)
-        blocker_right = min(mask_width - 1, x + w - 1)
-
-        # 挡板在光标右边：只看最左边到挡板左侧
-        if cursor_x < blocker_left:
-            return 0, max(0, blocker_left - 1)
-
-        # 挡板在光标左边：只看挡板右侧到最右边
-        if cursor_x > blocker_right:
-            return min(mask_width - 1, blocker_right + 1), mask_width - 1
-
-        # 光标刚好落在挡板矩形内，兜底：按离哪边近来切
-        blocker_center = (blocker_left + blocker_right) // 2
-        if cursor_x <= blocker_center:
-            return 0, max(0, blocker_left - 1)
-        return min(mask_width - 1, blocker_right + 1), mask_width - 1
-
-    def _mask_range_count(
-        self,
-        mask: np.ndarray,
-        left_x: int,
-        right_x: int,
-    ) -> int:
-        """统计闭区间 ``left_x..right_x`` 内的非零遮罩像素。"""
-        return cv2.countNonZero(mask[:, left_x : right_x + 1])
-
-    def _clamp_x_to_range(self, x: int, left_x: int, right_x: int) -> int:
-        return max(left_x, min(x, right_x))
+        self._qte_trace.observe(
+            "tracking",
+            blocker=blocker_rect,
+            cursor=cursor_x,
+            yellow=yellow_pixels,
+            active=(left_x, right_x),
+            pressed=target is not None,
+        )

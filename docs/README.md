@@ -5,6 +5,7 @@
 ## 使用
 
 - [使用指南](user/usage.md)：启动、停止、钓场、满包、多显示器和常见问题。
+- [便携版更新与数据保留](user/updating.md)：下载、首次迁移、本地 ZIP 更新、目录与清理规则。
 - [配置说明](user/configuration.md)：配置位置、界面保存规则与各配置段用途。
 - [日志与诊断](user/diagnostics.md)：上钩超时、QTE 反馈、决策证据和整条鱼结算。
 
@@ -13,6 +14,7 @@
 - [工作区与仓库统一布局](design/repository-layout.md)：源码、部署、归档、默认配置、脚本、测试与文档的完整归属。
 - [架构规划](design/architecture.md)：面向岛屿玩法的功能边界、岛屿与机制扩展及迁移范围；首轮职责拆分已实施，后续目标单独标明。
 - [QTE 时延设计与验收](design/qte-performance.md)：关键路径、帧新鲜度、输入暂停、后台争用与性能基线；尚未完成时延实测。
+- [便携发布与事务更新设计](design/portable-update.md)：文件所有权、清单校验、独立助手和恢复流程。
 - [特殊机制处理与看图确认](design/special-mechanism-handling.md)：逐项机制方案、冰冻处理缺口及不依赖失败结果的取证设计。
 
 ## 开发与发布
@@ -22,7 +24,10 @@
 - [依赖管理](../requirements/README.md)：声明来源与 Windows 锁定清单。
 - [工具说明](development/tools.md)：每个工具的用途、输入影响和运行命令。
 - [构建与发布](development/releasing.md)：OCR 模型、PyInstaller、GitHub Actions 与部署验收。
+- [分支、版本与发布约定](development/branching.md)：main、临时分支、标签和 Release 的职责与生命周期。
+- [版本更新记录](../CHANGELOG.md)：每个发布版本的变化及验证边界。
 - [当前开发状态](development/status.md)：当前能力、验证边界、暂缓事项与本轮整理记录。
+- [待验证问题与推进计划](development/validation-plan.md)：特殊机制的样本/实测判据、时延调参、反馈追溯与普通问题进展。
 - [实机问题分类与处理](development/error-triage.md)：错误证据、逐项修复及仍需真实样本的机制。
 - [已验证功能的正式代码核对](development/verified-features.md)：历史测试到当前实现的对应关系、合入结论和未覆盖范围。
 

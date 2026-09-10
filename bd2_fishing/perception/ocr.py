@@ -33,16 +33,21 @@ def get_result_from_ocr(
     try:
         frame = sct.grab(ocr_region)
     except Exception:
-        log.exception("OCR 截图异常: 场景=%s ROI=%s", purpose, ocr_region.as_tuple())
+        log.exception(
+            "OCR 截图异常: 场景=%s ROI=%s",
+            purpose,
+            ocr_region.as_tuple(),
+            extra={"user_message": "文字识别无法获取游戏画面，请检查游戏窗口是否可见。"},
+        )
         raise
     if frame is None:
-        log.info("OCR 无新图: 场景=%s ROI=%s（不等同于截图异常）", purpose, ocr_region.as_tuple())
+        log.debug("OCR 无新图: 场景=%s ROI=%s（不等同于截图异常）", purpose, ocr_region.as_tuple())
         return None
 
     try:
         with ocr_log_context(purpose, ocr_region, expected_empty):
             results = ocr_engine.detect_and_recognize(frame)
-        level = logging.INFO if results or expected_empty else logging.WARNING
+        level = logging.DEBUG if results or expected_empty else logging.WARNING
         log.log(
             level,
             "OCR 结果: 场景=%s ROI=%s 图像尺寸=%s 文本数=%d 允许无文字=%s 耗时毫秒=%.1f",
@@ -52,6 +57,9 @@ def get_result_from_ocr(
             len(results),
             expected_empty,
             (time.monotonic() - started) * 1000,
+            extra={"user_message": "此次未读到游戏文字，等待后续识别。"}
+            if level == logging.WARNING
+            else {},
         )
         if results:
             log.debug(
@@ -59,7 +67,12 @@ def get_result_from_ocr(
             )
         return results
     except Exception:
-        log.exception("OCR 执行失败: 场景=%s ROI=%s", purpose, ocr_region.as_tuple())
+        log.exception(
+            "OCR 执行失败: 场景=%s ROI=%s",
+            purpose,
+            ocr_region.as_tuple(),
+            extra={"user_message": "文字识别失败，当前信息暂不可用。"},
+        )
         return None
 
 

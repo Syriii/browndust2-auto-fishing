@@ -18,6 +18,11 @@ def vertical_text_edges(frame):
     return cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
 
 
+def warm_text(frame):
+    """暴击橙色描边的红蓝差值，削弱白色和蓝色光柱；不用于推断命中区域。"""
+    return np.maximum(frame[:, :, 2].astype(np.float32) - frame[:, :, 0], 0)
+
+
 class FeedbackMatcher:
     """仅匹配实测反馈字形；不以按键位置或进度变化推测命中。"""
 
@@ -25,6 +30,8 @@ class FeedbackMatcher:
         assets = Path(assets or Path(__file__).with_name("assets"))
         self.patterns = {}
         self.critical_edges = []
+        self.hit_edges = []
+        self.critical_warm = []
         self._last_frame = None
         self._last_result = None
         self.last_method = None
@@ -36,6 +43,7 @@ class FeedbackMatcher:
             [
                 ("hit_effect_945", 945, 532),
                 ("hit_plain_945", 945, 532),
+                ("hit_compact_945", 945, 532),
                 ("critical_plain_945", 945, 532),
             ]
         )
@@ -52,31 +60,91 @@ class FeedbackMatcher:
                 ),
             )
             self.patterns.setdefault(name.split("_")[0], []).append(white_text(image))
-            if name in ("critical", "critical_alt", "critical_plain_945"):
+            if name in (
+                "critical",
+                "critical_alt",
+                "critical_plain_945",
+                "hit_plain_945",
+                "hit_compact_945",
+            ):
                 # 用清晰暴击字形校验强光变化，不从待测强光帧提取模板。
                 for delta in (-1, 0, 1):
                     resized = cv2.resize(image, (image.shape[1], max(5, image.shape[0] + delta)))
                     if min(resized.shape[:2]) <= 4:
                         continue
-                    self.critical_edges.append(
+                    edges = self.hit_edges if name.startswith("hit_") else self.critical_edges
+                    edges.append(
                         (
                             vertical_text_edges(resized)[2:-2, 2:-2],
                             cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)[2:-2, 2:-2],
                         )
                     )
+        # 两个实测动画字形；只为较宽早期字形保留一个 -2px 取整变体。
+        # 不遍历任意尺度，也不把被遮挡文字截成半个词来匹配。
+        for name, offsets in (("critical_plain_945", (0,)), ("critical_early_945", (0, -2))):
+            raw = cv2.imdecode(np.frombuffer((assets / f"{name}.png").read_bytes(), np.uint8), 1)
+            if raw is None:
+                raise ValueError(f"反馈模板无法解码: {name}")
+            for offset in offsets:
+                image = cv2.resize(
+                    raw,
+                    (
+                        max(5, round((raw.shape[1] + offset) * width / 945)),
+                        max(5, round(raw.shape[0] * height / 532)),
+                    ),
+                )[2:-2, 2:-2]
+                color = warm_text(image)
+                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                if color.std() >= 1 and gray.std() >= 1:
+                    self.critical_warm.append((color, gray))
+
+    def _critical_by_color(self, frame):
+        color = warm_text(frame)
+        # 先定位橙色描边；绿色背景、蓝光或单个小提示图标不做整幅模板搜索。
+        red_green = frame[:, :, 2].astype(np.float32) - frame[:, :, 1]
+        ys, xs = np.nonzero((color >= 60) & (red_green >= 20))
+        if not self.critical_warm or len(xs) < 40:
+            return 0.0
+        if xs.max() - xs.min() + 1 < min(p.shape[1] for p, _ in self.critical_warm) * 0.75:
+            return 0.0
+        left, top = max(0, int(xs.min()) - 4), max(0, int(ys.min()) - 4)
+        right, bottom = int(xs.max()) + 5, int(ys.max()) + 5
+        color = color[top:bottom, left:right]
+        frame = frame[top:bottom, left:right]
+        gray = None
+        for pattern, gray_pattern in self.critical_warm:
+            h, w = pattern.shape
+            if color.shape[0] < h or color.shape[1] < w:
+                continue
+            _, score, _, (x, y) = cv2.minMaxLoc(
+                cv2.matchTemplate(color, pattern, cv2.TM_CCOEFF_NORMED)
+            )
+            if not np.isfinite(score) or score < 0.85:
+                continue
+            if gray is None:
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            gray_score = cv2.matchTemplate(
+                gray[y : y + h, x : x + w], gray_pattern, cv2.TM_CCOEFF_NORMED
+            )[0, 0]
+            if np.isfinite(gray_score) and gray_score >= 0.65:
+                return score
+        return 0.0
 
     def _critical_under_glare(self, frame):
+        return self._word_under_glare(frame, self.critical_edges, 0.80, 0.65)
+
+    def _word_under_glare(self, frame, patterns, edge_threshold, gray_threshold):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         edges = cv2.Sobel(gray.astype(np.float32), cv2.CV_32F, 0, 1, ksize=3)
         best = 0.0
-        for pattern, gray_pattern in self.critical_edges:
+        for pattern, gray_pattern in patterns:
             h, w = pattern.shape
             if edges.shape[0] < h or edges.shape[1] < w:
                 continue
             _, score, _, (x, y) = cv2.minMaxLoc(
                 cv2.matchTemplate(edges, pattern, cv2.TM_CCOEFF_NORMED)
             )
-            if score < 0.80:
+            if not np.isfinite(score) or score < edge_threshold:
                 continue
             # 相同位置还必须符合完整灰度字形，不能只凭一组相似边缘认作暴击。
             gray_score = float(
@@ -84,7 +152,7 @@ class FeedbackMatcher:
                     0, 0
                 ]
             )
-            if gray_score >= 0.65:
+            if np.isfinite(gray_score) and gray_score >= gray_threshold:
                 best = max(best, score)
         return best
 
@@ -115,10 +183,19 @@ class FeedbackMatcher:
                 scores.append((max(group), name))
         scores.sort(reverse=True)
         if not scores or scores[0][0] < 0.80:
+            # 补充漏检，不覆盖已有明确文字或类别差值不足的歧义结果。
+            color_score = self._critical_by_color(frame)
+            if color_score:
+                self.last_method = "critical_color"
+                return "critical", color_score
             edge_score = self._critical_under_glare(frame)
             if edge_score:
                 self.last_method = "critical_edges"
                 return "critical", edge_score
+            hit_score = self._word_under_glare(frame, self.hit_edges, 0.85, 0.75)
+            if hit_score:
+                self.last_method = "hit_edges"
+                return "hit", hit_score
             self.last_method = "unrecognized"
             return None, scores[0][0] if scores else 0.0
         if len(scores) > 1 and scores[0][0] - scores[1][0] < 0.12:

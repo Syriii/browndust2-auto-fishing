@@ -10,7 +10,7 @@ import re
 from importlib.resources import files
 from pathlib import Path
 
-from bd2_fishing.infrastructure.paths import get_base_path
+from bd2_fishing.infrastructure.paths import get_base_path, get_config_path
 
 log = logging.getLogger(__name__)
 
@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 def update_config_options(path, updates):
     """只替换界面管理的选项，保留其他配置和注释；成功后原子替换。"""
     path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
     text = path.read_text(encoding="utf-8-sig") if path.exists() else DEFAULT_CONFIG_CONTENT
     for section, options in updates.items():
         match = re.search(r"(?m)^\[" + re.escape(section) + r"\]\s*$", text)
@@ -45,12 +46,16 @@ def update_config_options(path, updates):
 
 def read_ini(filename: str = "config.ini") -> configparser.ConfigParser:
     """读取 ini 配置文件，不存在时自动写入默认配置。"""
-    full_path = os.path.join(get_base_path(), filename)
-    log.info(f">>> 正在读取配置文件路径: {full_path}")
+    full_path = (
+        str(get_config_path())
+        if filename == "config.ini"
+        else os.path.join(get_base_path(), filename)
+    )
+    log.debug("读取配置文件: %s", full_path)
 
     config = configparser.ConfigParser()
     if not os.path.exists(full_path):
-        log.info(f">>> 配置文件未找到，正在生成默认配置: {full_path}")
+        log.debug("配置文件未找到，生成默认配置: %s", full_path)
         with open(full_path, "w", encoding="utf-8-sig") as file:
             file.write(DEFAULT_CONFIG_CONTENT)
 

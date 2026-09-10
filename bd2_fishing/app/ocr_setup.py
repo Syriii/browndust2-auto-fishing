@@ -106,8 +106,8 @@ def build_ocr_context(config: configparser.ConfigParser, region: Rect) -> OCRCon
     if ocr_enabled:
         try:
             ocr_engine = build_ocr_engine(config)
-        except Exception as exc:
-            log.info(f">>> OCR init failed: {exc}")
+        except Exception:
+            log.exception("文字识别初始化失败；自动识别钓场和文字提示暂不可用。")
             ocr_enabled = False
 
     return OCRContext(

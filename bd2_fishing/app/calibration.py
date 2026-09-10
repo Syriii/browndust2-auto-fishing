@@ -6,49 +6,63 @@ import threading
 import time
 
 
+def _collect_waits(cancel, clock):
+    measurements = {requested: [] for requested in (5, 10, 20)}
+    # 同一候选分散到四批，减少机器负载随测量时间变化的顺序偏差。
+    for batch in range(4):
+        for requested, samples in measurements.items():
+            for index in range(9 if batch == 0 else 8):
+                started = clock()
+                if cancel.wait(requested / 1000):
+                    raise RuntimeError("校准已取消")
+                elapsed = (clock() - started) * 1000
+                if not math.isfinite(elapsed) or elapsed <= 0:
+                    raise RuntimeError("等待计时无效，请重新校准")
+                if batch or index:
+                    samples.append(elapsed)
+    return measurements
+
+
+def _summarize_wait(requested, samples):
+    ordered = sorted(samples)
+    p95 = ordered[math.ceil(len(ordered) * 0.95) - 1]
+    p95_limit = requested + max(2, requested * 0.25)
+    maximum_limit = requested + max(5, requested * 0.5)
+    stable = p95 <= p95_limit and max(samples) <= maximum_limit
+    return dict(
+        requested_ms=requested,
+        samples_ms=samples,
+        median_ms=round(statistics.median(samples), 3),
+        p95_ms=round(p95, 3),
+        max_ms=round(max(samples), 3),
+        p95_overshoot_ms=round(max(0, p95 - requested), 3),
+        spread_ms=round(max(samples) - min(samples), 3),
+        outlier_count=sum(value > maximum_limit for value in samples),
+        stable=stable,
+    )
+
+
 def measure_waits(cancel=None, *, clock=time.perf_counter):
     cancel = cancel or threading.Event()
-    rows = []
-    # 与运行控制相同的可取消 Event.wait；每档 32 次，先丢弃一次预热。
-    for requested in (5, 10, 20):
-        samples = []
-        for index in range(33):
-            started = clock()
-            if cancel.wait(requested / 1000):
-                raise RuntimeError("校准已取消")
-            elapsed = (clock() - started) * 1000
-            if not math.isfinite(elapsed) or elapsed <= 0:
-                raise RuntimeError("等待计时无效，请重新校准")
-            if index:
-                samples.append(elapsed)
-        ordered = sorted(samples)
-        p95 = ordered[math.ceil(len(ordered) * 0.95) - 1]
-        rows.append(
-            dict(
-                requested_ms=requested,
-                samples_ms=samples,
-                median_ms=round(statistics.median(samples), 3),
-                p95_ms=round(p95, 3),
-                max_ms=round(max(samples), 3),
-                stable=p95 <= requested + max(2, requested * 0.25),
-            )
-        )
+    rows = [
+        _summarize_wait(requested, samples)
+        for requested, samples in _collect_waits(cancel, clock).items()
+    ]
     usable = [row["requested_ms"] for row in rows if row["stable"]]
     # 这是明确的基础节流启发式；调度波动过大时不给自动填入值。
     selected = min(usable) if usable else None
+    feedback_candidates = [value for value in usable if value >= 10]
+    recommendation = {} if selected is None else {"loop_sleep_seconds": str(selected)}
+    if feedback_candidates:
+        recommendation["feedback_poll_seconds"] = str(min(feedback_candidates))
     return dict(
-        schema_version=1,
+        schema_version=2,
         measured_at_unix=time.time(),
-        method="threading.Event.wait; 32 samples per interval after warmup",
+        method="threading.Event.wait; 4 interleaved batches, 32 samples per interval after warmup",
         waits=rows,
-        recommendation={}
-        if selected is None
-        else {
-            "loop_sleep_seconds": str(selected),
-            "feedback_poll_seconds": str(max(10, selected)),
-        },
+        recommendation=recommendation,
         recommendation_unit="milliseconds",
-        reason="采用 p95 超时偏差不超过 max(2ms, 请求值的25%) 的最小候选；反馈间隔至少10ms。"
+        reason="选择 p95 偏差不超过 max(2ms, 25%)、最大偏差不超过 max(5ms, 50%) 的最小稳定候选；反馈另选至少10ms的稳定档，无合格档则保留原值。"
         if usable
         else "各档等待均有较大调度波动，保留当前设置，稍后重新测量。",
         limitation="基础节流建议不包含截图、识别、输入驱动或游戏响应；按住和松开后等待仍需游戏验证。",

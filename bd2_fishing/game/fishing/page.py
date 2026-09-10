@@ -37,7 +37,7 @@ class FishingPageReader:
     def __init__(self, window):
         self.window = window
         self.cast_patterns = []
-        for variant in ("", "_night_945", "_night_875", "_day_875"):
+        for variant in ("", "_night_945", "_night_875", "_day_875", "_day_945"):
             self.cast_patterns.extend(
                 self._scale_patterns(_load_pattern(f"idle_cast{variant}"), 106, 122)
             )

@@ -23,15 +23,15 @@ from bd2_fishing.infrastructure.windows import window as window
 from bd2_fishing.runtime import control as run_control
 from bd2_fishing.runtime import geometry as geometry
 from bd2_fishing.runtime.context import current_round_id, fishing_round, get_logger
+from bd2_fishing.ui.logs import UILogHandler
 
 
 @contextmanager
 def log_outputs():
     root = logging.getLogger()
     original = root.handlers[:], root.level
-    screen, file = io.StringIO(), io.StringIO()
-    handlers = [logging.StreamHandler(screen), logging.StreamHandler(file)]
-    handlers[0].setLevel(logging.INFO)
+    screen, file = UILogHandler(), io.StringIO()
+    handlers = [screen, logging.StreamHandler(file)]
     handlers[1].setLevel(logging.DEBUG)
     root.handlers = handlers
     root.setLevel(logging.DEBUG)
@@ -118,10 +118,16 @@ class LoggingPolicyTests(unittest.TestCase):
                 session.close()
                 observer.finalize("returned")
                 self.assertTrue(observer.save_done.wait(2))
-            shown, saved = screen.getvalue(), file.getvalue()
-            self.assertIn("[轮次=round-a] QTE 反馈 #1：普通命中（HIT）", shown)
-            self.assertIn("普通命中=1", shown)
-            self.assertIn("按键尝试=2，其中归属未确认=2", shown)
+            shown = "\n".join(
+                entry.display() for entry in screen.drain() if entry.level >= logging.INFO
+            )
+            saved = file.getvalue()
+            self.assertIn("QTE 第 1 次游戏反馈 · 普通命中", shown)
+            self.assertIn("命中 1", shown)
+            self.assertIn("2 次按键反馈未确认", shown)
+            self.assertNotIn("[轮次=", shown)
+            self.assertNotIn("匹配=", shown)
+            self.assertIn("按键尝试=2，其中归属未确认=2", saved)
             self.assertNotIn("QTE 按键归属:", shown)
             self.assertNotIn("[轮次=round-b]", saved)
             self.assertEqual(saved.count("QTE 按键归属:"), 2)
@@ -129,7 +135,8 @@ class LoggingPolicyTests(unittest.TestCase):
             with ZipFile(next(Path(directory).rglob("*.zip"))) as z:
                 data = json.loads(z.read("metadata.json"))
             self.assertEqual(data["round_id"], "round-a")
-            self.assertIn(data["evidence_id"], shown)
+            self.assertNotIn(data["evidence_id"], shown)
+            self.assertIn(data["evidence_id"], saved)
             self.assertEqual(len(data["attempt_outcomes"]), 2)
 
     def test_reused_screenshot_slot_has_distinct_evidence_id_and_bound_round(self):
@@ -153,7 +160,10 @@ class LoggingPolicyTests(unittest.TestCase):
                 ids.append(data["evidence_id"])
                 self.assertIn(f"[轮次={round_id}] QTE 证据已保存", file.getvalue())
             self.assertNotEqual(*ids)
-            self.assertNotIn("QTE 证据已保存", screen.getvalue())
+            self.assertNotIn(
+                "QTE 证据已保存",
+                "\n".join(entry.message for entry in screen.drain() if entry.level >= logging.INFO),
+            )
 
     def test_expected_stop_has_no_traceback_but_capture_error_does(self):
         for error, level, traceback in (

@@ -86,6 +86,7 @@ class CatchObserver:
         self.log = get_logger(__name__, self.round_id)
         self.engine, self.config, self.window = engine, config, window
         self.lock = threading.Lock()
+        # 本锁只协调本轮计时器与结算；跨轮原生调用互斥由共享引擎负责。
         self.ocr_lock = threading.Lock()
         self.readings = deque(maxlen=32)
         self.next_timer_at = 0.0
@@ -197,55 +198,7 @@ class CatchObserver:
         guard = window.WindowGuard("BrownDust II", self.window, require_foreground=True)
         budget = bounded_float(self.config, "time", "fish_end_wait_time", 4, 0, 30)
         deadline = time.monotonic() + budget
-        frame, captured, panel = None, None, False
-        self.evidence_metadata["panel_open"] = False
-        samples = []
-        idle_since = None
-        with FeedbackCapture(self.window) as capture:
-            # 同时限制次数与时间；逐次响应取消/窗口保护，只保留首帧与最新帧。
-            for _ in range(151):
-                run_control.checkpoint()
-                guard()
-                candidate = capture.grab()
-                stamp = time.monotonic()
-                if candidate is not None:
-                    frame, captured = candidate, stamp
-                    panel = self._panel_open(frame)
-                    idle, scores = self.page_reader.inspect(frame) if not panel else (False, {})
-                    idle_since = (
-                        stamp if idle and idle_since is None else idle_since if idle else None
-                    )
-                    idle_confirmed = idle_since is not None and stamp - idle_since >= 0.19
-                    if "settlement_first.png" not in self.evidence_frames:
-                        self.evidence_frames["settlement_first.png"] = frame.copy()
-                        self.evidence_metadata["first_settlement_at_monotonic"] = stamp
-                    self.evidence_frames["settlement.png"] = frame.copy()
-                    self.evidence_metadata.update(
-                        captured_at_monotonic=stamp,
-                        panel_open=panel,
-                        idle_scores=scores,
-                        page_state="panel"
-                        if panel
-                        else "idle"
-                        if idle_confirmed
-                        else "unrecognized",
-                    )
-                else:
-                    idle_since = None
-                    idle_confirmed = False
-                samples.append(
-                    dict(
-                        captured_at_monotonic=stamp,
-                        frame_available=candidate is not None,
-                        panel_open=panel if candidate is not None else False,
-                    )
-                )
-                self.evidence_metadata["settlement_wait_samples"] = samples
-                if panel or idle_confirmed or stamp >= deadline:
-                    break
-                run_control.sleep(min(0.2, max(0, deadline - stamp)))
-        if frame is None:
-            raise RuntimeError("结算等待期间未取得有效截图")
+        frame, captured, panel = self._wait_for_result_page(deadline, guard)
         with self._settlement_ocr():
             readings = list(self.readings)
             reward_texts, distance_texts = [], []
@@ -316,6 +269,59 @@ class CatchObserver:
         if distance_reading is not None:
             self.evidence_frames["distance_qte.png"] = distance_reading[2]
 
+    def _wait_for_result_page(self, deadline, guard):
+        """沿用调用者的单一预算；保留首末帧、逐次取消与窗口保护。"""
+        frame, captured, panel = None, None, False
+        self.evidence_metadata["panel_open"] = False
+        samples = []
+        idle_since = None
+        with FeedbackCapture(self.window) as capture:
+            # 同时限制次数与时间；逐次响应取消/窗口保护，只保留首帧与最新帧。
+            for _ in range(151):
+                run_control.checkpoint()
+                guard()
+                candidate = capture.grab()
+                stamp = time.monotonic()
+                if candidate is not None:
+                    frame, captured = candidate, stamp
+                    panel = self._panel_open(frame)
+                    idle, scores = self.page_reader.inspect(frame) if not panel else (False, {})
+                    idle_since = (
+                        stamp if idle and idle_since is None else idle_since if idle else None
+                    )
+                    idle_confirmed = idle_since is not None and stamp - idle_since >= 0.19
+                    if "settlement_first.png" not in self.evidence_frames:
+                        self.evidence_frames["settlement_first.png"] = frame.copy()
+                        self.evidence_metadata["first_settlement_at_monotonic"] = stamp
+                    self.evidence_frames["settlement.png"] = frame.copy()
+                    self.evidence_metadata.update(
+                        captured_at_monotonic=stamp,
+                        panel_open=panel,
+                        idle_scores=scores,
+                        page_state="panel"
+                        if panel
+                        else "idle"
+                        if idle_confirmed
+                        else "unrecognized",
+                    )
+                else:
+                    idle_since = None
+                    idle_confirmed = False
+                samples.append(
+                    dict(
+                        captured_at_monotonic=stamp,
+                        frame_available=candidate is not None,
+                        panel_open=panel if candidate is not None else False,
+                    )
+                )
+                self.evidence_metadata["settlement_wait_samples"] = samples
+                if panel or idle_confirmed or stamp >= deadline:
+                    break
+                run_control.sleep(min(0.2, max(0, deadline - stamp)))
+        if frame is None:
+            raise RuntimeError("结算等待期间未取得有效截图")
+        return frame, captured, panel
+
     def inspect_current_page(self):
         """动作前重新截图；不沿用等待前的面板判定。"""
         run_control.checkpoint()
@@ -354,6 +360,12 @@ class CatchObserver:
             else:
                 idle_since = None
             if stamp >= deadline:
+                # 最后一次观察刚恢复控件时，允许完成已有的两帧确认；不重新开等待窗口。
+                if state == "idle" and idle_since == stamp:
+                    run_control.sleep(0.2)
+                    if self.inspect_current_page() == "idle":
+                        self.evidence_metadata["resume_confirmed"] = True
+                        return
                 break
             run_control.sleep(min(0.2, max(0, deadline - stamp)))
         self.evidence_metadata["resume_confirmed"] = False
@@ -405,7 +417,7 @@ class CatchObserver:
             "unknown": "结算未确认",
             "interrupted": "已中断",
         }
-        self.log.info(
+        self.log.debug(
             "本轮结果：%s；游戏反馈：暴击=%d 普通命中=%d 未命中=%d；按键尝试=%d，其中归属未确认=%d；原因=%s",
             labels[self.result.status],
             counts["critical"],
@@ -415,9 +427,21 @@ class CatchObserver:
             unknown,
             self.result.reason,
         )
+        summary = (
+            f"本轮{labels[self.result.status]} · 暴击 {counts['critical']} / "
+            f"命中 {counts['hit']} / 未命中 {counts['miss']}"
+        )
+        if unknown:
+            summary += f" · {unknown} 次按键反馈未确认"
+        if self.result.status in ("unknown", "suspected_escape"):
+            self.log.warning("%s；请结合异常截图检查。", summary)
+        else:
+            self.log.info("%s", summary)
         if self.result.status == "caught":
             self.log.info(
-                "鱼获：%s，尺寸=%scm（名称为 OCR 读数）", self.result.reward, self.result.size_cm
+                "鱼获识别：%s · %s",
+                self.result.reward or "名称未识别",
+                f"{self.result.size_cm} cm" if self.result.size_cm else "尺寸未识别",
             )
         if not bundle_writer.submit(
             Path(paths.get_diagnostics_path())
@@ -459,23 +483,35 @@ def confirm_ready_for_next_cast(config, region):
 def run_observed_qte(strategy, capture):
     """覆盖正常、超时、异常和停止路径；最终按键归因完成后再保存整轮证据。"""
     reason = "returned"
+    primary_error = None
     try:
         return strategy.play_qte(capture)
-    except QTEControlTimeout:
+    except QTEControlTimeout as exc:
+        primary_error = exc
         reason = "control_timeout"
         raise
-    except run_control.RunStopped:
+    except run_control.RunStopped as exc:
+        primary_error = exc
         reason = "interrupted"
         raise
     except BaseException as exc:
+        primary_error = exc
         reason = f"exception:{type(exc).__name__}"
         raise
     finally:
-        strategy._stop_feedback()
         observer = getattr(strategy, "catch_observer", None)
-        if observer is not None:
-            try:
-                observer.finalize(reason)
-                observer.wait_for_evidence()
-            except Exception:
-                log.exception("整条鱼记录收尾失败；保留原流程的停止或异常信号")
+        try:
+            strategy._stop_feedback()
+        except Exception as exc:
+            log.exception("QTE 反馈收尾失败；仍封存整轮证据")
+            if primary_error is None:
+                reason = f"exception:{type(exc).__name__}"
+                raise
+            primary_error.add_note(f"QTE 收尾重试失败：{type(exc).__name__}: {exc}")
+        finally:
+            if observer is not None:
+                try:
+                    observer.finalize(reason)
+                    observer.wait_for_evidence()
+                except Exception:
+                    log.exception("整条鱼记录收尾失败；保留原流程的停止或异常信号")

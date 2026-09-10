@@ -12,9 +12,9 @@ def project_root() -> Path | None:
 
 
 def get_base_path() -> str:
-    """配置目录：源码 .local，普通安装用户目录，便携版 EXE 旁。"""
+    """运行数据根：源码 .local；发布版 EXE 所在目录，不随工作目录变化。"""
     if getattr(sys, "frozen", False):
-        directory = Path(sys.executable).parent
+        directory = Path(sys.executable).resolve().parent
     else:
         root = project_root()
         directory = root / ".local" if root is not None else Path.home() / "BD2_AutoFishing"
@@ -23,18 +23,29 @@ def get_base_path() -> str:
 
 
 def get_log_path() -> str:
-    directory = Path(get_base_path())
-    if not getattr(sys, "frozen", False):
-        directory /= "logs"
+    directory = Path(get_base_path()) / "logs"
     directory.mkdir(parents=True, exist_ok=True)
     return str(directory)
 
 
 def get_diagnostics_path() -> str:
-    name = "diagnostics"
+    name = "screenshots" if getattr(sys, "frozen", False) else "diagnostics"
     directory = Path(get_base_path()) / name
     directory.mkdir(parents=True, exist_ok=True)
     return str(directory)
+
+
+def get_config_path() -> Path:
+    root = Path(get_base_path())
+    directory = root / "config" if getattr(sys, "frozen", False) else root
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory / "config.ini"
+
+
+def get_data_path() -> Path:
+    directory = Path(get_base_path()) / "data"
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
 
 
 def get_resource_path(relative_path: str) -> str:

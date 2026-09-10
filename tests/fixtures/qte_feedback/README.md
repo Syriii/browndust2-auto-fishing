@@ -1,5 +1,15 @@
 # 反馈识别原图
 
+## 2026-09-09 14:33 HIT 漏检
+
+`compact_hit_source.png`：`3cb3471b-001` 第 1 次按键
+`qte_1788935596338157700_14c7788b.zip` 的 frame_02；用于紧凑 HIT 模板提取。
+`compact_hit_holdout.png`：同轮独立第 4 次按键
+`qte_1788935599364325900_8a2a6a81.zip` 的 frame_02，未用于模板；既有 hit_plain_945
+的边缘与灰度联合校验可恢复识别。两份 `_after.png` 均为对应包的 frame_07，文字已消失。
+原图完整 BGR 复制，观察区域 378×155；只对顶部 96 像素识别反馈。
+256 张 12:18/14:33 观察帧对照仅新增 3 张 HIT，其余标签不变；原 unknown 账本不改写。
+
 旧 `recovered_*` 与其他样本的标签和来源见 `manifest.json`，客户区 875×492。
 
 新增样本来自本机 `.local/maintenance/qte-review-60/index.json` 所索引的原 ZIP，
@@ -35,3 +45,15 @@ U49/U50 正例参与模板提取，不声称它们是独立训练外验证；同
 `plain_critical_holdout_945.png` 为第 5 次按键包 `qte_1788924882654524200_5c53b9ca.zip`
 的 frame_03，CRITICAL 被光柱覆盖；未用于模板，当前仍保留未确认。
 原图均为 945×532 客户区的独立观察 ROI，历史按键账本不随字形修复改写。
+
+## 12:18 六份未确认的橙色字形回归
+
+以下原图来自 `.local/maintenance/live-review-20260909-121810/` 的六份 QTE 包，
+此处 U 编号仅属于本次复核，不与旧 60 包的 U 系列混用。
+`warm_source_U02.png` 为第一轮第 7 次按键 frame_02，新增 early 模板的来源；
+`warm_holdout_U01/U04/U06.png` 分别为第一轮第 4 次、第二轮第 10 次、第三轮第 9 次按键的 frame_02，
+未用于模板提取。四张均有原 750ms 归属窗内的完整 CRITICAL。
+`warm_occluded_U05.png` 为第三轮第 8 次按键 frame_03，文字叠加提示图标与光效，允许保留未识别。
+`warm_negative_U01/U03/U04/U06.png` 分别为上述本次编号的 frame_01/03/04/04，
+覆盖空白、紫色机制图示与橙色提示图标、蓝光，不应识别为反馈。全部原样复制，保留 BGR。
+完整分类、时间和来源见 `docs/development/cases/2026-09-09-a1d435a2.md`。

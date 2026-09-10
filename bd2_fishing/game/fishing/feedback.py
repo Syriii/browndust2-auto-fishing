@@ -112,7 +112,11 @@ class FeedbackSession:
             )
         except Exception as exc:
             self.scene_error = type(exc).__name__
-            self.log.warning("QTE 场景取证初始化失败，反馈观察继续：%s", self.scene_error)
+            self.log.warning(
+                "QTE 场景取证初始化失败，反馈观察继续：%s",
+                self.scene_error,
+                extra={"user_message": "特殊场景截图暂不可用，QTE 反馈观察仍在继续。"},
+            )
         self.writer = EvidenceWriter(
             Path(paths.get_diagnostics_path()) / "qte_feedback",
             self.config,
@@ -125,9 +129,9 @@ class FeedbackSession:
         self.thread = threading.Thread(target=self.run, name="qte-feedback-reader", daemon=True)
         self.thread.start()
 
-    def begin_press(self, decision=None, decision_frame=None):
+    def begin_press(self, decision=None, decision_frame=None, *, pressed_at=None):
         """输入前只固定时间与小图并提交；不等观察锁，不归因、不输出日志。"""
-        stamp = time.monotonic()
+        stamp = time.monotonic() if pressed_at is None else pressed_at
         snapshot = decision_frame.copy() if decision_frame is not None else None
         decision = dict(decision) if decision is not None else None
         with self.submission_lock:
@@ -174,15 +178,15 @@ class FeedbackSession:
                     self.tracker.close(stamp, "反馈观察线程异常退出", category="observer_failed")
                 )
 
-    def _log(self, level, message, *args):
-        self.messages.append((level, message, args))
+    def _log(self, level, message, *args, user_message=None):
+        self.messages.append((level, message, args, user_message))
 
     def _emit_messages(self):
         # 只有摘取列表需要状态锁；慢控制台/UI 输出不能占用该锁。
         with self.lock:
             messages, self.messages = self.messages, []
-        for level, message, args in messages:
-            self.log.log(level, message, *args)
+        for level, message, args, user_message in messages:
+            self.log.log(level, message, *args, extra={"user_message": user_message})
 
     def publish(self, outcomes):
         for event in self.tracker.feedback_events[self.event_count :]:
@@ -194,10 +198,9 @@ class FeedbackSession:
             labels = {"critical": "暴击", "hit": "普通命中", "miss": "未命中"}
             self._log(
                 logging.INFO,
-                "QTE 反馈 #%d：%s（%s）",
+                "QTE 第 %d 次游戏反馈 · %s",
                 event["sequence"],
                 labels[event["result"]],
-                event["feedback"].upper(),
             )
             self._log(
                 logging.DEBUG,
@@ -274,7 +277,12 @@ class FeedbackSession:
                     ):
                         self._log(logging.WARNING, "QTE 证据未入队；按键结果仍保留在本轮账本")
                 else:
-                    self._log(logging.WARNING, "QTE 结果无可用截图: 按键序号=%s", outcome.attempt)
+                    self._log(
+                        logging.WARNING,
+                        "QTE 结果无可用截图: 按键序号=%s",
+                        outcome.attempt,
+                        user_message="此次 QTE 反馈没有可保存的画面，仅保留结果日志。",
+                    )
             else:
                 pending.append((deadline, outcome, before, decision_frame))
         self.pending_evidence = pending
@@ -299,50 +307,10 @@ class FeedbackSession:
                     if self.done.is_set():
                         break
                     if frame is not None:
-                        frame = frame.copy()
-                        # 仅上方文字区域参与匹配，下方 QTE 条保留在证据帧中。
-                        text_height = round(self.window.height * 0.18)
-                        match_started = time.perf_counter()
-                        label, score = self.matcher.detect(frame[:text_height])
-                        match_ms = (time.perf_counter() - match_started) * 1000
-                        with self.lock:
-                            if self.done.is_set():
-                                break
-                            self.capture_timings.append(capture_ms)
-                            self.match_timings.append(match_ms)
-                            method = getattr(self.matcher, "last_method", None)
-                            self.match_methods[
-                                method if isinstance(method, str) else "unknown"
-                            ] += 1
-                            self.match_cache_hits += (
-                                getattr(self.matcher, "cache_hit", False) is True
-                            )
-                            incidents.observe(frame, self.region, "qte_feedback")
-                            self._drain_presses()
-                            self.samples.append((now, frame))
-                            if self.scenes is not None and self.scene_error is None:
-                                try:
-                                    self.scenes.observe(frame, now)
-                                except Exception as exc:
-                                    self.scene_error = type(exc).__name__
-                                    self._log(
-                                        logging.WARNING,
-                                        "QTE 场景观察异常，保留已有帧：%s",
-                                        self.scene_error,
-                                    )
-                            self.publish(self.tracker.observe(label, now, score))
-                            self.flush_evidence(now)
-                        self._emit_messages()
-                        if not self.done.is_set() and self.catch_observer is not None:
-                            self.catch_observer.observe_timer(frame, now)
-                    else:
-                        with self.lock:
-                            if self.done.is_set():
-                                break
-                            self._drain_presses()
-                            self.publish(self.tracker.expire(now))
-                            self.flush_evidence(now)
-                        self._emit_messages()
+                        if not self._process_frame(frame, now, capture_ms):
+                            break
+                    elif not self._process_missing_frame(now):
+                        break
                     self.done.wait(self.poll_seconds)
         except run_control.RunStopped as exc:
             self.log.debug("QTE 观察随任务停止: %s", str(exc) or "已停止")
@@ -361,7 +329,56 @@ class FeedbackSession:
                     "QTE 结果观察异常停止: %s；未确认的按键不会当作未命中",
                     str(exc) or type(exc).__name__,
                     exc_info=True,
+                    extra={"user_message": "QTE 反馈观察已中断；未确认的按键不会算作未命中。"},
                 )
+
+    def _process_frame(self, frame, now, capture_ms):
+        """识别在锁外，账本和场景在锁内；关闭后不得发布迟到结果。"""
+        frame = frame.copy()
+        # 仅上方文字区域参与匹配，下方 QTE 条保留在证据帧中。
+        text_height = round(self.window.height * 0.18)
+        match_started = time.perf_counter()
+        label, score = self.matcher.detect(frame[:text_height])
+        match_ms = (time.perf_counter() - match_started) * 1000
+        with self.lock:
+            if self.done.is_set():
+                return False
+            self.capture_timings.append(capture_ms)
+            self.match_timings.append(match_ms)
+            method = getattr(self.matcher, "last_method", None)
+            self.match_methods[method if isinstance(method, str) else "unknown"] += 1
+            self.match_cache_hits += getattr(self.matcher, "cache_hit", False) is True
+            incidents.observe(frame, self.region, "qte_feedback")
+            self._drain_presses()
+            self.samples.append((now, frame))
+            if self.scenes is not None and self.scene_error is None:
+                try:
+                    self.scenes.observe(frame, now)
+                except Exception as exc:
+                    self.scene_error = type(exc).__name__
+                    self._log(
+                        logging.WARNING,
+                        "QTE 场景观察异常，保留已有帧：%s",
+                        self.scene_error,
+                        user_message="特殊场景观察中断，将保留已经取得的画面。",
+                    )
+            self.publish(self.tracker.observe(label, now, score))
+            self.flush_evidence(now)
+        self._emit_messages()
+        if not self.done.is_set() and self.catch_observer is not None:
+            self.catch_observer.observe_timer(frame, now)
+        return True
+
+    def _process_missing_frame(self, now):
+        """无图仅处理排队按键和到期反馈，不能伪造识别结果。"""
+        with self.lock:
+            if self.done.is_set():
+                return False
+            self._drain_presses()
+            self.publish(self.tracker.expire(now))
+            self.flush_evidence(now)
+        self._emit_messages()
+        return True
 
     def close(self):
         with self.submission_lock:
@@ -376,6 +393,7 @@ class FeedbackSession:
                     logging.WARNING,
                     "QTE 按键记录队列溢出：丢失=%d；后续按键归属保持未确认",
                     self.dropped_presses,
+                    user_message="部分按键记录未能保存，相应反馈将标记为未确认。",
                 )
             self.publish(
                 self.tracker.close(
@@ -386,37 +404,54 @@ class FeedbackSession:
             )
             if self.writer is not None:
                 self.flush_evidence(time.monotonic(), force=True)
-            if self.scenes is not None:
-                try:
-                    self.scenes.close(
-                        self.tracker.feedback_events, self.scene_error or "qte_observer_closed"
-                    )
-                    if self.scenes.submitted is False:
-                        self._log(logging.WARNING, "QTE 场景证据队列已满，本轮场景记录未保存")
-                except Exception as exc:
-                    self._log(logging.WARNING, "QTE 场景证据提交失败：%s", type(exc).__name__)
+            self._close_scenes()
             if self.catch_observer is not None:
                 self.catch_observer.stop_observing()
-                self.catch_observer.feedback_diagnostics = dict(
-                    dropped_press_records=self.dropped_presses,
-                    attribution_incomplete=bool(self.dropped_presses),
-                    observer_error=self.reader_error,
-                    unknown_categories=dict(self.unknown_categories),
-                    scene_observation_error=self.scene_error,
-                    observation_performance=dict(
-                        configured_poll_seconds=self.poll_seconds,
-                        frames=sum(self.match_methods.values()),
-                        match_methods=dict(self.match_methods),
-                        identical_frame_cache_hits=self.match_cache_hits,
-                        sample_limit=128,
-                        capture_ms=self._timing_summary(self.capture_timings),
-                        matching_ms=self._timing_summary(self.match_timings),
-                        note="最后最多128个有效观察的局部耗时，不是控制输入或游戏响应时延",
-                    ),
-                    scene_evidence_submitted=self.scenes.submitted
-                    if self.scenes is not None
-                    else None,
+                self.catch_observer.feedback_diagnostics = self._diagnostics_snapshot()
+        self._wait_for_close()
+        self._emit_messages()
+        self._log_summary()
+
+    def _close_scenes(self):
+        """锁内提交场景快照；写入失败不能阻止结算观察封存。"""
+        if self.scenes is not None:
+            try:
+                self.scenes.close(
+                    self.tracker.feedback_events, self.scene_error or "qte_observer_closed"
                 )
+                if self.scenes.submitted is False:
+                    self._log(logging.WARNING, "QTE 场景证据队列已满，本轮场景记录未保存")
+            except Exception as exc:
+                self._log(
+                    logging.WARNING,
+                    "QTE 场景证据提交失败：%s",
+                    type(exc).__name__,
+                    user_message="特殊场景截图无法提交保存，请保留诊断日志。",
+                )
+
+    def _diagnostics_snapshot(self):
+        """调用者持有观察状态锁；返回独立的本轮诊断快照。"""
+        return dict(
+            dropped_press_records=self.dropped_presses,
+            attribution_incomplete=bool(self.dropped_presses),
+            observer_error=self.reader_error,
+            unknown_categories=dict(self.unknown_categories),
+            scene_observation_error=self.scene_error,
+            observation_performance=dict(
+                configured_poll_seconds=self.poll_seconds,
+                frames=sum(self.match_methods.values()),
+                match_methods=dict(self.match_methods),
+                identical_frame_cache_hits=self.match_cache_hits,
+                sample_limit=128,
+                capture_ms=self._timing_summary(self.capture_timings),
+                matching_ms=self._timing_summary(self.match_timings),
+                note="最后最多128个有效观察的局部耗时，不是控制输入或游戏响应时延",
+            ),
+            scene_evidence_submitted=self.scenes.submitted if self.scenes is not None else None,
+        )
+
+    def _wait_for_close(self):
+        """仅在封存后、锁外等待观察线程和后台证据。"""
         if self.thread is not None:
             self.thread.join(timeout=2)
             if self.catch_observer is not None:
@@ -428,7 +463,8 @@ class FeedbackSession:
         # 仅在本轮观察关闭后有界等待写盘，不阻塞逐帧检测或按键路径。
         if self.scenes is not None and self.scenes.submitted and not self.scenes.done.wait(1):
             self.log.warning("QTE 场景证据仍在后台写入")
-        self._emit_messages()
+
+    def _log_summary(self):
         self.log.debug(
             "QTE 按键归属统计: 尝试=%d 暴击=%d 普通命中=%d 未命中=%d 未确认=%d 无对应按键反馈=%s",
             self.tracker.sequence,

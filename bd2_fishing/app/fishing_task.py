@@ -110,7 +110,7 @@ class FishingBot:
             "backpack", "auto_clear_enabled", fallback=True
         )
         log.info(
-            ">>> 背包自动清理: %s", "开启" if self.auto_clear_backpack else "关闭（满包时停止）"
+            "满包处理：%s", "自动清理" if self.auto_clear_backpack else "停止任务，等待手动整理"
         )
         self.hook_diagnostics = HookDiagnostics(
             Path(paths.get_diagnostics_path()) / "hook_timeouts",
@@ -119,14 +119,14 @@ class FishingBot:
             max_events=config.getint("diagnostics", "failure_max_events", fallback=100),
         )
 
-        log.info(f">>> 当前游戏窗口截图尺寸: {region.width} x {region.height}")
-        log.info(
+        log.debug(f"当前游戏窗口截图尺寸: {region.width} x {region.height}")
+        log.debug(
             ">>> 像素阈值缩放倍率: "
             f"{self.pixel_threshold_scale.factor:.4f} "
             f"(参考窗口 {self.pixel_threshold_scale.reference_width} x "
             f"{self.pixel_threshold_scale.reference_height})"
         )
-        log.info(f">>> 上钩黄色像素阈值: {BITE_PIXEL_THRESHOLD} -> {self.bite_pixel_threshold}")
+        log.debug(f"上钩黄色像素阈值: {BITE_PIXEL_THRESHOLD} -> {self.bite_pixel_threshold}")
 
     def _sleep_loop(self) -> None:
         run_control.sleep(self.loop_sleep_seconds)
@@ -165,6 +165,7 @@ class FishingBot:
                     ">>> 突发情况，尝试恢复钓鱼状态 (本窗口峰值黄色像素=%d，阈值=%d)",
                     max_yellow_pixel,
                     self.bite_pixel_threshold,
+                    extra={"user_message": "等待上钩超时，正在尝试恢复钓鱼状态。"},
                 )
                 self.hook_diagnostics.save_timeout(
                     sct,
@@ -197,11 +198,16 @@ class FishingBot:
                 )
                 if position_recovery_attempts >= 1:
                     reason = "自动移动并重抛后仍无法抛竿；请手动调整至船边后重新开始"
-                    log.warning("%s；本轮位置恢复次数=%d", reason, position_recovery_attempts)
+                    log.warning(
+                        "%s；本轮位置恢复次数=%d",
+                        reason,
+                        position_recovery_attempts,
+                        extra={"user_message": reason},
+                    )
                     raise run_control.RunStopped(reason)
                 position_recovery_attempts += 1
                 run_control.set_status("调整抛竿位置")
-                log.warning("抛竿位置恢复 1/1：向前移动 2 秒、点击游戏画面并重新抛竿")
+                log.warning("无法在当前位置抛竿，正在调整位置并重试。")
                 fishing_actions.recover_from_timeout(self.region)
                 run_control.set_status("等待上钩")
                 wait_start_time = time.monotonic()
@@ -212,7 +218,7 @@ class FishingBot:
             if backpack_full:
                 self._record_incident(sct, "backpack_full", auto_clear=self.auto_clear_backpack)
                 if not self.auto_clear_backpack:
-                    log.warning(">>> 背包已满，自动清理已关闭；请手动整理后点击开始钓鱼 重新开始")
+                    log.warning("背包已满，自动清理已关闭；请手动整理后重新开始。")
                     raise run_control.RunStopped("背包已满，自动清理已关闭；请手动整理后重新开始")
                 inventory_actions.clear_backpack(self.region, self.config, sct, self.ocr_context)
                 fishing_actions.cast_rod()
@@ -247,6 +253,7 @@ class FishingBot:
                     ">>> 鱼上钩，黄色像素=%d (阈值=%d)",
                     hook_yellow_pixel,
                     self.bite_pixel_threshold,
+                    extra={"user_message": "鱼上钩了，准备 QTE。"},
                 )
                 pydirectinput.press("space")
                 return
@@ -309,7 +316,7 @@ class FishingBot:
             ) as sct,
         ):
             qte_strategy = self.choose_strategy(sct)
-            log.info(">>> 使用策略: %s", type(qte_strategy).__name__)
+            log.debug("使用策略: %s", type(qte_strategy).__name__)
             run_control.sleep(self.begin_fish_wait_time)
             completed_rounds = 0
             while True:
@@ -326,7 +333,7 @@ class FishingBot:
                 from bd2_fishing.runtime.context import fishing_round
 
                 with fishing_round():
-                    log.info("开始本轮钓鱼")
+                    log.info("第 %d 轮 · 开始钓鱼", completed_rounds + 1)
                     if completed_rounds:
                         from bd2_fishing.game.fishing.settlement import confirm_ready_for_next_cast
 

@@ -130,11 +130,28 @@ class SettlementWaitTests(unittest.TestCase):
         self.assertEqual(self.observer.result.status, "unknown")
 
     def test_missing_or_partial_controls_never_enable_recovery(self):
+        transition = cv2.imread(
+            str(Path(__file__).parents[1] / "fixtures/catch_result/idle_day_transition_180018.png")
+        )
+        self.assertFalse(self.observer.page_reader.inspect(transition)[0])
         for frame in (self.loading, self.caught, np.zeros_like(self.idle), self.idle[:100]):
             self.assertFalse(self.observer.page_reader.inspect(frame)[0])
         frame = self.idle.copy()
         frame[:, :200] = 0
         self.assertFalse(self.observer.page_reader.inspect(frame)[0])
+
+    def test_idle_arriving_at_deadline_gets_one_confirmation_without_input(self):
+        self.camera.grab.side_effect = [self.loading, self.loading, self.idle, self.idle]
+        self.observer.wait_until_idle()
+        self.assertTrue(self.observer.evidence_metadata["resume_confirmed"])
+        self.assertAlmostEqual(self.clock, 0.6)
+
+    def test_deadline_confirmation_flicker_still_stops(self):
+        self.camera.grab.side_effect = [self.loading, self.loading, self.idle, self.loading]
+        with self.assertRaises(TimeoutError):
+            self.observer.wait_until_idle()
+        self.assertFalse(self.observer.evidence_metadata["resume_confirmed"])
+        self.assertAlmostEqual(self.clock, 0.6)
 
     def test_real_idle_variants_and_independent_frame_match_without_reward_false_positive(self):
         root = Path(__file__).parents[1] / "fixtures" / "catch_result"
@@ -143,6 +160,7 @@ class SettlementWaitTests(unittest.TestCase):
             "normal_945.png",
             "escaped_scene.png",
             "idle_holdout_20260909.png",
+            "idle_day_945_180022.png",
         ):
             frame = cv2.imread(str(root / name))
             height, width = frame.shape[:2]

@@ -39,5 +39,5 @@ def check_backpack_if_full(sct: DxCameraCapture, ocr_context: OCRContext) -> boo
     if not contains_backpack_full_text(texts):
         return False
 
-    log.info(">>> 检测到“背包已满，请清理背包”提示")
+    log.info("检测到“背包已满，请清理背包”提示")
     return True

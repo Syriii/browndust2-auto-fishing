@@ -93,8 +93,11 @@ from bd2_fishing.game.fishing.settlement_rules import classify_settlement
 from bd2_fishing.game.observation import OCRContext
 from bd2_fishing.game.fishing.recognition import FeedbackMatcher
 from bd2_fishing.perception.ocr import get_result_from_ocr
+from bd2_fishing.game.fishing.mechanics.policy import MechanismPolicy
+from bd2_fishing.game.fishing.mechanics.blockers import BlockerDetector
 assert list(FishingLocation)
 assert OutcomeTracker()
+assert MechanismPolicy()
 """
         completed = subprocess.run(
             [sys.executable, "-X", "utf8", "-B", "-c", code],
@@ -103,6 +106,24 @@ assert OutcomeTracker()
             text=True,
         )
         self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_every_new_mechanic_is_checked_without_adding_its_filename(self):
+        for statement in (
+            "from bd2_fishing.infrastructure.windows import input",
+            "from bd2_fishing.game.fishing import qte",
+            "from ..feedback import FeedbackSession",
+        ):
+            for filename in ("future_skill.py", "__init__.py"):
+                with (
+                    self.subTest(statement=statement, filename=filename),
+                    tempfile.TemporaryDirectory() as directory,
+                ):
+                    package = Path(directory) / "bd2_fishing"
+                    folder = package / "game/fishing/mechanics"
+                    folder.mkdir(parents=True)
+                    (folder / filename).write_text(statement, encoding="utf-8")
+                    errors, _ = check_package(package)
+                    self.assertTrue(errors, statement)
 
     def test_capture_factory_is_used_without_creating_native_camera(self):
         config = configparser.ConfigParser()

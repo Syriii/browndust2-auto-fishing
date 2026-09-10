@@ -34,6 +34,7 @@ auto_fishing-dev/
 │   │   ├── islands/         岛屿资料、地点读取与地图往返
 │   │   ├── navigation/      页面操作基础能力，完整导航待扩展
 │   │   ├── fishing/         钓鱼、QTE、反馈、结算与统计
+│   │   │   ├── mechanics/   同帧机制识别、状态与纯决策
 │   │   │   └── assets/      运行时识别模板
 │   │   └── inventory/       背包识别与清理
 │   ├── perception/          跨功能图像与文字处理、OCR 数据和读取
@@ -41,7 +42,8 @@ auto_fishing-dev/
 │   ├── infrastructure/      具体平台、引擎与存储实现
 │   │   ├── windows/         窗口、截图、受控输入和电源
 │   │   ├── ocr/             RapidOCR 引擎适配
-│   │   └── diagnostics/     后台日志及诊断证据写入
+│   │   ├── diagnostics/     后台日志及诊断证据写入
+│   │   └── updates/         发布清单、下载及事务更新
 │   ├── ui/                  桌面展示
 │   └── resources/default.ini  唯一默认配置
 ├── tests/
@@ -64,7 +66,7 @@ auto_fishing-dev/
 │   └── history/            按时间保存的旧实测记录
 ├── .github/workflows/       Windows 离线回归与发布构建
 ├── build/                  构建中间物和 egg-info，不提交
-├── dist/                   候选便携程序目录和发布 ZIP，不提交
+├── dist/                   当前交付的便携目录、ZIP、校验值和说明，不提交
 ├── .venv/                  本机 Python 环境，不提交
 └── .local/                 本机配置和生成物，不提交
     ├── config.ini           源码用户配置
@@ -77,20 +79,23 @@ auto_fishing-dev/
 
 bd2_fishing 内职责与允许的依赖见[程序架构](architecture.md)。尚未实现的完整导航、岛屿目录和机制组合不预建空目录；功能达到需要独立维护的规模时再拆包。
 
+2026-09-10：钓鱼机制已形成 `game/fishing/mechanics/` 实体子包；已有绿色、泡泡、蓝区与挡板
+识别/规则迁入其中。统一仲裁不代表完整技能分类或机制生命周期已实现，详见程序架构第 6 节。
+
 ## 配置、资源与运行数据
 
 | 内容 | 唯一归属 | 维护规则 |
 | --- | --- | --- |
 | 默认配置 | `bd2_fishing/resources/default.ini` | 随 wheel/便携包发布，代码通过资源 API 读取，不再复制整份字符串 |
 | 个人源码配置 | `.local/config.ini` | 初次运行生成；已有值和注释保留；不提交 |
-| 便携版配置 | EXE 旁的 `config.ini` | 独立于源码；打包不读取个人源码配置 |
+| 便携版配置 | EXE 旁的 `config/config.ini` | 独立于源码；打包不读取个人源码配置 |
 | 识别模板 | `game/fishing/assets/` 等所属功能包 | 运行必需，随包收集 |
 | 测试样本 | `tests/fixtures/` | 有来源、正负例与回归用途，不作为运行依赖 |
 | 游戏封面资料 | `docs/reference/images/` | 保留用户原图与可见信息；资料不等于已实现导航模板 |
 | 日志和现场证据 | `.local/logs/`、`.local/diagnostics/` | 有回归价值的样本经整理后复制到 fixtures |
 | 依赖 | pyproject 声明，requirements 生成锁定 | 不再维护另一份手写 requirements.txt |
 
-开发路径不随终端当前目录变化。普通 wheel 安装使用用户主目录的 `BD2_AutoFishing/` 保存配置，下设 logs 和 diagnostics；新便携版在 EXE 旁保存配置、日志及 diagnostics；旧部署的 debug 原样保留。自定义 OCR 相对资源仍从仓库或冻结资源目录解析，配置迁移不改变资源含义。
+开发路径不随终端当前目录变化。普通 wheel 安装使用用户主目录的 `BD2_AutoFishing/` 保存配置，下设 logs 和 diagnostics；新便携版在 EXE 旁的 config、data、logs、screenshots 分别保存配置、持久数据、日志和证据；旧部署的 debug 原样保留。自定义 OCR 相对资源仍从仓库或冻结资源目录解析，配置迁移不改变资源含义。
 
 `.venv/` 含绝对路径，原位保留；以后重建环境再按标准命令生成。Python 缓存仍按解释器正常行为生成。setuptools 的 egg-info 统一位于 `build/`，普通 wheel 中间文件位于 `build/setuptools/`；setup.py 仅准备路径并调用构建后端，元数据和依赖仍由 pyproject 维护。
 
@@ -111,3 +116,10 @@ Ruff 统一检查与格式化，静态架构检查限制反向依赖并检测模
 保留原用户配置、日志、证据和源码备份；旧开发记录归本机 archive。部署迁移前后 1177 个文件大小和 SHA256 全部一致。离线回归、Tk 模拟检查与打包资源核对见[当前开发状态](../development/status.md)。
 
 迁移不调整 QTE 等待、按键顺序、HSV 阈值或游戏策略。端到端低时延仍需按[QTE 验收设计](qte-performance.md)单独实测，目录整理不等于性能优化完成。
+
+## 新版便携发布目录
+
+发布包包含主 EXE、独立更新助手、_internal 和 manifest；运行时按需创建 config、data、logs、screenshots 与 cache。更新备份是 cache 内短期事务数据，不是 deployment/current 或永久历史版本。详见[便携版目录树](../user/updating.md)与[更新设计](portable-update.md)。
+
+`dist/` 只保留当前一套交付结果，不长期并列保存各轮构建目录。候选验证完成后清理层级，
+旧构建及其中的运行数据归外层 `archive/builds/`，构建中间物继续归 `build/`，检查日志归 `.local/maintenance/`。

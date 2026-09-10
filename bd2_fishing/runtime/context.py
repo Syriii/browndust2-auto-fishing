@@ -34,6 +34,7 @@ def fishing_round(round_id=None):
 class RoundLogger(logging.LoggerAdapter):
     def process(self, msg, kwargs):
         extra = dict(kwargs.get("extra", {}))
+        extra.setdefault("plain_message", msg)
         round_id = self.extra.get("round_id") or current_round_id()
         if round_id:
             extra["round_id"] = round_id

@@ -49,12 +49,16 @@ class TaskController:
             self.last_stop_reason = str(exc) or "已停止"
         except Exception as exc:
             self.last_error = str(exc)
-            log.exception(">>> 钓鱼任务异常，已返回待机；排查后可点击开始钓鱼重试")
+            log.exception("任务发生错误，已停止；请检查此前提示，详细原因可在诊断日志中查看。")
         finally:
             control.stop(self.release_inputs)
             if not self.last_stop_reason:
                 self.last_stop_reason = "本次任务已结束"
-            log.info("已停止，按键已释放；原因=%s", self.last_error or self.last_stop_reason)
+            log.info(
+                "已停止，按键已释放；原因=%s",
+                self.last_error or self.last_stop_reason,
+                extra={"user_message": "任务已停止，按键已释放。"} if self.last_error else {},
+            )
 
     def close(self):
         if self.control is not None:

@@ -88,7 +88,7 @@ def create_camera_for_region(region, output_color="BGR"):
     run_control.checkpoint()
     bindings = _enumerate_bindings()
     outputs = [binding.info for binding in bindings]
-    log.info("本次截图输出枚举：%s；游戏区域=%s", outputs, region)
+    log.debug("本次截图输出枚举：%s；游戏区域=%s", outputs, region)
     selected = select_output(outputs, region)
     binding = next(binding for binding in bindings if binding.info is selected)
     camera = None

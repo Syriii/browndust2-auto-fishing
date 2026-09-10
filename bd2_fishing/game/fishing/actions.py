@@ -18,7 +18,7 @@ def cast_rod() -> None:
     pydirectinput.keyDown("space")
     run_control.sleep(CAST_HOLD_SECONDS)
     pydirectinput.keyUp("space")
-    log.info(">>> 已发送抛竿按键，等待游戏响应")
+    log.info("已发送抛竿按键，等待游戏响应")
 
 
 def recover_from_timeout(region) -> None:

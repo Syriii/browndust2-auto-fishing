@@ -58,7 +58,7 @@ def get_window_region(window_title: str) -> Rect | None:
     """获取窗口客户区的屏幕绝对坐标，不包含标题栏和边框。"""
     hwnd = win32gui.FindWindow(None, window_title)
     if not hwnd:
-        log.info(f"错误: 未找到标题为 '{window_title}' 的窗口")
+        log.warning("未找到游戏窗口，请打开游戏并恢复为可见窗口。")
         return None
 
     if win32gui.IsIconic(hwnd):

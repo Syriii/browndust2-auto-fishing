@@ -64,7 +64,7 @@ def change_location(
     sct: DxCameraCapture, ocr_context: OCRContext, current_location: FishingLocation
 ) -> None:
     """先前往中转钓点，再按反向路径回到当前钓点以刷新鱼群。"""
-    log.info(">>> 切换钓点")
+    log.info("切换钓点")
 
     # 先从当前地点前往中转点，让原地点在返回时重新加载。
     click_change_btn(sct, ocr_context)
@@ -110,7 +110,7 @@ def change_location(
     while time.monotonic() - now < CHANGE_LOCATION_POLL_TOTAL_SECONDS:
         run_control.checkpoint()
         if check_if_have_keyword(sct, ocr_context, CHANGE_LOCATION_BTN_NAME):
-            log.info(">>> 已成功切换地点")
+            log.info("已成功切换地点")
             return
         run_control.sleep(0.2)
     raise LocationChangeFailed("换岛后未能确认钓鱼页面已恢复；请检查游戏页面后重新开始")

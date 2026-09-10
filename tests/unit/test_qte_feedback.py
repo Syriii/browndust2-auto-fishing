@@ -25,6 +25,42 @@ FIXTURES = ROOT / "tests/fixtures/qte_feedback"
 
 
 class FeedbackImageTests(unittest.TestCase):
+    def test_compact_hit_and_independent_attempt_with_blue_glare(self):
+        matcher = FeedbackMatcher(945, 532)
+        for name in ("compact_hit_source", "compact_hit_holdout"):
+            frame = cv2.imread(str(FIXTURES / f"{name}.png"))[:96]
+            self.assertEqual(matcher.detect(frame)[0], "hit", name)
+            # 消失后的独立原图不能被同一区域背景识别为 HIT。
+            after = cv2.imread(str(FIXTURES / f"{name}_after.png"))[:96]
+            self.assertIsNone(matcher.detect(after)[0], name)
+
+    def test_warm_critical_source_and_independent_rounds(self):
+        matcher = FeedbackMatcher(945, 532)
+        for name in ("warm_source_U02", "warm_holdout_U01", "warm_holdout_U04", "warm_holdout_U06"):
+            with self.subTest(name=name):
+                frame = cv2.imread(str(FIXTURES / f"{name}.png"))[:96]
+                label, score = matcher.detect(frame)
+                self.assertEqual(label, "critical")
+                self.assertEqual(matcher.last_method, "critical_color")
+                self.assertGreaterEqual(score, 0.85)
+
+    def test_warm_backgrounds_and_mechanism_symbols_are_not_feedback(self):
+        matcher = FeedbackMatcher(945, 532)
+        for name in (
+            "warm_negative_U01",
+            "warm_negative_U03",
+            "warm_negative_U04",
+            "warm_negative_U06",
+        ):
+            frame = cv2.imread(str(FIXTURES / f"{name}.png"))[:96]
+            self.assertIsNone(matcher.detect(frame)[0], name)
+        for color in ((0, 100, 255), (255, 255, 255), (0, 0, 0)):
+            frame = np.empty((96, 378, 3), np.uint8)
+            frame[:] = color
+            self.assertIsNone(matcher.detect(frame)[0])
+        frame = cv2.imread(str(FIXTURES / "warm_occluded_U05.png"))[:96]
+        self.assertIn(matcher.detect(frame)[0], (None, "critical"))
+
     def test_identical_frame_cache_owns_pixels_and_invalidates_on_any_change(self):
         matcher = FeedbackMatcher(945, 532)
         frame = cv2.imread(str(FIXTURES / "glare_critical_945.png"))[:96].copy()

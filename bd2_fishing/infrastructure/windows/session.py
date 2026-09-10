@@ -64,4 +64,4 @@ def keep_awake(enabled):
     finally:
         if previous:
             setter(previous)
-            log.info("已恢复本线程原有电源请求")
+            log.info("任务结束，已恢复系统原有息屏和睡眠设置。")

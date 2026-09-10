@@ -145,6 +145,10 @@ class DecisionEvidenceTests(unittest.TestCase):
                         strategy, "_feedback_session", observer if enabled else None
                     )
                     strategy._sleep_loop = Mock(side_effect=run_control.RunStopped("end sample"))
+                    if reason == "blue_fallback":
+                        strategy._sleep_loop = Mock(
+                            side_effect=[None, run_control.RunStopped("end sample")]
+                        )
                     raw = np.full(
                         (strategy.roi_pos.height, strategy.roi_pos.width, 3), 80, np.uint8
                     )
@@ -166,12 +170,14 @@ class DecisionEvidenceTests(unittest.TestCase):
                         target[:, 40:80] = 255
                     strategy._yellow_mask = Mock(return_value=target)
                     if cls is qte_strategy.AbyssMawQTEStrategy:
+                        blue_target = np.zeros_like(cursor)
+                        blue_target[:, 40:80] = 255
                         strategy._blue_mask = Mock(
-                            return_value=cursor
+                            return_value=blue_target
                             if reason == "blue_fallback"
                             else np.zeros_like(cursor)
                         )
-                        strategy._blocker_rect = Mock(return_value=None)
+                        strategy._blocker_detector.read = Mock(return_value=None)
                     with (
                         patch.object(qte_strategy.pydirectinput, "press") as press,
                         patch("bd2_fishing.runtime.control.sleep"),
@@ -191,7 +197,8 @@ class DecisionEvidenceTests(unittest.TestCase):
                             np.testing.assert_array_equal(frame, raw)
                         else:
                             observer.begin_press.assert_not_called()
-                    camera.grab.assert_called_once_with(strategy.roi_pos)
+                    self.assertEqual(camera.grab.call_count, 2 if reason == "blue_fallback" else 1)
+                    camera.grab.assert_called_with(strategy.roi_pos)
                     self.assertIsNone(strategy._decision_frame)
 
 

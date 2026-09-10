@@ -41,7 +41,7 @@ class FeedbackLifecycleTests(unittest.TestCase):
         session.writer = Mock()
         session.matcher = Mock(detect=Mock(return_value=("hit", 0.99)))
 
-        def slow_log(*args):
+        def slow_log(*args, **kwargs):
             entered.set()
             if not release.wait(5):
                 raise TimeoutError("test log gate timed out")
@@ -178,3 +178,30 @@ class FeedbackLifecycleTests(unittest.TestCase):
             self.assertFalse(writer.submit(Mock(), []))
             self.assertTrue(writer.queue.empty())
             save.assert_not_called()
+
+    def test_close_waits_outside_lock_and_scene_failure_still_seals_observer(self):
+        observer = CatchObserver(Mock(), self.config, self.region)
+        session = feedback.FeedbackSession(self.config, self.region, observer)
+        session.log = Mock()
+        session.scenes = Mock(submitted=False)
+        session.scenes.close.side_effect = RuntimeError("writer unavailable")
+        session.writer = Mock()
+        session.thread = Mock(is_alive=Mock(return_value=False))
+        session.begin_press()
+
+        def join(*, timeout):
+            self.assertEqual(timeout, 2)
+            self.assertTrue(session.done.is_set())
+            self.assertTrue(session.closed)
+            acquired = session.lock.acquire(blocking=False)
+            self.assertTrue(acquired, "joining while holding observation lock can deadlock")
+            if acquired:
+                session.lock.release()
+            self.assertEqual(observer.attempt_outcomes[0]["result"], "unknown")
+
+        session.thread.join.side_effect = join
+        session.close()
+        session.close()
+        session.thread.join.assert_called_once()
+        session.writer.close.assert_called_once()
+        self.assertFalse(observer.feedback_diagnostics["reader_still_running"])

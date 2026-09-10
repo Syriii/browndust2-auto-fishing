@@ -63,6 +63,7 @@ class ProjectLayoutTests(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory() as temporary,
             patch.object(settings, "get_base_path", return_value=temporary),
+            patch.object(settings, "get_config_path", return_value=Path(temporary) / "config.ini"),
         ):
             config = settings.read_ini()
             self.assertTrue(config.has_section("hook"))
@@ -84,8 +85,9 @@ class ProjectLayoutTests(unittest.TestCase):
                 patch.object(sys, "_MEIPASS", str(app / "_internal"), create=True),
             ):
                 self.assertEqual(Path(paths.get_base_path()), app)
-                self.assertEqual(Path(paths.get_log_path()), app)
-                self.assertEqual(Path(paths.get_diagnostics_path()), app / "diagnostics")
+                self.assertEqual(paths.get_config_path(), app / "config/config.ini")
+                self.assertEqual(Path(paths.get_log_path()), app / "logs")
+                self.assertEqual(Path(paths.get_diagnostics_path()), app / "screenshots")
                 self.assertEqual(
                     Path(paths.get_resource_path("models/test.onnx")),
                     app / "_internal" / "models" / "test.onnx",

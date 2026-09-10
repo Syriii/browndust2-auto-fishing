@@ -40,9 +40,21 @@ def _release_qte_key():
     previous = _input.FAILSAFE
     try:
         _input.FAILSAFE = False
-        _input.keyUp("space", _pause=False)
+        return _input.keyUp("space", _pause=False)
     finally:
         _input.FAILSAFE = previous
+
+
+def qte_key_down():
+    """绿色动作按下，不附加驱动 PAUSE；保持期间由控制循环继续观察。"""
+    if not run_control.call_input(_input.keyDown, "space", _pause=False):
+        raise RuntimeError("QTE 按键未被系统接受")
+
+
+def qte_key_up():
+    """释放不受停止/失焦检查拦截，仍与统一停止释放串行。"""
+    if not run_control.call_release(_release_qte_key):
+        raise RuntimeError("QTE 松键未被系统接受")
 
 
 def keyDown(*args, **kwargs):
