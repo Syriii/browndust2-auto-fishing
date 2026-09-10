@@ -1,5 +1,6 @@
 import ast
 import json
+import os
 import tempfile
 import threading
 import unittest
@@ -181,6 +182,9 @@ class HookDiagnosticsTests(unittest.TestCase):
         self.join()
         self.save()
         self.join()
+        # 明确旧包早于新包，避免 Windows 快速写入的相同时间戳干扰轮转断言。
+        for path in self.output.glob("*.zip"):
+            os.utime(path, (1, 1))
         self.recorder.reset()
         self.recorder.observe(None)
         self.save(Mock(grab=Mock(return_value=None)))
