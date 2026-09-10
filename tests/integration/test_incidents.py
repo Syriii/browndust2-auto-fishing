@@ -123,8 +123,12 @@ class IncidentTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             (Path(directory) / "notes.txt").write_text("keep")
             for number in range(4):
+                previous = set(Path(directory).glob("*.zip"))
                 with incidents.recording_session(directory=directory, max_events=2):
                     incidents.report("failure", number=number)
+                # 本用例验证按时间保留；快速写入可能获得相同的 Windows 文件时间。
+                (created,) = set(Path(directory).glob("*.zip")) - previous
+                os.utime(created, (number + 1, number + 1))
             records = []
             for file in Path(directory).glob("*.zip"):
                 with ZipFile(file) as archive:
