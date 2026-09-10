@@ -12,6 +12,8 @@
 | `benchmarks/qte_latency.py` | 合成图像与日志提交时延基准 | 不连接游戏、不发送输入；结果写入 .local/benchmarks |
 | `checks/smoke_ui.py` | 实际 Tk 控件、模拟任务，检查启停、设置及日志筛选；自动结束 | 不连接游戏、不发送输入，设置写入临时配置 |
 | `checks/preview_ui.py` | 带示例日志的手动页面预览 | 不连接游戏、不保存配置 |
+| `checks/smoke_updates.py` | 隐藏 Tk 更新与存储入口检查 | 临时配置和模拟网络，不下载、不替换真实程序 |
+| `checks/check_portable_package.py` | 完整包与真实更新助手的隔离升级、恢复验证 | 使用 C# 测试 EXE，不运行钓鱼程序；需 Windows .NET Framework csc |
 | `checks/smoke_capture.py` | 检查 DXcam 创建、截图和释放；可模拟旧工厂缓存缺失 | 只读截图，不聚焦或发送输入 |
 | `checks/smoke_feedback_capture.py` | 检查 GDI 与 DXcam 并行采集及资源释放 | 只读截图，不发送输入 |
 | `live/run_live_diagnostic.py` | 有时限的钓鱼诊断，默认 90 秒 | 真实抛竿和按键，沿用读取的配置；失焦或到时停止 |
@@ -85,6 +87,13 @@
 
 `python scripts/checks/smoke_ui.py --short-screen` 显示测试窗口，模拟 125% Tk 缩放和 1366×768 屏幕的工作区，检查原生窗口边界及开始、保存按钮可见性；不能与 `--hidden` 同用。所有模式都覆盖诊断积压分批读取后的时间顺序，以及警告不等待积压清空即可显示。
 
-- `scripts/checks/smoke_updates.py`：隐藏 Tk 更新与存储入口检查，使用临时配置和模拟网络，不下载或替换真实程序，不操作游戏。
+## 更新与发布包验证
 
-- `scripts/checks/check_portable_package.py <候选目录> --report <JSON路径>`：验证 ZIP/文件清单，使用真实更新助手与 C# 测试 EXE 检查替换、重启及恢复；仅创建临时隔离目录，不启动钓鱼程序或操作游戏。需要 Windows .NET Framework csc。
+```powershell
+.\.venv\Scripts\python.exe -X utf8 -B scripts/checks/smoke_updates.py
+.\.venv\Scripts\python.exe -X utf8 -B scripts/checks/check_portable_package.py dist/BD2_AutoFishing --report .local/maintenance/package-check.json
+```
+
+包检查要求候选目录同级存在 `BD2_AutoFishing-windows.zip` 及同名 `.zip.sha256`，并验证目录与 ZIP 的清单一致。真实助手只更新隔离目录中的测试 EXE，临时目录位于 `.local/maintenance/`，报告位置由 `--report` 指定。
+
+工具不代替公开下载验收：正式发布后仍需检查 Release 附件、版本查询与实际下载，见[发布步骤](releasing.md#github-构建)。
