@@ -2,11 +2,30 @@
 
 ## 版本与验证索引
 
-- 0.2.0：[发布页面](https://github.com/Syriii/browndust2-auto-fishing/releases/tag/v0.2.0) · [版本说明](../../CHANGELOG.md)。附件与 Actions 均通过后才算交付完成。
+- 0.2.0 已发布：[发布页面](https://github.com/Syriii/browndust2-auto-fishing/releases/tag/v0.2.0) · [版本说明](../../CHANGELOG.md)。构建与附件校验结果见下方发布记录。
 - 日常协作：[分支与发布约定](branching.md)。合并 main 不自动发布，文档修改无需重发 EXE。
 - 游戏端到端与特殊机制覆盖继续按[验证计划](validation-plan.md)推进，不因创建 Release 自动标为通过。
 
 以下日期条目保留验证当时的状态；“未提交/未发布”等描述属于对应阶段，发布状态以版本页面为准。
+
+## 2026-09-10 v0.2.0 正式发布
+
+[发布 PR #1](https://github.com/Syriii/browndust2-auto-fishing/pull/1) 经 Windows CI 通过后合并 main，
+标签 v0.2.0 固定提交 `1c9675525a4469b0b340c69c28616ceb61fccba5`，临时发布分支已删除。
+[正式构建](https://github.com/Syriii/browndust2-auto-fishing/actions/runs/34446286495) 已通过离线回归、
+打包与上传，Release 提供完整 ZIP 和同名 SHA-256 文件。
+
+使用程序自身下载与解包模块从官方公开附件地址下载并校验：ZIP 为 92,559,146 字节，
+清单版本 0.2.0，1,212 个程序文件逐项校验通过。ZIP SHA-256：
+`1913186e5369a04015f33d95d9f3834b0dd1338e3b5499220fef1e7d0bd40207`。
+云端包与本机候选包由不同 Python 构建环境生成，哈希及依赖文件数不同；GitHub 下载以上述云端产物为准。
+
+本机匿名版本查询遇到 GitHub API HTTP 403 限流；通过维护者 API 核对正式版本与附件元数据后，
+公开附件下载和完整性检查成功。此结果验证了下载链路，不能视为匿名自动检查更新全链路已通过。
+限流恢复后的版本发现与同版本无更新提示仍待复核；用户可通过浏览器下载 ZIP 并从程序导入。
+本机证据位于 `.local/maintenance/publish-20260910/`。本次未运行游戏任务，未覆盖 deployment。
+
+发布后补充文档通过独立 docs 分支合并，不修改已发布标签、附件或 EXE。
 
 ## 2026-09-10 便携更新与存储方案已实现（0.2.0 候选包）
 
