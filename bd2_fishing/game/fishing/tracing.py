@@ -1,0 +1,156 @@
+"""钓鱼 QTE 统计与生命周期观察，不改动按键策略。"""
+
+import logging
+import time
+from collections import Counter
+from functools import wraps
+
+from bd2_fishing.runtime import control as run_control
+from bd2_fishing.runtime.context import get_logger
+
+log = get_logger(__name__)
+
+
+class QTEControlTimeout(TimeoutError):
+    """控制期限结束，不代表游戏已退出 QTE；调用者必须终止后续轮次。"""
+
+
+class QTETrace:
+    def __init__(self, *, detailed=False, interval=5):
+        self.detailed = detailed
+        self.interval = interval
+        self.started = self.last_report = time.monotonic()
+        self.reason = "longest_keep_time"
+        self.total = Counter()
+        self.counts = Counter()
+        self.first = self.last = None
+        self.previous_blocker = None
+        self.x_min = self.x_max = None
+
+    def observe(self, state, *, blocker=None, cursor=None, yellow=None, active=None, pressed=False):
+        self.total[state] += 1
+        self.counts[state] += 1
+        sample = dict(
+            state=state,
+            blocker=blocker,
+            cursor=cursor,
+            yellow=yellow,
+            active=active,
+            pressed=pressed,
+        )
+        if self.first is None:
+            self.first = sample
+        self.last = sample
+        if state == "tracking":
+            if blocker != self.previous_blocker:
+                log.debug(
+                    "QTE 挡板变化: 原位置=%s 新位置=%s 光标=%s 有效范围=%s",
+                    self.previous_blocker,
+                    blocker,
+                    cursor,
+                    active,
+                )
+            self.counts["blocker_detected"] += blocker is not None
+            self.counts["blocker_changes"] += blocker != self.previous_blocker
+            self.counts["presses"] += bool(pressed)
+            self.previous_blocker = blocker
+            if blocker is not None:
+                self.x_min = blocker[0] if self.x_min is None else min(self.x_min, blocker[0])
+                self.x_max = blocker[0] if self.x_max is None else max(self.x_max, blocker[0])
+        if self.detailed:
+            log.debug("QTE 逐帧: %s", sample)
+        if time.monotonic() - self.last_report >= self.interval:
+            self.report()
+
+    def report(self):
+        if not self.counts:
+            return
+        now = time.monotonic()
+        log.debug(
+            "QTE 控制采样: 窗口秒=%.2f 计数=%s 挡板x范围=%s 首帧=%s 末帧=%s",
+            now - self.last_report,
+            dict(self.counts),
+            (self.x_min, self.x_max),
+            self.first,
+            self.last,
+        )
+        self.counts.clear()
+        self.first = self.last = None
+        self.x_min = self.x_max = None
+        self.last_report = now
+
+    def close(self):
+        self.report()
+        level = (
+            logging.WARNING
+            if self.reason in ("longest_keep_time", "control_timeout")
+            else logging.DEBUG
+        )
+        if self.reason.startswith("exception:"):
+            level = logging.ERROR
+        log.log(
+            level,
+            "QTE 退出: 原因=%s 耗时秒=%.2f 总采样=%s（不代表捕获成功）",
+            self.reason,
+            time.monotonic() - self.started,
+            dict(self.total),
+            extra={
+                "user_message": "QTE 等待超时，未确认捕获结果。"
+                if level == logging.WARNING
+                else "QTE 执行异常，正在结束本轮任务。"
+                if level == logging.ERROR
+                else "QTE 控制结束，等待结算确认。"
+            },
+        )
+
+
+def trace_qte(method):
+    @wraps(method)
+    def wrapped(self, *args, **kwargs):
+        run_control.set_status("QTE 进行中")
+        trace = QTETrace(detailed=self.qte_detail_log)
+        self._qte_trace = trace
+        log.info("QTE 开始")
+        log.debug(
+            "QTE 参数: 策略=%s ROI=%s 最长秒=%s 逐帧文件日志=%s",
+            type(self).__name__,
+            self.roi_pos.as_tuple(),
+            self.longest_keep_time,
+            self.qte_detail_log,
+        )
+        primary_error = None
+        try:
+            start_feedback = getattr(self, "_start_feedback", None)
+            if start_feedback is not None:
+                start_feedback()
+            return method(self, *args, **kwargs)
+        except QTEControlTimeout as exc:
+            primary_error = exc
+            trace.reason = "control_timeout"
+            raise
+        except run_control.RunStopped as exc:
+            primary_error = exc
+            trace.reason = "cancelled"
+            raise
+        except BaseException as exc:
+            primary_error = exc
+            trace.reason = f"exception:{type(exc).__name__}"
+            raise
+        finally:
+            stop_feedback = getattr(self, "_stop_feedback", None)
+            try:
+                if stop_feedback is not None:
+                    stop_feedback()
+            except Exception as exc:
+                if primary_error is None:
+                    trace.reason = f"exception:{type(exc).__name__}"
+                    raise
+                primary_error.add_note(f"QTE 反馈清理另有异常：{type(exc).__name__}: {exc}")
+                log.exception("QTE 反馈清理失败；保留原退出原因，外层继续收尾")
+            finally:
+                try:
+                    trace.close()
+                finally:
+                    self._qte_trace = None
+
+    return wrapped

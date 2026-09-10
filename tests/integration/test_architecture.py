@@ -16,7 +16,7 @@ from bd2_fishing.runtime.geometry import Rect
 from scripts.checks.check_architecture import check_package
 from tests.support import ROOT
 
-PACKAGE = ROOT / "src/bd2_fishing"
+PACKAGE = ROOT / "bd2_fishing"
 
 
 class ArchitectureTests(unittest.TestCase):
@@ -67,6 +67,18 @@ class ArchitectureTests(unittest.TestCase):
                     for module in modules:
                         self.assertFalse(module.startswith(forbidden), (path, module))
 
+    def test_production_cannot_import_experimental_tools_or_test_helpers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory) / "bd2_fishing"
+            (package / "app").mkdir(parents=True)
+            (package / "app/task.py").write_text(
+                "from scripts.live import record_qte_session\nfrom tests import support\n",
+                encoding="utf-8",
+            )
+            errors, _ = check_package(package)
+            self.assertTrue(any("scripts.live" in item for item in errors))
+            self.assertTrue(any("tests.support" in item for item in errors))
+
     def test_rules_and_catalog_import_without_windows_or_ocr_runtime(self):
         code = """
 import importlib.abc, sys
@@ -81,8 +93,11 @@ from bd2_fishing.game.fishing.settlement_rules import classify_settlement
 from bd2_fishing.game.observation import OCRContext
 from bd2_fishing.game.fishing.recognition import FeedbackMatcher
 from bd2_fishing.perception.ocr import get_result_from_ocr
+from bd2_fishing.game.fishing.mechanics.policy import MechanismPolicy
+from bd2_fishing.game.fishing.mechanics.blockers import BlockerDetector
 assert list(FishingLocation)
 assert OutcomeTracker()
+assert MechanismPolicy()
 """
         completed = subprocess.run(
             [sys.executable, "-X", "utf8", "-B", "-c", code],
@@ -91,6 +106,24 @@ assert OutcomeTracker()
             text=True,
         )
         self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_every_new_mechanic_is_checked_without_adding_its_filename(self):
+        for statement in (
+            "from bd2_fishing.infrastructure.windows import input",
+            "from bd2_fishing.game.fishing import qte",
+            "from ..feedback import FeedbackSession",
+        ):
+            for filename in ("future_skill.py", "__init__.py"):
+                with (
+                    self.subTest(statement=statement, filename=filename),
+                    tempfile.TemporaryDirectory() as directory,
+                ):
+                    package = Path(directory) / "bd2_fishing"
+                    folder = package / "game/fishing/mechanics"
+                    folder.mkdir(parents=True)
+                    (folder / filename).write_text(statement, encoding="utf-8")
+                    errors, _ = check_package(package)
+                    self.assertTrue(errors, statement)
 
     def test_capture_factory_is_used_without_creating_native_camera(self):
         config = configparser.ConfigParser()

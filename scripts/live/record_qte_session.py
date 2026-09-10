@@ -223,7 +223,7 @@ def main():
         help="仅调试：进入 QTE 后只观察、不按键，采集超时结束证据",
     )
     parser.add_argument(
-        "--feedback", action="store_true", help="启用新增的只读 QTE 结果观察和失败留图"
+        "--feedback", action="store_true", help="兼容旧命令；QTE 结果观察和失败留图现已始终启用"
     )
     parser.add_argument(
         "--no-full-frames",
@@ -254,7 +254,6 @@ def main():
     config.set("backpack", "auto_clear_enabled", "false")
     config.set("ocr", "change_location_on_missing_time", "false")
     config.set("diagnostics", "qte_detail_log", "true")
-    config.set("diagnostics", "qte_feedback_enabled", str(args.feedback).lower())
     control = run_control.RunControl()
     recorder = Recorder(output, control, record_frames=not args.no_full_frames)
     if args.probe_outcomes:

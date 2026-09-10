@@ -7,7 +7,7 @@ from importlib.util import resolve_name
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PACKAGE = ROOT / "src/bd2_fishing"
+PACKAGE = ROOT / "bd2_fishing"
 
 # 当前采用功能模块化结构：game 的动作/观察器允许使用具体适配器；纯规则另行收紧。
 ALLOWED = {
@@ -19,7 +19,17 @@ ALLOWED = {
     "ui": {"ui", "app", "runtime"},
     "bootstrap": {"app", "ui", "infrastructure"},
 }
-PURE = {"feedback_rules", "settlement_rules", "cast_feedback", "recognition", "catalog"}
+PURE = {
+    "feedback_rules",
+    "settlement_rules",
+    "cast_feedback",
+    "recognition",
+    "catalog",
+    "pointer",
+    "scene_signals",
+    "trigger_rules",
+}
+MECHANICS = "bd2_fishing.game.fishing.mechanics"
 
 
 def module_imports(path, module):
@@ -46,13 +56,24 @@ def check_package(package=PACKAGE):
     for name, path in modules.items():
         layer = name.split(".")[1] if "." in name else ""
         for imported in module_imports(path, name):
+            if imported.split(".")[0] in {"scripts", "tests", "tools"}:
+                errors.add(f"Production imports development code: {name} -> {imported}")
             if not imported.startswith("bd2_fishing."):
                 continue
             target_layer = imported.split(".")[1]
             if target_layer not in ALLOWED.get(layer, set()):
                 errors.add(f"Forbidden dependency: {name} -> {imported}")
-            if path.stem in PURE and target_layer in {"infrastructure", "app", "ui"}:
+            pure = path.stem in PURE or name == MECHANICS or name.startswith(MECHANICS + ".")
+            if pure and target_layer in {"infrastructure", "app", "ui"}:
                 errors.add(f"Pure recognition/rule imports implementation: {name} -> {imported}")
+            if (name == MECHANICS or name.startswith(MECHANICS + ".")) and target_layer == "game":
+                if not (
+                    imported == MECHANICS
+                    or imported.startswith(MECHANICS + ".")
+                    or imported == "bd2_fishing.game.fishing.trigger_rules"
+                    or imported.startswith("bd2_fishing.game.fishing.trigger_rules.")
+                ):
+                    errors.add(f"Mechanics imports game execution: {name} -> {imported}")
             target = imported
             while target not in modules and "." in target:
                 target = target.rpartition(".")[0]

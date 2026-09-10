@@ -21,12 +21,12 @@ class ProjectLayoutTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             shutil.copy2(ROOT / "setup.py", root / "setup.py")
-            (root / "src/example").mkdir(parents=True)
-            (root / "src/example/__init__.py").write_text("", encoding="utf-8")
+            (root / "example").mkdir(parents=True)
+            (root / "example/__init__.py").write_text("", encoding="utf-8")
             (root / "pyproject.toml").write_text(
                 '[build-system]\nrequires=["setuptools>=68"]\nbuild-backend="setuptools.build_meta"\n'
                 '[project]\nname="build-location-test"\nversion="0.0.0"\n'
-                '[tool.setuptools.packages.find]\nwhere=["src"]\n',
+                '[tool.setuptools.packages.find]\nwhere=["."]\ninclude=["example*"]\n',
                 encoding="utf-8",
             )
             result = subprocess.run(
@@ -45,9 +45,9 @@ class ProjectLayoutTests(unittest.TestCase):
                 encoding="utf-8",
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertEqual([path.name for path in (root / "src").iterdir()], ["example"])
-            self.assertFalse((root / "build").exists())
-            self.assertTrue((root / ".local/build/build_location_test.egg-info/PKG-INFO").is_file())
+            self.assertEqual([path.name for path in (root / "example").iterdir()], ["__init__.py"])
+            self.assertFalse(list(root.glob("*.egg-info")))
+            self.assertTrue((root / "build/build_location_test.egg-info/PKG-INFO").is_file())
 
     def test_source_config_and_resources_do_not_follow_working_directory(self):
         with tempfile.TemporaryDirectory() as temporary, chdir(temporary):
@@ -63,6 +63,7 @@ class ProjectLayoutTests(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory() as temporary,
             patch.object(settings, "get_base_path", return_value=temporary),
+            patch.object(settings, "get_config_path", return_value=Path(temporary) / "config.ini"),
         ):
             config = settings.read_ini()
             self.assertTrue(config.has_section("hook"))
@@ -77,15 +78,16 @@ class ProjectLayoutTests(unittest.TestCase):
 
     def test_frozen_config_is_beside_executable_and_resources_are_bundled(self):
         with tempfile.TemporaryDirectory() as temporary:
-            app = Path(temporary)
+            app = Path(temporary).resolve()
             with (
                 patch.object(sys, "frozen", True, create=True),
                 patch.object(sys, "executable", str(app / "BD2_AutoFishing.exe")),
                 patch.object(sys, "_MEIPASS", str(app / "_internal"), create=True),
             ):
                 self.assertEqual(Path(paths.get_base_path()), app)
-                self.assertEqual(Path(paths.get_log_path()), app)
-                self.assertEqual(Path(paths.get_diagnostics_path()), app / "debug")
+                self.assertEqual(paths.get_config_path(), app / "config/config.ini")
+                self.assertEqual(Path(paths.get_log_path()), app / "logs")
+                self.assertEqual(Path(paths.get_diagnostics_path()), app / "screenshots")
                 self.assertEqual(
                     Path(paths.get_resource_path("models/test.onnx")),
                     app / "_internal" / "models" / "test.onnx",
@@ -105,10 +107,8 @@ class ProjectLayoutTests(unittest.TestCase):
         self.assertIn([str(templates), "bd2_fishing/game/fishing/assets"], data)
         self.assertTrue((templates / "settlement_close.png").is_file())
         self.assertIn([str(DEFAULT_CONFIG), "bd2_fishing/resources"], data)
-        self.assertEqual(command[command.index("--distpath") + 1], str(ROOT / ".local/releases"))
-        self.assertEqual(
-            command[command.index("--workpath") + 1], str(ROOT / ".local/build/pyinstaller")
-        )
+        self.assertEqual(command[command.index("--distpath") + 1], str(ROOT / "dist"))
+        self.assertEqual(command[command.index("--workpath") + 1], str(ROOT / "build/pyinstaller"))
 
 
 if __name__ == "__main__":

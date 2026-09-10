@@ -2,7 +2,7 @@
 
 [文档目录](../README.md) · [当前开发状态](status.md) · [架构方案与实施范围](../design/architecture.md)
 
-本页描述已经落地的源码结构。首轮迁移建立功能归属、设备与运行边界，并采用 src 布局；新岛屿、新机制和完整导航尚未实现。
+本页描述已经落地的源码结构。首轮迁移建立功能归属、设备与运行边界，源码包 bd2_fishing 直接位于仓库根目录；新岛屿、新机制和完整导航尚未实现。
 
 ## 环境与入口
 
@@ -32,7 +32,7 @@ Windows、Python 3.12。[pyproject.toml](../../pyproject.toml) 管理元数据�
 
 根目录 `main.py` 调用 bootstrap，导入包不会自动设置 DPI 或启动界面。具体 DPI 初始化在启动/运行入口执行。
 
-| 位置（相对 `src/bd2_fishing/`） | 职责 |
+| 位置（相对 `bd2_fishing/`） | 职责 |
 | --- | --- |
 | `bootstrap.py` | 日志、异常处理、DPI 与桌面启动 |
 | `app/desktop.py`、`app/service.py` | 页面使用的设置与任务服务、单任务工作线程 |
@@ -42,7 +42,8 @@ Windows、Python 3.12。[pyproject.toml](../../pyproject.toml) 管理元数据�
 | `game/navigation/actions.py` | 共享的相对坐标点击原语，尚未建立完整页面导航 |
 | `game/inventory/` | 背包文本判断、清包与退出检查 |
 | `game/fishing/actions.py`、`cast_feedback.py` | 抛竿、位置恢复与抛竿提示判断 |
-| `game/fishing/qte.py`、`perception/image.py` | 原 QTE 策略与图像/阈值工具；输入条件、等待和顺序保持原样 |
+| `game/fishing/qte.py` | 共用控制循环、地点目标读取、同步输入执行及异常释放 |
+| `game/fishing/mechanics/` | 同帧区域与挡板识别，绿色/泡泡状态，黄蓝目标确认和纯输入仲裁；无设备副作用 |
 | `game/fishing/feedback_rules.py`、`settlement_rules.py` | 可独立导入的反馈归属和整条鱼结果规则 |
 | `game/fishing/feedback.py`、`settlement.py`、`hook_diagnostics.py` | 游戏反馈/结算观察与上钩证据采集协调 |
 | `game/fishing/assets/` | 运行时识别模板，与测试样本分开 |
@@ -60,13 +61,19 @@ Windows、Python 3.12。[pyproject.toml](../../pyproject.toml) 管理元数据�
 
 录制工具通过 `run_once(..., capture_factory=...)` 选择原相机或录制相机，取消与工作线程生命周期保持一致。按键录制和探针仍有局部包装，不能当成已经具备完整离线回放框架。
 
+2026-09-10 起，两套 QTE 策略共用 `BaseQTEStrategy.play_qte`；地点差异只在 `_track_targets`
+提供当前目标几何与有效阈值。`MechanismPolicy` 每轮持有绿条、泡泡和普通目标状态，返回
+normal/wait/press/down/up 意图，`qte.py` 同步执行；状态对象不持有截图器或写入器。
+原 `mechanisms.py` 移至 `mechanics/regions.py`；`blue_target.py`、`green_control.py`、`bubbles.py`
+移入 mechanics，挡板识别位于 `mechanics/blockers.py`。没有保留旧路径转发模块。
+
 ## 路径与包装
 
 - 可编辑安装使用 `.local/config.ini`，日志写入 `.local/logs/`，证据写入 `.local/diagnostics/`；路径不随工作目录变化。
 - 普通安装的运行目录为用户主目录下 `BD2_AutoFishing/`，避免向 site-packages 写入；唯一默认配置由 settings 从 `resources/default.ini` 包资源读取。
-- 便携版继续使用 EXE 旁的用户配置和日志；自定义 OCR 相对资源从冻结资源目录解析。
-- 运行时模板随 Python 包和 PyInstaller 收集。包资源与运行目录分开；本机部署已成套归入外层 `deployment/current/`，未升级 EXE。
-- `.local/` 集中配置和生成物，egg-info 及 setuptools 中间文件由 setup.py 固定写入 `.local/build/`；`.venv/` 和 Python 缓存按正常行为生成并忽略。原图与证据保留；完整规则见[统一布局](../design/repository-layout.md)。
+- 便携版使用 EXE 旁 config/config.ini、logs 与 screenshots；自定义 OCR 相对资源从冻结资源目录解析。
+- 运行时模板随 Python 包和 PyInstaller 收集。包资源与运行目录分开；本机部署已成套归入外层 `deployment/`，未升级 EXE。
+- `.local/` 集中配置和生成物，egg-info 及 setuptools 中间文件由 setup.py 固定写入 `build/`；`.venv/` 和 Python 缓存按正常行为生成并忽略。原图与证据保留；完整规则见[统一布局](../design/repository-layout.md)。
 
 ## 修改与验证
 
@@ -79,3 +86,5 @@ Windows、Python 3.12。[pyproject.toml](../../pyproject.toml) 管理元数据�
 QTE 关键路径没有增加消息队列、线程跳转或输入暂停修改。三个策略类在归一化导入引用后 AST 与迁移前一致；这证明实现表达式保持一致，不替代[端到端时延实测](../design/qte-performance.md)。
 
 工具影响范围见[工具说明](tools.md)，发布流程见[构建与发布](releasing.md)。提交和推送从源码仓库执行，外层旧 Git 已归档到 archive，不能从旧实验工作树推送旧结构。
+
+便携发布的更新链路和目录职责见[更新设计](../design/portable-update.md)。源码个人配置仍在 .local/config.ini，环境与校准报告在 .local/data；源码历史证据不会被发布版待机清理。

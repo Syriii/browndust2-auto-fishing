@@ -5,10 +5,10 @@ from pathlib import Path
 from setuptools import setup
 
 if __name__ == "__main__":
-    (Path(__file__).resolve().parent / ".local" / "build").mkdir(parents=True, exist_ok=True)
+    (Path(__file__).resolve().parent / "build").mkdir(parents=True, exist_ok=True)
     setup(
         options={
-            "egg_info": {"egg_base": ".local/build"},
-            "build": {"build_base": ".local/build/setuptools"},
+            "egg_info": {"egg_base": "build"},
+            "build": {"build_base": "build/setuptools"},
         }
     )

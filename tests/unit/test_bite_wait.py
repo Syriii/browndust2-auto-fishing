@@ -22,6 +22,7 @@ class BiteWaitTests(unittest.TestCase):
         self.recover = Mock(side_effect=self.recovery)
         self.backpack = Mock(return_value=False)
         self.bot = SimpleNamespace(
+            _record_incident=Mock(),
             hook_diagnostics=self.diagnostics,
             bite_pixel_threshold=212,
             region=None,
@@ -52,7 +53,7 @@ class BiteWaitTests(unittest.TestCase):
             "pydirectinput": SimpleNamespace(press=self.press),
         }
         self.namespace["inventory_actions"] = self.namespace["fishing_actions"]
-        source = ROOT / "src" / "bd2_fishing" / "app" / "fishing_task.py"
+        source = ROOT / "bd2_fishing" / "app" / "fishing_task.py"
         tree = ast.parse(source.read_text(encoding="utf-8-sig"))
         method = next(
             node

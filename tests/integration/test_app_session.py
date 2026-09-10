@@ -94,8 +94,9 @@ class AppSessionTests(unittest.TestCase):
         logger.addHandler(file_handler)
         for i in range(2010):
             logger.info("entry %d", i)
-        self.assertEqual(ui.messages.qsize(), 2000)
-        self.assertEqual(ui.skipped, 10)
+        self.assertEqual(ui.messages.qsize(), 1500)
+        self.assertEqual(ui.skipped, 510)
+        self.assertEqual(ui.diagnostics.qsize(), 0)
         self.assertEqual(file_handler.handle.call_count, 2010)
 
     def test_start_restores_minimized_game_and_verifies_foreground(self):

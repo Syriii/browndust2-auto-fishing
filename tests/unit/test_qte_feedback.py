@@ -25,6 +25,59 @@ FIXTURES = ROOT / "tests/fixtures/qte_feedback"
 
 
 class FeedbackImageTests(unittest.TestCase):
+    def test_compact_hit_and_independent_attempt_with_blue_glare(self):
+        matcher = FeedbackMatcher(945, 532)
+        for name in ("compact_hit_source", "compact_hit_holdout"):
+            frame = cv2.imread(str(FIXTURES / f"{name}.png"))[:96]
+            self.assertEqual(matcher.detect(frame)[0], "hit", name)
+            # 消失后的独立原图不能被同一区域背景识别为 HIT。
+            after = cv2.imread(str(FIXTURES / f"{name}_after.png"))[:96]
+            self.assertIsNone(matcher.detect(after)[0], name)
+
+    def test_warm_critical_source_and_independent_rounds(self):
+        matcher = FeedbackMatcher(945, 532)
+        for name in ("warm_source_U02", "warm_holdout_U01", "warm_holdout_U04", "warm_holdout_U06"):
+            with self.subTest(name=name):
+                frame = cv2.imread(str(FIXTURES / f"{name}.png"))[:96]
+                label, score = matcher.detect(frame)
+                self.assertEqual(label, "critical")
+                self.assertEqual(matcher.last_method, "critical_color")
+                self.assertGreaterEqual(score, 0.85)
+
+    def test_warm_backgrounds_and_mechanism_symbols_are_not_feedback(self):
+        matcher = FeedbackMatcher(945, 532)
+        for name in (
+            "warm_negative_U01",
+            "warm_negative_U03",
+            "warm_negative_U04",
+            "warm_negative_U06",
+        ):
+            frame = cv2.imread(str(FIXTURES / f"{name}.png"))[:96]
+            self.assertIsNone(matcher.detect(frame)[0], name)
+        for color in ((0, 100, 255), (255, 255, 255), (0, 0, 0)):
+            frame = np.empty((96, 378, 3), np.uint8)
+            frame[:] = color
+            self.assertIsNone(matcher.detect(frame)[0])
+        frame = cv2.imread(str(FIXTURES / "warm_occluded_U05.png"))[:96]
+        self.assertIn(matcher.detect(frame)[0], (None, "critical"))
+
+    def test_identical_frame_cache_owns_pixels_and_invalidates_on_any_change(self):
+        matcher = FeedbackMatcher(945, 532)
+        frame = cv2.imread(str(FIXTURES / "glare_critical_945.png"))[:96].copy()
+        with patch.object(matcher, "_detect", wraps=matcher._detect) as detect:
+            result = matcher.detect(frame)
+            self.assertEqual(matcher.last_method, "critical_edges")
+            self.assertEqual(matcher.detect(frame.copy()), result)
+            self.assertTrue(matcher.cache_hit)
+            self.assertEqual(detect.call_count, 1)
+            frame[0, 0, 0] ^= 1
+            matcher.detect(frame)
+            self.assertFalse(matcher.cache_hit)
+            self.assertEqual(detect.call_count, 2)
+            matcher.detect(frame[:80])
+            self.assertFalse(matcher.cache_hit)
+            self.assertEqual(detect.call_count, 3)
+
     def test_real_words_and_backgrounds(self):
         matcher = FeedbackMatcher(875, 492)
         verified = set()
@@ -44,6 +97,48 @@ class FeedbackImageTests(unittest.TestCase):
         matcher = FeedbackMatcher(875, 492)
         for value in (0, 255):
             self.assertEqual(matcher.detect(np.full((89, 350, 3), value, np.uint8))[0], None)
+
+    def test_945_hit_variants_and_same_run_negative_frames(self):
+        matcher = FeedbackMatcher(945, 532)
+        for name, expected in (
+            ("U49-02", "hit"),
+            ("U50-03", "hit"),
+            ("U02-05", None),
+            ("U49-01", None),
+            ("U01-00", "fail"),
+            ("U04-07", "critical"),
+        ):
+            with self.subTest(frame=name):
+                frame = cv2.imread(str(FIXTURES / (name + ".png")))
+                self.assertEqual(matcher.detect(frame[:96])[0], expected)
+
+    def test_glare_critical_uses_existing_templates_and_rejects_neighbor_frames(self):
+        matcher = FeedbackMatcher(945, 532)
+        for name, expected in (
+            ("glare_critical_945", "critical"),
+            ("glare_holdout_U21", "critical"),
+            ("glare_holdout_U34", "critical"),
+            ("glare_before_945", None),
+            ("glare_after_945", None),
+        ):
+            with self.subTest(frame=name):
+                frame = cv2.imread(str(FIXTURES / (name + ".png")))
+                self.assertEqual(matcher.detect(frame[:96])[0], expected)
+
+    def test_new_plain_critical_and_its_background_do_not_require_lower_threshold(self):
+        matcher = FeedbackMatcher(945, 532)
+        for name, expected in (
+            ("plain_critical_945", "critical"),
+            ("plain_critical_after_945", None),
+        ):
+            frame = cv2.imread(str(FIXTURES / (name + ".png")))
+            label, score = matcher.detect(frame[:96])
+            self.assertEqual(label, expected)
+            if expected:
+                self.assertGreaterEqual(score, 0.80)
+        # 强光保留样本允许暂未识别，但不允许错认成 HIT/FAIL；不把当前漏检锁成永久预期。
+        holdout = cv2.imread(str(FIXTURES / "plain_critical_holdout_945.png"))
+        self.assertIn(matcher.detect(holdout[:96])[0], (None, "critical"))
 
 
 class OutcomeTests(unittest.TestCase):
@@ -161,13 +256,14 @@ class IntegrationTests(unittest.TestCase):
         config.read_string(settings.DEFAULT_CONFIG_CONTENT)
         return config
 
-    def test_existing_input_call_is_unchanged_and_can_disable_observer(self):
+    def test_old_debug_switch_cannot_disable_evidence_or_change_input(self):
         config = self.config()
         config.set("diagnostics", "qte_feedback_enabled", "false")
         strategy = qte_strategy.FrostStraitQTEStrategy(config, geometry.Rect(0, 0, 875, 492))
-        self.assertFalse(strategy.feedback_enabled)
-        strategy._start_feedback()
-        self.assertIsNone(strategy._feedback_session)
+        self.assertTrue(strategy.feedback_enabled)
+        with patch("bd2_fishing.game.fishing.feedback.FeedbackSession") as session:
+            strategy._start_feedback()
+            session.return_value.start.assert_called_once_with()
         observer = Mock()
         strategy._feedback_session = observer
         with patch.object(qte_strategy.pydirectinput, "press", return_value=True) as press:
@@ -178,8 +274,8 @@ class IntegrationTests(unittest.TestCase):
     def test_source_config_and_defaults_enable_observer_consistently(self):
         source = configparser.ConfigParser()
         source.read(DEFAULT_CONFIG, encoding="utf-8-sig")
-        self.assertTrue(source.getboolean("diagnostics", "qte_feedback_enabled"))
-        self.assertTrue(self.config().getboolean("diagnostics", "qte_feedback_enabled"))
+        self.assertEqual(source.getint("diagnostics", "failure_max_events"), 100)
+        self.assertEqual(self.config().getint("diagnostics", "failure_max_events"), 100)
         source.remove_option("diagnostics", "qte_feedback_enabled")
         self.assertTrue(
             qte_strategy.FrostStraitQTEStrategy(

@@ -2,9 +2,9 @@
 
 [文档目录](../README.md) · [完整目录布局](../design/repository-layout.md) · [当前状态](status.md)
 
-本项目采用可安装的 src 布局和按功能组织的模块化应用。Python 没有要求所有项目使用同一套业务目录；本项目用明确的依赖方向和自动检查保证结构能持续维护。src 隔离仓库脚本与可导入包，普通 wheel 安装用于检查资源与导入是否完整。[PyPA 布局说明](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/)
+本项目是独立桌面应用，采用仓库根目录直接放 bd2_fishing 的扁平布局。保留统一导入名称和明确的模块依赖边界；pyproject 显式只收集 bd2_fishing 包，普通 wheel 检查资源与导入完整性，不代表向 PyPI 发布第三方库。[PyPA 布局说明](https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/)
 
-## src 内职责与依赖
+## 应用包内职责与依赖
 
 | 包 | 职责 | 可导入的本项目部分 |
 | --- | --- | --- |
@@ -20,10 +20,16 @@ game 中的纯规则和识别模块进一步限制：feedback_rules、settlement
 
 静态规则由 `scripts/checks/check_architecture.py` 执行，覆盖绝对/相对导入、from 别名导入、函数内导入和模块循环。它不执行代码，也不分析运行时动态拼接的 import；新增动态装载必须单独验证。目录名本身不是架构验收。
 
+`game/fishing/mechanics/` 整个子包按纯识别/规则边界检查，新增文件自动纳入；不得导入
+基础设施、app、ui，也不得通过 qte/feedback 等游戏执行模块间接获取设备。可依赖同包模块、
+普通目标去重规则 `trigger_rules`、perception 和 runtime。时间以参数传入，不在机制中等待或派发输入。
+
+正式应用不得导入 scripts、tests 或 tools；工具调用应用能力，实验探针不能反向进入正常任务。异常与结算共用 infrastructure/diagnostics/bundle_writer.py，玩法只提交结构化证据。
+
 ## 公共逻辑的抽取原则
 
 - 已有多个调用方且语义相同的图像/文字处理归 perception；不创建收纳任意代码的 common.py 或 utils.py。
-- 反馈字形预处理由钓鱼反馈与结算共用，归 game/fishing/recognition.py；它具有游戏语义，不提升成通用 OCR 引擎功能。
+- QTE 亮字反馈归 game/fishing/recognition.py；结算关闭提示为灰字，使用独立灰度模板与有限像素取整搜索，不能套用亮白阈值。这些识别具有游戏语义，不提升成通用 OCR 引擎功能。
 - 地点、地图和满包 ROI 属于本游戏的观察设置，归 game/observation.py；QTE 统计归 game/fishing/tracing.py。runtime 不拥有玩法场景字段。
 - 设备合同与实现分开命名；通用 OCR 读取依赖 FrameSource/OCREngine，不借用 DXcam/RapidOCR 名字伪装通用接口。
 - 提取以调用关系和变更原因作为依据。小型模块保持简单，不为每个函数增加接口、工厂、线程或多层转发。
@@ -35,8 +41,8 @@ game 中的纯规则和识别模块进一步限制：feedback_rules、settlement
 提交前在仓库根目录执行：
 
 ```powershell
-.\.venv\Scripts\python.exe -m ruff check src scripts tests main.py setup.py
-.\.venv\Scripts\python.exe -m ruff format --check src scripts tests main.py setup.py
+.\.venv\Scripts\python.exe -m ruff check bd2_fishing scripts tests main.py setup.py
+.\.venv\Scripts\python.exe -m ruff format --check bd2_fishing scripts tests main.py setup.py
 .\.venv\Scripts\python.exe -X utf8 -B scripts/checks/check_architecture.py
 .\.venv\Scripts\python.exe -X utf8 -B -m unittest discover -s tests -v
 ```
@@ -49,7 +55,11 @@ QTE 控制继续在同一工作线程采样、判断和调用受控输入。模�
 
 文件日志由 BufferedHandler 交给后台输出，控制线程只固定消息并入队，不写盘或格式化 traceback。队列容量 4096，其中 256 个位置为 INFO 及以上的结果/错误预留；DEBUG 达到预算或总队列满时丢弃新记录，由后台报告丢弃数；不以同步写盘回退阻塞控制。close 最多等待两秒排空；显式 flush 另有有界等待，强制退出或长期磁盘阻塞可能留下未保存记录。UI 筛选独立于文件日志；原生故障日志保留独立文件。标准库同样建议把阻塞的日志处理移到工作线程。[Python Logging Cookbook](https://docs.python.org/3.12/howto/logging-cookbook.html#dealing-with-handlers-that-block)
 
-消息参数固定、控制台/UI handler、反馈锁和截图/输入驱动仍会占用调用时间，后台日志不是端到端时延保证。PNG/ZIP 编码和写盘继续在有界后台执行，诊断队列与输入执行分开。
+按键前的反馈记录只复制小图、固定提交时间，并向容量 128 的队列非阻塞提交；按键不等待观察状态锁。归属、证据整理和反馈日志由观察线程处理，日志处理器在状态锁外调用。队列满时计数丢失记录，本会话后续按键归属保持未知，不能把缺失候选按键的反馈确认为某次命中。整轮元数据的 feedback_diagnostics 记录过载与观察线程退出状态。
+
+关闭先停止接收并封存账本，再有限等待观察线程。原生识别迟到返回时不能继续发布反馈或更新 OCR 读数，采集资源仍由原线程退出时释放。同轮后台 OCR 与结算 OCR 串行，等待本轮锁时响应取消，超过两秒未释放则结算保持未知。RapidOCR 引擎另持有覆盖所有入口和轮次的互斥锁；原生调用仍忙时，新观察明确报忙且不排队，不能把未执行识别伪装成空结果。原生调用和结果转换无论正常或异常结束均释放引擎锁。
+
+QTE 执行中的停止、超时和异常优先保留；反馈清理再次失败时附加原因并记录日志，仍尝试封存整轮证据。正常执行后的清理失败继续抛出，阻止任务继续。PNG/ZIP 编码和写盘继续在有界后台执行，三类证据写入器共用写入事务，失败时清理本次临时文件。消息固定、控制台/UI handler 和截图/输入驱动仍有开销，以上边界不是端到端时延保证。
 
 离线基准命令：
 

@@ -46,6 +46,7 @@ class DecisionEvidenceTests(unittest.TestCase):
                 session.begin_press(decision, control)
             control[:] = 0
             decision["reason"] = "changed_after_call"
+            session._drain_presses()
             session.samples.append((10.1, feedback))
             session.publish(session.tracker.observe("miss", 10.1, 0.95))
             session.close()
@@ -96,6 +97,7 @@ class DecisionEvidenceTests(unittest.TestCase):
                 session.begin_press(
                     dict(reason=reason), np.full((4, 5, 3), int(stamp * 10), np.uint8)
                 )
+        session._drain_presses()
         session.publish(session.tracker.observe("hit", 10.3, 0.95))
         session.samples.append((11, np.zeros((4, 5, 3), np.uint8)))
         session.publish(session.tracker.observe("fail", 11, 0.95))
@@ -118,6 +120,7 @@ class DecisionEvidenceTests(unittest.TestCase):
         session = FeedbackSession(self.config, self.window, observer)
         with patch("bd2_fishing.game.fishing.feedback.time.monotonic", return_value=10):
             session.begin_press(dict(reason="yellow_overlap"), np.zeros((4, 5, 3), np.uint8))
+        session._drain_presses()
         session.publish(session.tracker.observe("critical", 10.1, 0.95))
         self.assertFalse(session.press_decisions)
         self.assertFalse(session.pending_evidence)
@@ -127,7 +130,7 @@ class DecisionEvidenceTests(unittest.TestCase):
     def test_all_existing_press_branches_and_no_press_keep_input_behavior(self):
         cases = [
             (qte_strategy.FrostStraitQTEStrategy, reason)
-            for reason in ("yellow_overlap", "no_cursor_fallback", "ice_break_attempt", "no_press")
+            for reason in ("yellow_overlap", "no_cursor_fallback", "red_obstruction", "no_press")
         ]
         cases += [
             (qte_strategy.AbyssMawQTEStrategy, reason)
@@ -142,12 +145,16 @@ class DecisionEvidenceTests(unittest.TestCase):
                         strategy, "_feedback_session", observer if enabled else None
                     )
                     strategy._sleep_loop = Mock(side_effect=run_control.RunStopped("end sample"))
+                    if reason == "blue_fallback":
+                        strategy._sleep_loop = Mock(
+                            side_effect=[None, run_control.RunStopped("end sample")]
+                        )
                     raw = np.full(
                         (strategy.roi_pos.height, strategy.roi_pos.width, 3), 80, np.uint8
                     )
                     camera = Mock(grab=Mock(return_value=raw))
                     hsv = np.zeros((30, 300, 3), np.uint8)
-                    if reason == "ice_break_attempt":
+                    if reason == "red_obstruction":
                         hsv[:] = strategy.red_range.lower
                     strategy._split_roi_and_time = Mock(return_value=(hsv, hsv))
                     strategy._time_bar_visible_from_masks = Mock(return_value=True)
@@ -155,24 +162,29 @@ class DecisionEvidenceTests(unittest.TestCase):
                     if reason != "no_cursor_fallback":
                         cursor[:, 50] = 255
                     strategy._cursor_mask = Mock(return_value=cursor)
+                    strategy._find_cursor_x = Mock(
+                        return_value=None if reason == "no_cursor_fallback" else 50
+                    )
                     target = np.zeros_like(cursor)
                     if reason == "yellow_overlap":
                         target[:, 40:80] = 255
                     strategy._yellow_mask = Mock(return_value=target)
                     if cls is qte_strategy.AbyssMawQTEStrategy:
+                        blue_target = np.zeros_like(cursor)
+                        blue_target[:, 40:80] = 255
                         strategy._blue_mask = Mock(
-                            return_value=cursor
+                            return_value=blue_target
                             if reason == "blue_fallback"
                             else np.zeros_like(cursor)
                         )
-                        strategy._blocker_rect = Mock(return_value=None)
+                        strategy._blocker_detector.read = Mock(return_value=None)
                     with (
                         patch.object(qte_strategy.pydirectinput, "press") as press,
                         patch("bd2_fishing.runtime.control.sleep"),
                     ):
                         with self.assertRaises(run_control.RunStopped):
                             strategy.play_qte(camera)
-                    if reason == "no_press":
+                    if reason in ("no_press", "no_cursor_fallback", "red_obstruction"):
                         press.assert_not_called()
                         observer.begin_press.assert_not_called()
                     else:
@@ -185,7 +197,8 @@ class DecisionEvidenceTests(unittest.TestCase):
                             np.testing.assert_array_equal(frame, raw)
                         else:
                             observer.begin_press.assert_not_called()
-                    camera.grab.assert_called_once_with(strategy.roi_pos)
+                    self.assertEqual(camera.grab.call_count, 2 if reason == "blue_fallback" else 1)
+                    camera.grab.assert_called_with(strategy.roi_pos)
                     self.assertIsNone(strategy._decision_frame)
 
 

@@ -9,13 +9,17 @@ import os
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
+from bd2_fishing.infrastructure.updates.package import create_manifest, sha256
+
 APP_NAME = "BD2_AutoFishing"
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DIST_DIR = PROJECT_ROOT / ".local" / "releases"
-CONFIG_PATH = PROJECT_ROOT / "src" / "bd2_fishing" / "resources" / "default.ini"
+DIST_DIR = PROJECT_ROOT / "dist"
+CONFIG_PATH = PROJECT_ROOT / "bd2_fishing" / "resources" / "default.ini"
+ICON_DIR = PROJECT_ROOT / "bd2_fishing" / "resources" / "icons"
 MODEL_PATH_KEYS = (
     "det_model_path",
     "cls_model_path",
@@ -32,6 +36,9 @@ def parse_args() -> argparse.Namespace:
         "--nvidia",
         action="store_true",
         help="Include NVIDIA CUDA and cuDNN related binaries.",
+    )
+    parser.add_argument(
+        "--output-dir", type=Path, default=DIST_DIR, help="独立候选包目录，必须位于项目 dist/ 内"
     )
     return parser.parse_args()
 
@@ -148,9 +155,9 @@ def build_pyinstaller_command(*, include_nvidia: bool, model_files: list[Path]) 
         "PyInstaller",
         str(PROJECT_ROOT / "main.py"),
         "--workpath",
-        str(PROJECT_ROOT / ".local/build/pyinstaller"),
+        str(PROJECT_ROOT / "build/pyinstaller"),
         "--specpath",
-        str(PROJECT_ROOT / ".local/build/specs"),
+        str(PROJECT_ROOT / "build/specs"),
         "--distpath",
         str(DIST_DIR),
         "--noconfirm",
@@ -159,6 +166,8 @@ def build_pyinstaller_command(*, include_nvidia: bool, model_files: list[Path]) 
         "--name",
         APP_NAME,
         "--windowed",
+        "--icon",
+        str(validate_project_file(ICON_DIR / "app.ico")),
         "--collect-data",
         "rapidocr",
         "--collect-submodules",
@@ -190,9 +199,10 @@ def build_pyinstaller_command(*, include_nvidia: bool, model_files: list[Path]) 
         cmd.extend(["--copy-metadata", package_name])
 
     add_data_args(cmd, CONFIG_PATH, "bd2_fishing/resources")
+    add_data_args(cmd, ICON_DIR, "bd2_fishing/resources/icons")
     add_data_args(
         cmd,
-        PROJECT_ROOT / "src" / "bd2_fishing" / "game" / "fishing" / "assets",
+        PROJECT_ROOT / "bd2_fishing" / "game" / "fishing" / "assets",
         "bd2_fishing/game/fishing/assets",
     )
 
@@ -250,7 +260,22 @@ def remove_unused_pillow_plugins(package_dir: Path) -> list[Path]:
 
 
 def main() -> None:
+    global DIST_DIR
     args = parse_args()
+    version = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf8"))[
+        "project"
+    ]["version"]
+    if (
+        os.environ.get("GITHUB_EVENT_NAME") == "release"
+        and os.environ.get("GITHUB_REF_NAME") != f"v{version}"
+    ):
+        raise SystemExit("Release tag must match the version in pyproject.toml")
+    destination = args.output_dir.resolve()
+    if not destination.is_relative_to((PROJECT_ROOT / "dist").resolve()):
+        raise SystemExit("Build output must stay inside the project dist/ directory")
+    if destination != DIST_DIR.resolve() and (destination / APP_NAME).exists():
+        raise SystemExit("Candidate package already exists; choose a new output directory")
+    DIST_DIR = destination
 
     try:
         import onnxruntime  # noqa: F401 -- fail before building if native libraries are missing
@@ -279,9 +304,43 @@ def main() -> None:
             )
     remove_unused_opencv_ffmpeg_binaries(package_dir)
     remove_unused_pillow_plugins(package_dir)
+    build_updater(package_dir)
+    create_manifest(package_dir, version)
     zip_path = zip_dist_folder(package_dir)
+    zip_path.with_suffix(".zip.sha256").write_text(
+        f"{sha256(zip_path)}  {zip_path.name}\n", encoding="ascii"
+    )
     print(f">>> Build output directory: {package_dir}")
     print(f">>> Release zip: {zip_path}")
+
+
+def build_updater(package_dir):
+    """助手仅含 Python 标准库，复制到 cache 后可独立替换主程序运行库。"""
+    command = [
+        sys.executable,
+        "-m",
+        "PyInstaller",
+        str(PROJECT_ROOT / "bd2_fishing/infrastructure/updates/runner.py"),
+        "--paths",
+        str(PROJECT_ROOT),
+        "--onefile",
+        "--windowed",
+        "--clean",
+        "--noconfirm",
+        "--name",
+        "BD2_Updater",
+        "--distpath",
+        str(package_dir),
+        "--workpath",
+        str(PROJECT_ROOT / "build/updater"),
+        "--specpath",
+        str(PROJECT_ROOT / "build/specs"),
+        "--exclude-module",
+        "tkinter",
+        "--exclude-module",
+        "numpy",
+    ]
+    subprocess.run(command, check=True, cwd=PROJECT_ROOT)
 
 
 if __name__ == "__main__":
