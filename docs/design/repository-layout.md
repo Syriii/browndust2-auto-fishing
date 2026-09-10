@@ -1,125 +1,131 @@
-# 工作区与仓库统一布局
+# 源码、发布包与运行数据布局
 
-[文档目录](../README.md) · [程序架构](architecture.md) · [开发指南](../development/guide.md)
+[文档目录](../README.md) · [架构说明](architecture.md) · [更新说明](../user/updating.md)
 
-状态：2026-09-08 已实施。目录按文件用途、维护者和生命周期划分。游戏运行流程由应用层组织，不决定仓库顶层结构。
+目录按用途和生命周期组织。GitHub 上的源码仓库、用户解压的便携包、维护者本机工作区是三个不同层次。
 
-## 本机工作区
+## GitHub 源码仓库
+
+```text
+repository/
+├── README.md                 项目介绍与快速开始
+├── CHANGELOG.md              发布版本变化
+├── AGENTS.md                 项目开发约束
+├── pyproject.toml            包元数据、依赖、资源和工具配置
+├── main.py                   桌面启动入口
+├── setup.py                  setuptools 构建路径适配
+├── bd2_fishing/
+│   ├── bootstrap.py          启动组装
+│   ├── app/                  用户任务、设置、校准、更新与资源组装
+│   ├── game/
+│   │   ├── islands/          地点资料、文字读取与已有地图往返
+│   │   ├── navigation/       页面操作基础能力，完整导航待扩展
+│   │   ├── fishing/          抛竿、QTE、反馈、结算与统计
+│   │   │   ├── mechanics/    同帧区域、纯状态与决策
+│   │   │   └── assets/       运行时识别模板
+│   │   └── inventory/        背包判断与清理
+│   ├── perception/           通用图像、OCR 合同与文字处理
+│   ├── runtime/              取消、输入锁、几何与设备合同
+│   ├── infrastructure/
+│   │   ├── windows/          窗口、截图、原生输入和电源
+│   │   ├── ocr/              RapidOCR 适配
+│   │   ├── diagnostics/      后台日志及证据写入
+│   │   └── updates/          清单、下载、更新事务与助手
+│   ├── ui/                   主窗口、设置、日志、更新与主题
+│   └── resources/            default.ini、应用图标
+├── tests/
+│   ├── unit/                 局部规则和行为回归
+│   ├── integration/          跨模块、资源和包装回归
+│   └── fixtures/             有来源的真实回归样本
+├── scripts/
+│   ├── build_release.py      便携包构建
+│   ├── lock_environment.py   依赖锁定生成
+│   ├── benchmarks/          离线局部时延测量
+│   ├── checks/              规范、界面、包与只读截图检查
+│   └── live/                会操作游戏的诊断、录制及清包工具
+├── requirements/             Windows Python 3.12 完整锁定清单
+├── docs/
+│   ├── user/                 用户操作
+│   ├── development/          开发、验证、工具和发布
+│   ├── design/               架构与专项设计
+│   ├── reference/            外部资料与来源
+│   └── history/              按阶段保存的旧记录
+└── .github/workflows/        Windows CI 与 Release 构建
+```
+
+`bd2_fishing/` 是独立应用的内部包，不需要额外 `src/` 层，也不把构建产物放入应用包。更细的职责和实际依赖方向见[架构说明](architecture.md)。图中省略了部分模块文件，不表示它们未纳入仓库。
+
+## 开发过程中生成的目录
+
+以下位于源码仓库内，均不提交：
+
+```text
+.venv/                       本机虚拟环境
+.local/
+├── config.ini               源码个人配置
+├── data/                    环境与校准报告
+├── logs/                    源码日志
+├── diagnostics/             上钩、QTE、结算及录制证据
+├── benchmarks/              局部时延报告
+├── cache/                   工具缓存
+└── maintenance/             调试分析、校验报告和临时工具
+build/                       构建中间物、spec、egg-info 与 wheel
+dist/
+├── BD2_AutoFishing/          本机完整便携目录
+├── BD2_AutoFishing-windows.zip
+├── BD2_AutoFishing-windows.zip.sha256
+└── README.txt               维护者整理的本次交付说明（非构建自动生成）
+```
+
+`build/` 是中间产物，`dist/` 是本机候选/交付产物，GitHub Release 的 Assets 是公开下载产物。相同源码的本机和云端构建不保证二进制哈希相同，验收记录实际包版本与哈希。
+
+`dist/` 最终保留一套当前产物；临时候选可使用构建的 `--output-dir`，验证后再整理。旧候选及附带日志归维护者的历史目录，不能直接批量删除证据。构建不自动清理所有旧版本，也不覆盖当前部署，详见[构建与发布](../development/releasing.md)。
+
+## 用户便携目录
+
+首次下载并完整解压后，程序文件和后续生成的数据共同位于独立文件夹：
 
 ```text
 BD2_AutoFishing/
-├── README.md / AGENTS.md     本机导航与工作边界
-├── auto_fishing-dev/         唯一在用的 GitHub 源码仓库
-├── deployment/             当前使用的 EXE、运行库、配置、日志和旧 debug
-└── archive/                 旧 Git、实验工作树、旧记录及迁移清单
+├── BD2_AutoFishing.exe       主程序
+├── BD2_Updater.exe           独立更新及恢复助手
+├── _internal/               Python、Tk、OCR 与其他运行依赖
+├── manifest.json            版本及程序文件清单
+├── config/config.ini        用户设置，首次运行生成
+├── data/                    环境与校准报告
+├── logs/                    运行日志
+├── screenshots/             异常与场景证据
+│   └── keep/                手工保留的证据
+└── cache/updates/            下载、暂存及恢复数据
 ```
 
-GitHub 仓库根目录就是 auto_fishing-dev 的内容，不上传外层部署和归档。外层原 Git 已保存为 `archive/git/legacy-workspace.git`，同时保留完整 bundle 与工作区差异；实验 worktree 已归档并修复关联。历史仍可读取，不再与源码仓库混用。
+Release ZIP 包含程序文件，个人数据按需生成。主程序运行库持久放在 `_internal/`，不在每轮钓鱼时解压。更新助手内部的临时运行环境只服务更新进程，详见[更新设计](portable-update.md)。
 
-deployment 直接保存用户正在使用的版本，没有 current 子目录、自动版本切换或自动历史保存机制。候选构建留在源码 `dist/`。两者之间只有明确的发布操作，不由普通构建自动覆盖。现有部署只迁移位置，EXE、运行库、配置与证据保持原内容。
+程序按清单处理依赖更新与过期文件，用户不需要逐个复制 DLL。设置和证据不属于程序文件清单；更新保留这些数据，日志与截图按独立保留规则清理。移动整个目录即可迁移，删除整个目录即可卸载并删除其中个人数据。首次旧版迁移见[用户更新说明](../user/updating.md)。
 
-## 源码仓库
+## 文件归属规则
+
+| 内容 | 维护位置 | 规则 |
+| --- | --- | --- |
+| 默认配置 | `bd2_fishing/resources/default.ini` | 唯一默认来源，随包提供；不从个人配置构建 |
+| 图标、模板与模型 | 应用资源及所属玩法 | 运行必需，构建检查完整性 |
+| 回归样本 | `tests/fixtures/` | 记录来源、用途和正负例，不直接作运行模板 |
+| 游戏封面与资料 | `docs/reference/` | 来源和观察结论分开，不等于已支持导航 |
+| 新玩法、新岛屿、机制 | `game/` 对应功能 | 跨功能任务归 app，不按运行步骤拆顶层 |
+| 调试散图、临时脚本 | `.local/maintenance/` | 不向根目录增加 debug/output/temp 等目录 |
+| 用户操作与当前能力 | docs/user、development/status | 随实现更新；过程记录归 history |
+
+普通 wheel 安装的运行根是用户目录 `BD2_AutoFishing/`，用于仓库外运行而不写入 site-packages；完整路径表见[开发指南](../development/guide.md#运行数据与资源)。
+
+## 维护者本机工作区（不属于分发结构）
 
 ```text
-auto_fishing-dev/
-├── README.md / AGENTS.md     快速开始与开发约束
-├── pyproject.toml           包元数据、直接依赖、入口和资源清单
-├── main.py                  桌面薄入口
-├── setup.py                 setuptools 构建路径适配，不定义重复元数据
-├── bd2_fishing/
-│   ├── __init__.py          Python 包标识
-│   ├── bootstrap.py         桌面启动组装
-│   ├── app/                 任务、跨功能协调与资源组装
-│   ├── game/                本游戏的功能和规则
-│   │   ├── islands/         岛屿资料、地点读取与地图往返
-│   │   ├── navigation/      页面操作基础能力，完整导航待扩展
-│   │   ├── fishing/         钓鱼、QTE、反馈、结算与统计
-│   │   │   ├── mechanics/   同帧机制识别、状态与纯决策
-│   │   │   └── assets/      运行时识别模板
-│   │   └── inventory/       背包识别与清理
-│   ├── perception/          跨功能图像与文字处理、OCR 数据和读取
-│   ├── runtime/             取消、输入互斥与最小设备合同
-│   ├── infrastructure/      具体平台、引擎与存储实现
-│   │   ├── windows/         窗口、截图、受控输入和电源
-│   │   ├── ocr/             RapidOCR 引擎适配
-│   │   ├── diagnostics/     后台日志及诊断证据写入
-│   │   └── updates/         发布清单、下载及事务更新
-│   ├── ui/                  桌面展示
-│   └── resources/default.ini  唯一默认配置
-├── tests/
-│   ├── unit/                规则、判定和局部行为回归
-│   ├── integration/         跨模块协作、设备适配与包装回归（模拟依赖）
-│   ├── fixtures/            有来源的真实回归样本
-│   └── support.py           测试共用路径，不读取个人配置
-├── scripts/
-│   ├── build_release.py     Windows 便携包构建
-│   ├── lock_environment.py  从验证环境生成依赖锁定清单
-│   ├── benchmarks/         离线图像和日志时延基准
-│   ├── checks/             架构检查、页面模拟、只读截图检查
-│   └── live/               会控制游戏的诊断、录制和清包工具
-├── requirements/            Windows Python 3.12 完整依赖锁定清单
-├── docs/
-│   ├── user/               使用、配置与故障排查
-│   ├── development/        安装、验证、工具、发布与当前状态
-│   ├── design/             架构、仓库布局、QTE 时延设计
-│   ├── reference/          游戏机制、封面原图与外部依据
-│   └── history/            按时间保存的旧实测记录
-├── .github/workflows/       Windows 离线回归与发布构建
-├── build/                  构建中间物和 egg-info，不提交
-├── dist/                   当前交付的便携目录、ZIP、校验值和说明，不提交
-├── .venv/                  本机 Python 环境，不提交
-└── .local/                 本机配置和生成物，不提交
-    ├── config.ini           源码用户配置
-    ├── logs/               日志与故障日志
-    ├── diagnostics/        上钩、QTE、结算及录制证据
-    ├── benchmarks/         离线基准结果
-    ├── cache/              开发工具缓存
-    └── maintenance/        本次迁移备份、清单和验证日志
+BD2_AutoFishing/
+├── auto_fishing-dev/         唯一在用的 Git 仓库，即上文 repository
+├── deployment/              维护者当前运行的已部署程序与个人数据
+└── archive/                 旧 Git、工作树、构建和历史证据
 ```
 
-bd2_fishing 内职责与允许的依赖见[程序架构](architecture.md)。尚未实现的完整导航、岛屿目录和机制组合不预建空目录；功能达到需要独立维护的规模时再拆包。
+普通贡献者只需克隆源码，用户只需解压 Release，无需复刻这套外层目录。`deployment/` 没有 `current/` 子目录，也不是自动版本存档；明确执行本机部署时才成套更新。普通构建、推送和创建 GitHub Release 都不会自动覆盖它。
 
-2026-09-10：钓鱼机制已形成 `game/fishing/mechanics/` 实体子包；已有绿色、泡泡、蓝区与挡板
-识别/规则迁入其中。统一仲裁不代表完整技能分类或机制生命周期已实现，详见程序架构第 6 节。
-
-## 配置、资源与运行数据
-
-| 内容 | 唯一归属 | 维护规则 |
-| --- | --- | --- |
-| 默认配置 | `bd2_fishing/resources/default.ini` | 随 wheel/便携包发布，代码通过资源 API 读取，不再复制整份字符串 |
-| 个人源码配置 | `.local/config.ini` | 初次运行生成；已有值和注释保留；不提交 |
-| 便携版配置 | EXE 旁的 `config/config.ini` | 独立于源码；打包不读取个人源码配置 |
-| 识别模板 | `game/fishing/assets/` 等所属功能包 | 运行必需，随包收集 |
-| 测试样本 | `tests/fixtures/` | 有来源、正负例与回归用途，不作为运行依赖 |
-| 游戏封面资料 | `docs/reference/images/` | 保留用户原图与可见信息；资料不等于已实现导航模板 |
-| 日志和现场证据 | `.local/logs/`、`.local/diagnostics/` | 有回归价值的样本经整理后复制到 fixtures |
-| 依赖 | pyproject 声明，requirements 生成锁定 | 不再维护另一份手写 requirements.txt |
-
-开发路径不随终端当前目录变化。普通 wheel 安装使用用户主目录的 `BD2_AutoFishing/` 保存配置，下设 logs 和 diagnostics；新便携版在 EXE 旁的 config、data、logs、screenshots 分别保存配置、持久数据、日志和证据；旧部署的 debug 原样保留。自定义 OCR 相对资源仍从仓库或冻结资源目录解析，配置迁移不改变资源含义。
-
-`.venv/` 含绝对路径，原位保留；以后重建环境再按标准命令生成。Python 缓存仍按解释器正常行为生成。setuptools 的 egg-info 统一位于 `build/`，普通 wheel 中间文件位于 `build/setuptools/`；setup.py 仅准备路径并调用构建后端，元数据和依赖仍由 pyproject 维护。
-
-## 自动维护规范
-
-Ruff 统一检查与格式化，静态架构检查限制反向依赖并检测模块循环，Windows CI 在 push/PR 时执行；具体命令见[开发规范](../development/standards.md)。
-
-## 新文件如何归类
-
-- 新岛屿资料与读取器归 game/islands；页面转换归 game/navigation；钓鱼机制归 game/fishing；跨功能任务归 app。
-- 应用与复用实现归 bd2_fishing，开发脚本只负责参数和调用，不能把业务逻辑藏进 scripts。
-- 离线规则回归放 unit，模拟跨模块协作放 integration，真实游戏操作只从 scripts/live 显式执行。未来录制回放规模足够时再建立 replay 测试组。
-- 操作方法归 user，开发步骤归 development，设计目标和取舍归 design，外部游戏事实与来源归 reference。历史文档保留当时结论，最新结果归 development/status。
-- 调试散图、临时脚本与构建日志放 `.local/`，不在根目录新建 debug、output、temp 等并列目录。
-
-## 本次迁移与验证
-
-保留原用户配置、日志、证据和源码备份；旧开发记录归本机 archive。部署迁移前后 1177 个文件大小和 SHA256 全部一致。离线回归、Tk 模拟检查与打包资源核对见[当前开发状态](../development/status.md)。
-
-迁移不调整 QTE 等待、按键顺序、HSV 阈值或游戏策略。端到端低时延仍需按[QTE 验收设计](qte-performance.md)单独实测，目录整理不等于性能优化完成。
-
-## 新版便携发布目录
-
-发布包包含主 EXE、独立更新助手、_internal 和 manifest；运行时按需创建 config、data、logs、screenshots 与 cache。更新备份是 cache 内短期事务数据，不是 deployment/current 或永久历史版本。详见[便携版目录树](../user/updating.md)与[更新设计](portable-update.md)。
-
-`dist/` 只保留当前一套交付结果，不长期并列保存各轮构建目录。候选验证完成后清理层级，
-旧构建及其中的运行数据归外层 `archive/builds/`，构建中间物继续归 `build/`，检查日志归 `.local/maintenance/`。
+旧 Git、实验工作树和迁移清单仍保留于维护者 archive；日常开发只在源码仓库进行。迁移过程见[结构历史](../history/structure-2026-09.md)，不把当地路径写成通用安装要求。

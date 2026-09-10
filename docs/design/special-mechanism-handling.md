@@ -2,6 +2,8 @@
 
 [机制资料](../reference/fishing-mechanics.md) · [现有问题清单](../development/error-triage.md)
 
+本文保留样本驱动的机制设计过程。v0.2.0 已包含其中已落地的局部防护与状态规则，但不代表完整机制解除已验证；当前支持范围见[开发状态](../development/status.md)，完整链条缺口见[机制审计](../development/mechanism-chain-audit.md)。
+
 2026-09-10 代码位置更新：识别、蓝区、绿色和泡泡规则统一归 `game/fishing/mechanics/`，
 原 `mechanisms.py` 对应 `mechanics/regions.py`；`policy.py` 负责共用仲裁，qte 负责同步执行。
 下文历史记录的旧路径不代表仍存在同名根级模块。完整结构见[程序架构第 6 节](architecture.md)。

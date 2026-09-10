@@ -2,7 +2,7 @@
 
 [开发指南](../docs/development/guide.md)
 
-pyproject.toml 是运行、构建和开发依赖的声明来源。windows-py312.lock.txt 从本机已验证的 Windows / CPython 3.12 环境生成，固定直接、间接依赖和构建工具，共 35 项。本轮新增固定版本 Ruff 作为开发工具，原运行依赖没有升级。
+pyproject.toml 是运行、构建和开发依赖的声明来源。windows-py312.lock.txt 从已验证的 Windows / CPython 3.12 环境生成，固定直接、间接依赖和构建工具，包括 Ruff。具体条目以锁定文件为准，避免在多份文档重复维护数量。
 
 重建相同环境，在仓库根目录执行：
 

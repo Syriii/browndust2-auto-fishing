@@ -40,6 +40,6 @@
 
 离线测试必须覆盖文件保留、过期依赖删除、损坏/非法包、被占用文件、部分替换失败、进程中断恢复、配置幂等、锁互斥、保留策略和网络失败。EXE 验证需在隔离目录进行，不覆盖现用 deployment、不启动游戏任务。
 
-公开 GitHub Release 的下载链路需要发布符合新协议的资产后再验收；本地构建不等于已发布。第一版未实现拖放、自动静默安装、增量更新或包签名。
+v0.2.0 已完成公开附件下载、完整性校验和匿名版本查询复核，结果见[开发状态](../development/status.md)。每个新版本仍需重复对应发布验收；本地构建不等于已发布。第一版未实现拖放、自动静默安装、增量更新或包签名。
 
 参考：[MAA 手动更新说明](https://docs.maa.plus/zh-cn/manual/introduction/others.html#手动更新)、[MAA 更新助手](https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev-v2/src/MaaUpdater/main.cpp)、[GitHub Releases API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)。

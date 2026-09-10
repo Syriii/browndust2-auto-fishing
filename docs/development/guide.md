@@ -1,90 +1,92 @@
 # 开发指南
 
-[文档目录](../README.md) · [当前开发状态](status.md) · [架构方案与实施范围](../design/architecture.md)
+[文档目录](../README.md) · [架构说明](../design/architecture.md) · [开发规范](standards.md)
 
-本页描述已经落地的源码结构。首轮迁移建立功能归属、设备与运行边界，源码包 bd2_fishing 直接位于仓库根目录；新岛屿、新机制和完整导航尚未实现。
+本项目是独立 Windows 桌面应用，应用包 `bd2_fishing/` 直接位于仓库根目录。wheel 用于安装与资源检查，用户通过便携 ZIP 运行；不要求发布到 PyPI。
 
 ## 环境与入口
 
-Windows、Python 3.12。[pyproject.toml](../../pyproject.toml) 管理元数据、直接依赖和入口，[Windows 锁定清单](../../requirements/README.md) 固定已验证环境的直接、间接依赖和构建工具。本轮没有升级依赖。开发安装后工具无需修改 sys.path。
+使用 Windows x64、Python 3.12。CI 固定 Python 3.12.4；本机已有合适的 `.venv` 时复用，不顺带升级依赖。直接依赖和工具声明在 [pyproject.toml](../../pyproject.toml)，完整环境由 [requirements](../../requirements/README.md) 锁定。
 
-以下命令均在仓库根目录执行，本地对应 `auto_fishing-dev/`：
+在克隆后的仓库根目录执行：
 
 ```powershell
-# 首次创建环境后安装固定依赖；已有环境复用
+# 首次创建环境；已有 .venv 时跳过
+py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements/windows-py312.lock.txt
 .\.venv\Scripts\python.exe -m pip install --no-deps --no-build-isolation -e .
 
-# 默认页面待机；也可以使用安装后的 bd2-fishing 入口
+# 正常桌面入口，打开后待机
 .\.venv\Scripts\python.exe main.py
 
-# 模拟页面，不连接游戏
+# 仅模拟界面，不连接游戏或保存个人设置
 .\.venv\Scripts\python.exe main.py --preview
-
-# 离线回归，不发送真实游戏输入
-.\.venv\Scripts\python.exe -X utf8 -B -m unittest discover -s tests -v
-
-# 实际 Tk 控件、模拟任务检查
-.\.venv\Scripts\python.exe -X utf8 -B scripts/checks/smoke_ui.py
 ```
 
-## 代码职责
+可编辑安装后也可使用 `.venv/Scripts/bd2-fishing.exe`。脚本通过安装后的包导入，不自行修改 `sys.path`。包导入不自动启动 GUI、初始化设备或设置 DPI；入口负责组装。
 
-根目录 `main.py` 调用 bootstrap，导入包不会自动设置 DPI 或启动界面。具体 DPI 初始化在启动/运行入口执行。
+## 已实现的模块职责
 
-| 位置（相对 `bd2_fishing/`） | 职责 |
+以下位置相对 `bd2_fishing/`：
+
+| 模块 | 职责 |
 | --- | --- |
-| `bootstrap.py` | 日志、异常处理、DPI 与桌面启动 |
-| `app/desktop.py`、`app/service.py` | 页面使用的设置与任务服务、单任务工作线程 |
-| `app/session.py`、`app/ocr_setup.py` | 聚焦、COM、电源、OCR 初始化与每次运行资源收尾 |
-| `app/fishing_task.py` | 当前钓鱼任务协调、策略选择与等待上钩；可注入截图工厂 |
-| `game/islands/catalog.py`、`reading.py`、`travel.py` | 现有地点与别名、地点信息识别、原地图往返刷新 |
-| `game/navigation/actions.py` | 共享的相对坐标点击原语，尚未建立完整页面导航 |
-| `game/inventory/` | 背包文本判断、清包与退出检查 |
-| `game/fishing/actions.py`、`cast_feedback.py` | 抛竿、位置恢复与抛竿提示判断 |
-| `game/fishing/qte.py` | 共用控制循环、地点目标读取、同步输入执行及异常释放 |
-| `game/fishing/mechanics/` | 同帧区域与挡板识别，绿色/泡泡状态，黄蓝目标确认和纯输入仲裁；无设备副作用 |
-| `game/fishing/feedback_rules.py`、`settlement_rules.py` | 可独立导入的反馈归属和整条鱼结果规则 |
-| `game/fishing/feedback.py`、`settlement.py`、`hook_diagnostics.py` | 游戏反馈/结算观察与上钩证据采集协调 |
-| `game/fishing/assets/` | 运行时识别模板，与测试样本分开 |
-| `runtime/` | 取消、输入锁、轮次上下文、几何与设备合同 |
-| `perception/` | 通用图像、文字、OCR 类型与读取合同调用；不依赖游戏或具体设备 |
-| `game/observation.py` | 当前游戏的 OCR 场景区域与会话设置 |
-| `game/fishing/recognition.py`、`tracing.py` | 反馈字形共享识别、QTE 统计与生命周期观察 |
-| `infrastructure/windows/` | DXcam/GDI、显示器、窗口、受控输入、桌面和电源实现 |
-| `infrastructure/ocr/` | RapidOCR 引擎适配 |
-| `infrastructure/settings.py`、`paths.py` | INI、默认配置、保留注释的保存及运行路径 |
-| `infrastructure/diagnostics/` | 文件日志、PNG/ZIP 与结算证据队列；写入线程由写入模块持有 |
-| `ui/window.py` | Tk 控件和展示，配置与任务通过应用服务访问 |
+| `bootstrap.py` | 日志、异常处理、DPI、启动检查与桌面组装 |
+| `app/desktop.py`、`preferences.py`、`calibration.py` | UI 服务、设置字段与校准 |
+| `app/service.py`、`session.py`、`ocr_setup.py` | 单任务工作线程、聚焦、COM、电源、OCR 与资源收尾 |
+| `app/fishing_task.py` | 钓鱼轮次协调、地点策略选择、等待上钩与恢复 |
+| `app/startup.py`、`updates.py` | 配置初始化和迁移、在线/本地更新用例 |
+| `game/islands/` | 五地点目录与别名、文字读取、已有地图往返刷新 |
+| `game/navigation/` | 相对坐标操作基础能力；完整页面导航尚未实现 |
+| `game/inventory/` | 背包判断、出售与退出检查 |
+| `game/fishing/qte.py` | 两套地点策略共用的控制循环与同步输入执行 |
+| `game/fishing/mechanics/` | 同帧区域、黄蓝目标、绿色/泡泡状态、挡板及动作仲裁 |
+| `game/fishing/pointer.py`、`recognition.py` | 真光标候选与游戏反馈字形识别 |
+| `game/fishing/feedback*.py`、`settlement*.py` | 游戏反馈、按键归属、鱼获确认及观察生命周期 |
+| `game/fishing/scene_*.py`、`hook_diagnostics.py` | 特殊外观、场景时间线与上钩取证 |
+| `game/fishing/actions.py`、`cast_feedback.py`、`page.py` | 抛竿与恢复、提示判断、待机页面确认 |
+| `perception/` | 通用图像、OCR 合同和文字处理 |
+| `runtime/` | 取消、输入锁、几何、轮次上下文和设备合同 |
+| `infrastructure/windows/`、`ocr/` | Windows 窗口与输入、DXcam/GDI、RapidOCR |
+| `infrastructure/settings.py`、`paths.py`、`maintenance.py` | 配置、运行路径及便携版待机清理 |
+| `infrastructure/diagnostics/`、`updates/` | 后台日志/证据与文件更新事务 |
+| `ui/` | 主窗口、设置、日志展示、更新入口、主题与滚动容器 |
+| `resources/`、`game/fishing/assets/` | 默认配置与应用图标、玩法识别模板 |
 
-`runtime` 不导入 app、game、ui 或 infrastructure；UI 不直接导入设备或玩法实现。规则和地点目录可在没有 Windows/Tk/OCR 引擎的进程中导入。现有功能执行仍有具体受控输入和观察设备依赖，尚未将所有 I/O 都改为注入；这些边界继续按实际替换需求提取，不为迁移新建空框架。
+实际允许的导入方向由[开发规范](standards.md)及 `scripts/checks/check_architecture.py` 限制。UI 经 app 访问任务和设备；runtime 不导入游戏或基础设施；纯机制规则不持有设备。现有执行和观察模块仍可使用具体适配器，尚未把所有 I/O 改成依赖注入。
 
-录制工具通过 `run_once(..., capture_factory=...)` 选择原相机或录制相机，取消与工作线程生命周期保持一致。按键录制和探针仍有局部包装，不能当成已经具备完整离线回放框架。
+## 运行数据与资源
 
-2026-09-10 起，两套 QTE 策略共用 `BaseQTEStrategy.play_qte`；地点差异只在 `_track_targets`
-提供当前目标几何与有效阈值。`MechanismPolicy` 每轮持有绿条、泡泡和普通目标状态，返回
-normal/wait/press/down/up 意图，`qte.py` 同步执行；状态对象不持有截图器或写入器。
-原 `mechanisms.py` 移至 `mechanics/regions.py`；`blue_target.py`、`green_control.py`、`bubbles.py`
-移入 mechanics，挡板识别位于 `mechanics/blockers.py`。没有保留旧路径转发模块。
+| 运行方式 | 配置 | 日志 / 证据 | 持久报告 |
+| --- | --- | --- | --- |
+| 仓库源码 / 可编辑安装 | `.local/config.ini` | `.local/logs/`、`.local/diagnostics/` | `.local/data/` |
+| 便携 EXE | EXE 旁 `config/config.ini` | `logs/`、`screenshots/` | `data/` |
+| 仓库外普通安装 | 用户目录 `BD2_AutoFishing/config.ini` | 同根 `logs/`、`diagnostics/` | 同根 `data/` |
 
-## 路径与包装
+路径不依赖终端当前目录。默认配置只维护在 `resources/default.ini`，设置读取器通过包资源加载。识别模板、图标、OCR 模型和 Tcl/Tk 随发布包收集；测试样本、个人配置和日志不打入包。
 
-- 可编辑安装使用 `.local/config.ini`，日志写入 `.local/logs/`，证据写入 `.local/diagnostics/`；路径不随工作目录变化。
-- 普通安装的运行目录为用户主目录下 `BD2_AutoFishing/`，避免向 site-packages 写入；唯一默认配置由 settings 从 `resources/default.ini` 包资源读取。
-- 便携版使用 EXE 旁 config/config.ini、logs 与 screenshots；自定义 OCR 相对资源从冻结资源目录解析。
-- 运行时模板随 Python 包和 PyInstaller 收集。包资源与运行目录分开；本机部署已成套归入外层 `deployment/`，未升级 EXE。
-- `.local/` 集中配置和生成物，egg-info 及 setuptools 中间文件由 setup.py 固定写入 `build/`；`.venv/` 和 Python 缓存按正常行为生成并忽略。原图与证据保留；完整规则见[统一布局](../design/repository-layout.md)。
+`build/` 保存中间文件和 egg-info，`dist/` 保存本机当前交付包。构建不会覆盖维护者的 `deployment/`，源码修改也不会改变旧 EXE。更多归属见[统一布局](../design/repository-layout.md)。
 
 ## 修改与验证
 
-[开发规范与检查门槛](standards.md)规定依赖方向、格式、公共逻辑归属和时延边界。提交前运行 Ruff、架构检查和相关回归；CI 在 push/PR 时执行相同检查。
+修改对应文档和必要回归后，执行与变化匹配的检查：
 
-行为约束见 [AGENTS.md](../../AGENTS.md)。修改识别使用真实正负例，停止仍穿过普通业务异常捕获；保持输入锁和窗口保护。
+```powershell
+.\.venv\Scripts\python.exe -m ruff check bd2_fishing scripts tests main.py setup.py
+.\.venv\Scripts\python.exe -m ruff format --check bd2_fishing scripts tests main.py setup.py
+.\.venv\Scripts\python.exe -X utf8 -B scripts/checks/check_architecture.py
+.\.venv\Scripts\python.exe -X utf8 -B -m unittest discover -s tests -v
+```
 
-现有回归覆盖按键条件、停止/重启、清包开关、恢复、截图、日志和证据。新增架构测试覆盖导入边界、轻量规则导入、截图工厂注入和桌面服务。涉及打包时同时检查 wheel、便携包模板、OCR 模型及 Tcl/Tk；源码和构建验证不代表 EXE 已实机验收。
+隐藏 Tk 模拟检查不连接游戏：
 
-QTE 关键路径没有增加消息队列、线程跳转或输入暂停修改。三个策略类在归一化导入引用后 AST 与迁移前一致；这证明实现表达式保持一致，不替代[端到端时延实测](../design/qte-performance.md)。
+```powershell
+.\.venv\Scripts\python.exe -X utf8 -B scripts/checks/smoke_ui.py --hidden
+.\.venv\Scripts\python.exe -X utf8 -B scripts/checks/smoke_updates.py
+```
 
-工具影响范围见[工具说明](tools.md)，发布流程见[构建与发布](releasing.md)。提交和推送从源码仓库执行，外层旧 Git 已归档到 archive，不能从旧实验工作树推送旧结构。
+纯文档改动检查事实、路径、链接和差异即可，不需重复本地游戏或整套回归；GitHub CI 仍按仓库工作流执行。识别改动使用真实正负例；时序改动记录帧龄、输入与停止行为，不能用合成图或平均耗时替代端到端验证。
 
-便携发布的更新链路和目录职责见[更新设计](../design/portable-update.md)。源码个人配置仍在 .local/config.ini，环境与校准报告在 .local/data；源码历史证据不会被发布版待机清理。
+真实游戏调试从 `scripts/live/` 显式运行源码；发布 EXE 的用户验收另行安排。工具及参数的影响见[工具说明](tools.md)，不要在离线检查中顺带启动实机工具。
+
+日常提交走[短期分支与 PR](branching.md)，发布走[构建与发布](releasing.md)。当前已验证范围和开放问题分别见[状态](status.md)与[验证计划](validation-plan.md)。

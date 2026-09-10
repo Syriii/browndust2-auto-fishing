@@ -6,14 +6,15 @@
 
 ## 构建环境
 
-Windows、Python 3.12，复用现有 .venv；首次安装使用已验证的锁定清单：
+Windows x64、Python 3.12，复用现有 .venv；首次创建环境后安装已验证的锁定清单：
 
 ```powershell
+py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements/windows-py312.lock.txt
 .\.venv\Scripts\python.exe -m pip install --no-deps --no-build-isolation -e .
 ```
 
-依赖声明和锁定方式见[依赖管理](../../requirements/README.md)。本轮未升级依赖。
+已有环境跳过创建步骤。依赖声明和锁定方式见[依赖管理](../../requirements/README.md)。
 
 ## 配置与 OCR 模型
 
@@ -60,6 +61,8 @@ EXE、运行库及 ZIP 均生成到该目录，不更新 deployment，也不复�
 ```powershell
 .\.venv\Scripts\python.exe -X utf8 -B -m unittest discover -s tests -v
 .\.venv\Scripts\python.exe -X utf8 -B scripts/checks/smoke_ui.py
+.\.venv\Scripts\python.exe -X utf8 -B scripts/checks/smoke_updates.py
+.\.venv\Scripts\python.exe -X utf8 -B scripts/checks/check_portable_package.py dist/BD2_AutoFishing --report .local/maintenance/package-check.json
 ```
 
 包装核对包含全部 Python 模块、默认 INI、识别模板、3 个 OCR 模型、Tcl/Tk 和 ZIP 完整性。需要手动预览候选 EXE 时可运行：
@@ -79,6 +82,16 @@ EXE、运行库及 ZIP 均生成到该目录，不更新 deployment，也不复�
 
 本地构建不自动提交、推送或发布。若使用自定义模型，文件也必须存在于远程检出内容中。
 
+发布操作顺序：
+
+1. 在短期分支完成版本号、CHANGELOG、实现与必要验证，创建 PR，CI 通过后合并 main。
+2. 在 GitHub Releases 创建发布，选择该 main 提交，新建与 pyproject 一致的标签并填写本版说明。
+3. 发布正式 Release，等待 Build Release Package 成功上传完整 ZIP 与校验文件。
+4. 实际下载验证 SHA-256、包内版本与文件清单，并检查旧版本发现更新、当前版本无更新。
+5. 在状态文档记录结果及实机覆盖范围；后续文档合并不会重建已发布附件。
+
+当前 v0.2.0 已完成以上发布链路，结果见[开发状态](status.md)。下一次发布使用新版本号与新标签，不移动已发布标签或覆盖旧附件。
+
 发布后检查 Actions 的 Build Release Package 成功，并确认 Release 的 Assets 同时包含
 Windows ZIP 和同名 SHA-256 文件。附件尚未上传时更新器会提示缺少兼容包；失败时先查 Actions
 日志，不将“已创建 Release 页面”当作发布完成。发布说明明确实机覆盖范围，后续纯文档修改无需重发 EXE。
@@ -91,7 +104,7 @@ Windows ZIP 和同名 SHA-256 文件。附件尚未上传时更新器会提示�
 2. 优先通过新版程序导入候选 ZIP 更新；旧版首次迁移时成套包含主 EXE、更新助手、_internal 与 manifest，保留用户配置、日志和证据。
 3. 核对部署文件与构建产物哈希，再按授权范围验收。
 
-本次目录整理只将旧部署迁入 deployment，未升级它。递归移动或删除前核对解析后的绝对路径，使用 PowerShell 原生文件命令。
+deployment 是维护者本机约定，不是普通用户需要建立的目录。GitHub 发布不等于本机部署；递归移动或删除前核对解析后的绝对路径，使用 PowerShell 原生文件命令。
 
 ## 新版更新协议
 

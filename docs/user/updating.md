@@ -1,6 +1,8 @@
 # 便携版使用、更新与数据保留
 
-从 [GitHub Releases](https://github.com/Syriii/browndust2-auto-fishing/releases) 下载 `BD2_AutoFishing-windows.zip`，解压到独立文件夹后运行主程序。无需安装 Python、安装器或手动配置依赖。
+[文档目录](../README.md) · [使用指南](usage.md) · [配置说明](configuration.md)
+
+从 [最新正式 Release](https://github.com/Syriii/browndust2-auto-fishing/releases/latest) 的 Assets 下载 `BD2_AutoFishing-windows.zip`，解压到独立文件夹后运行主程序。无需安装 Python、安装器或手动配置依赖。本文的更新协议从 v0.2.0 起提供；旧版没有更新入口时，先按“手动更新”中的首次迁移步骤处理。
 
 ## 文件目录
 
@@ -18,7 +20,7 @@ BD2_AutoFishing/
 └─ cache/updates/            下载、解压、事务日志及临时恢复备份
 ```
 
-运行数据目录按需创建。EXE 与 `_internal` 必须成套保留；更新由程序管理，用户不需要逐项复制。整个文件夹可以移动；删除整个文件夹即可卸载，配置与证据也随之删除。
+运行数据目录按需创建。主 EXE、更新助手、`_internal` 和 `manifest.json` 必须成套保留；更新由程序管理，用户不需要逐项复制。整个文件夹可以移动；删除整个文件夹即可卸载，配置与证据也随之删除。
 
 首次启动生成配置并只读检测环境。没有打开游戏时也能进入界面，稍后在设备设置中检测；基础校准不会伪装成游戏的最佳命中参数。以后启动会补齐缺失配置、检查格式及数值，保留有效值和注释；损坏配置备份为 `config.invalid-*.ini`。旧根目录 `config.ini` 或旧单文件数据目录中的配置会在新配置不存在时自动导入，原文件保留。
 
