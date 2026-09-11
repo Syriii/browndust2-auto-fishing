@@ -203,6 +203,21 @@ def load_debug_config(path=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seconds", type=float, default=45)
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument(
+        "--navigation-only",
+        dest="navigation_mode",
+        action="store_const",
+        const="travel",
+        help="验证更改、选岛与启航，到达后停止，不抛竿；不购买或返回码头",
+    )
+    modes.add_argument(
+        "--refresh-island-only",
+        dest="navigation_mode",
+        action="store_const",
+        const="refresh",
+        help="验证自动换点的完整往返路线，返回后停止，不抛竿；最长 180 秒",
+    )
     parser.add_argument(
         "--config", type=Path, help="只读指定配置文件；工作树中可指向原目录的用户配置"
     )
@@ -231,12 +246,15 @@ def main():
         help="沿用原游戏采集路径，不录制高频全窗口画面；仍保存按键时序及已启用的失败证据",
     )
     args = parser.parse_args()
-    if not 1 <= args.seconds <= 90:
-        parser.error("seconds 必须为 1–90")
+    max_seconds = 180 if args.navigation_mode == "refresh" else 90
+    if not 1 <= args.seconds <= max_seconds:
+        parser.error(f"seconds 必须为 1–{max_seconds}")
     if args.stop_file is not None and args.stop_file.exists():
         parser.error("停止文件已存在；请为本次测试指定新路径")
     if args.probe_outcomes and args.probe_escape:
         parser.error("两种探针不能同时启用")
+    if args.navigation_mode and (args.probe_outcomes or args.probe_escape):
+        parser.error("导航验证不能与钓鱼探针同时启用")
     output = Path(paths.get_diagnostics_path()) / ("qte_live_" + time.strftime("%Y%m%d_%H%M%S"))
     output.mkdir(parents=True)
     logging.basicConfig(
@@ -368,6 +386,7 @@ def main():
                 location=FishingLocation(args.location),
                 interactive=False,
                 capture_factory=capture_factory,
+                navigation_mode=args.navigation_mode,
             )
     except run_control.RunStopped as exc:
         recorder.event("stopped", reason=str(exc) or "达到时限或采集保护停止")

@@ -23,9 +23,11 @@ class MechanismRegions:
     bubble_spans: tuple[tuple[int, int], ...] = ()
 
     def ordinary_pixels(self, hsv):
-        if not self.bubble_spans:
+        if not self.bubble_spans and not self.blocked.any():
             return hsv
         result = hsv.copy()
+        # 遮挡中的彩色残片必须在目标膨胀前去除，否则会跨出遮挡边缘授权输入。
+        result[:, self.blocked] = 0
         margin = max(2, hsv.shape[0] // 4)
         for left, right in self.bubble_spans:
             result[:, max(0, left - margin) : min(hsv.shape[1], right + margin)] = 0

@@ -185,7 +185,13 @@ class SettlementWaitTests(unittest.TestCase):
         self.camera.grab.return_value = self.idle
         with patch.object(qte.pydirectinput, "click") as click:
             strategy._finish_fishing()
+            strategy.catch_observer = settlement.CatchObserver(
+                self.observer.engine, self.config, self.region
+            )
             strategy._finish_fishing()
+            strategy.catch_observer = settlement.CatchObserver(
+                self.observer.engine, self.config, self.region
+            )
             with self.assertRaisesRegex(RuntimeError, "续钓上限"):
                 strategy._finish_fishing()
         click.assert_not_called()
@@ -224,6 +230,71 @@ class SettlementWaitTests(unittest.TestCase):
             patch.object(self.observer, "finish", side_effect=ValueError("broken")),
             patch.object(qte.pydirectinput, "click") as click,
         ):
-            with self.assertRaisesRegex(RuntimeError, "结算观察失败"):
+            with self.assertRaisesRegex(qte.RoundObservationError, "结算观察失败"):
                 strategy._finish_fishing()
         click.assert_not_called()
+
+    def test_water_splash_is_waiting_and_cannot_authorize_cast(self):
+        root = Path(__file__).parents[1] / "fixtures" / "catch_result"
+        for name in ("source", "holdout"):
+            frame = cv2.imread(str(root / f"idle_no_arrows_{name}_20260910.png"))
+            self.assertFalse(self.observer.page_reader.inspect(frame)[0])
+            ready, scores = self.observer.page_reader.inspect_waiting(frame)
+            self.assertTrue(ready, scores)
+            self.assertGreaterEqual(scores["compact_splash"], 0.88)
+            self.assertGreaterEqual(scores["compact_space"], 0.88)
+        for bounds in FishingPageReader.COMPACT_BOUNDS.values():
+            partial = frame.copy()
+            left, top, right, bottom = bounds
+            partial[top - 3 : bottom + 3, left - 3 : right + 3] = 0
+            self.assertFalse(self.observer.page_reader.inspect_waiting(partial)[0])
+
+    def test_waiting_rejects_active_timer_even_with_correct_button(self):
+        root = Path(__file__).parents[1] / "fixtures" / "catch_result"
+        frame = cv2.imread(str(root / "idle_no_arrows_holdout_20260910.png"))
+        rect = self.observer.page_reader.time_region
+        # 合成叠加仅验证计时器优先保护，不冒充游戏真实组合状态。
+        hsv = np.zeros((rect.height, rect.width, 3), dtype=np.uint8)
+        hsv[:] = (70, 190, 250)
+        frame[rect.top : rect.bottom, rect.left : rect.right] = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+        ready, scores = self.observer.page_reader.inspect_waiting(frame)
+        self.assertFalse(ready, scores)
+        self.assertEqual(scores["compact_qte_absent"], 0)
+
+    def test_timeout_in_waiting_hands_off_without_casting(self):
+        root = Path(__file__).parents[1] / "fixtures" / "catch_result"
+        idle = cv2.imread(str(root / "idle_no_arrows_holdout_20260910.png"))
+        self.camera.grab.return_value = idle
+        strategy = qte.FrostStraitQTEStrategy(self.config, self.region)
+        strategy.catch_observer = self.observer
+        strategy._start_feedback = Mock()
+        strategy.longest_keep_time = 0
+        rect = strategy.roi_pos
+        control_frame = idle[rect.top : rect.bottom, rect.left : rect.right]
+        with (
+            patch.object(qte.pydirectinput, "press") as press,
+            patch.object(qte.pydirectinput, "click") as click,
+            patch.object(settlement.bundle_writer, "submit", return_value=False) as save,
+        ):
+            settlement.run_observed_qte(strategy, Mock(grab=Mock(return_value=control_frame)))
+        press.assert_not_called()
+        click.assert_not_called()
+        self.assertEqual(self.observer.evidence_metadata["control_timeout"]["state"], "waiting")
+        self.assertEqual(self.observer.evidence_metadata["round_recovery"]["status"], "resumed")
+        self.assertEqual(self.observer.evidence_metadata["round_recovery"]["next_state"], "waiting")
+        self.assertEqual(self.observer.result.status, "unknown")
+        self.assertEqual(save.call_args.args[2]["exit_reason"], "control_timeout")
+
+    def test_real_nonidle_scenes_remain_negative_with_compact_variant_enabled(self):
+        root = Path(__file__).parents[1] / "fixtures" / "catch_result"
+        for name in (
+            "last_qte.png",
+            "caught.png",
+            "caught_945.png",
+            "loading_945.png",
+            "idle_day_transition_180018.png",
+        ):
+            frame = cv2.imread(str(root / name))
+            height, width = frame.shape[:2]
+            reader = FishingPageReader(Rect(0, 0, width, height), self.config)
+            self.assertFalse(reader.inspect(frame)[0], name)

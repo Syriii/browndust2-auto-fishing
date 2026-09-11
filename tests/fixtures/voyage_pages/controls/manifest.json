@@ -1,0 +1,84 @@
+{
+  "recorded_on": "2026-09-11",
+  "source": "用户提供的导航控件、两类确认图，以及源码实测原帧",
+  "samples": [
+    {
+      "file": "island_navigation_controls.png",
+      "source_file": "codex-clipboard-0d29b8ae-3a63-4794-8386-664d4de58ba1.png",
+      "width": 931,
+      "height": 529,
+      "sha256": "1c83763bf5667080e35c85a3b6cdc97891354b27990e1983823f3b09e6049f31",
+      "user_annotation": "船锚为返回码头入口，需要确认；更改直接进入地图",
+      "raw_unchanged": true,
+      "capture_scope": "user_image_without_title_bar",
+      "client_crop": null
+    },
+    {
+      "file": "return_to_dock_confirmation.png",
+      "source_file": "codex-clipboard-c5e1b452-abed-40a6-9a26-4bb07125edcc.png",
+      "width": 935,
+      "height": 529,
+      "sha256": "9e484e8eb9895d6e98e1b92a005210092aa3e3ae5155bfa9ac134aa110f616e2",
+      "user_annotation": "确认返回码头；弹窗提示当前生效的钓鱼消耗品效果会被移除",
+      "raw_unchanged": true,
+      "capture_scope": "user_image_without_title_bar",
+      "client_crop": null
+    },
+    {
+      "file": "travel_consumables_confirmation.png",
+      "width": 945,
+      "height": 532,
+      "sha256": "83d8bef819d30975275d65e73d9c2762898e52b7e360acf360fd08aa5aa3c845",
+      "source_file": ".local/diagnostics/navigation/event_1789100134545918100_aad7a84b.zip/latest.png",
+      "user_annotation": null,
+      "observation": "实测点击深渊巨口启航后出现前往钓鱼地区确认；移动时当前使用的钓鱼消耗品将全部失效；未点击确认",
+      "raw_unchanged": true,
+      "capture_scope": "native_game_client",
+      "client_crop": [
+        0,
+        0,
+        945,
+        532
+      ]
+    },
+    {
+      "file": "travel_confirmation_user.png",
+      "source_file": "codex-clipboard-f22852c9-a65a-4ea9-9583-1f497e251c49.png",
+      "width": 925,
+      "height": 527,
+      "sha256": "d0febbcae14ff322adadfb76eb3f7262431acbd046a640b86fbac3345fd8df14",
+      "raw_unchanged": true,
+      "capture_scope": "user_image_without_title_bar",
+      "client_crop": null,
+      "user_annotation": "该确认是换岛的确认，大部分情况下直接确认即可；2026-09-11 用户明确授权普通换岛自动确认"
+    },
+    {
+      "file": "island_day_name_unreadable.png",
+      "width": 945,
+      "height": 532,
+      "sha256": "2dbb233a6e36a568462dada825d34cdfa17117ef9499420014d73161a97779ca",
+      "source_file": ".local/diagnostics/incidents/event_1789102993297541300_abce7499.zip/cached_00.png",
+      "raw_unchanged": true,
+      "capture_scope": "native_game_client",
+      "client_crop": [
+        0,
+        0,
+        945,
+        532
+      ],
+      "observation": "待机控件及更改、使用时间可识别；OCR 将亚特兰蒂斯误读为正特兰蒂斯，应保持当前岛屿未知，但可进入地图核对目标"
+    },
+    {
+      "file": "return_to_dock_user_holdout.png",
+      "source_file": "codex-clipboard-8516c38e-a7bd-46c6-83d4-f94b0ccdd714.png",
+      "width": 938,
+      "height": 524,
+      "sha256": "dc174977323b7720afc08ad5a60921c3ddbaec248642008d196af4244d609168",
+      "raw_unchanged": true,
+      "capture_scope": "user_image_without_title_bar",
+      "client_crop": null,
+      "user_annotation": "返回码头确认框参考；用户说明尚无游戏 Bug 完整恢复过程截图，先按同类退出提示实现",
+      "usage": "independent_return_dialog_regression_not_bug_recovery_validation"
+    }
+  ]
+}

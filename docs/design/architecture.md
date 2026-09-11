@@ -46,8 +46,12 @@ flowchart TD
 
 ## 钓鱼与机制链路
 
+启动与轮次衔接使用[统一页面识别](scene-recognition.md)，与逐帧 QTE 控制分开。页面能力和未覆盖入口以该文档为准。
+
 ```text
 game/fishing/
+├── scene.py                      统一只读页面判断：待机、面板、QTE、未知／无图
+├── startup.py                    启动观察、接续分支与独立启动证据
 ├── actions.py / cast_feedback.py  抛竿、恢复动作与提示判断
 ├── qte.py                        控制循环、地点策略与同步输入
 ├── mechanics/
@@ -63,6 +67,8 @@ game/fishing/
 ├── scene_evidence.py              场景事件和前后图
 ├── feedback*.py / recognition.py  反馈识别与按键归属
 ├── settlement*.py / page.py       鱼获与待机页面确认
+├── recovery.py                   失败轮次恢复、按类型关闭连续结算弹窗
+├── panels.py / templates.py       结算弹窗身份与共用字形匹配
 ├── tracing.py / hook_diagnostics.py  轮次统计与上钩取证
 └── assets/                       运行时识别模板
 ```

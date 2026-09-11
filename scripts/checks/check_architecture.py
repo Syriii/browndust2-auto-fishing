@@ -27,7 +27,14 @@ PURE = {
     "catalog",
     "pointer",
     "scene_signals",
+    "hook",
+    "scene",
+    "page",
+    "panels",
+    "templates",
     "trigger_rules",
+    "voyage_reading",
+    "dialogs",
 }
 MECHANICS = "bd2_fishing.game.fishing.mechanics"
 

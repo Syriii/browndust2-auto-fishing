@@ -7,6 +7,7 @@
 | 下方 `night_*.png` | 夜间上钩黄色阈值的真实正负例 |
 | [hook_small_window/](hook_small_window/README.md) | 小窗口等待上钩与遮挡排查 |
 | [catch_result/](catch_result/README.md) | 奖励结算与疑似逃脱判断 |
+| [voyage_pages/](voyage_pages/README.md) | 加载、码头、地图、许可证购买前后与鱼种解锁的真实 OCR 回归 |
 | [qte_feedback/manifest.json](qte_feedback/manifest.json) | QTE 反馈字样及逐帧回归样本 |
 | [qte_control/](qte_control/README.md) | 无光标、蓝区回退及红色牙齿图示误触发的真实原图 |
 

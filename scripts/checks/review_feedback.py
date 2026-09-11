@@ -14,6 +14,11 @@ CATEGORIES = {
     "feedback_not_renewed": ("旧反馈未更新", "核对反馈持续时间及相邻输入"),
     "superseded_by_input": ("下一输入前未确认", "复核相邻输入与去重，不延长归属窗口凑成功"),
     "ambiguous_feedback": ("反馈归属歧义", "核对候选输入和新旧文字，保持未确认"),
+    "unattributed_fail": ("FAIL 原因待确认", "保留原图及候选按键，不直接计为按键未命中"),
+    "fail_without_input_result": (
+        "仅见 FAIL，按键结果未确认",
+        "检查机制、到期与后续反馈，不自动补按",
+    ),
     "observer_failed": ("观察线程失败", "先处理观察异常，再评估按键效果"),
     "input_records_dropped": ("按键记录丢失", "核对队列溢出和归属不完整标记"),
     "qte_ended": ("本轮结束前未确认", "结合整轮结果和末帧，勿自动补按"),

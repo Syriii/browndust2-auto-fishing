@@ -12,9 +12,10 @@ from dataclasses import asdict
 from pathlib import Path
 
 import cv2
-import numpy as np
 
-from bd2_fishing.game.fishing.page import FishingPageReader
+from bd2_fishing.game.fishing.evidence_selection import select_round_frames
+from bd2_fishing.game.fishing.recovery import RoundObservationError, recover_round
+from bd2_fishing.game.fishing.scene import FishingSceneReader
 from bd2_fishing.game.fishing.settlement_rules import (
     CatchResult,
     _evidence_token,
@@ -85,6 +86,7 @@ class CatchObserver:
         self.round_id = current_round_id() or uuid.uuid4().hex[:12]
         self.log = get_logger(__name__, self.round_id)
         self.engine, self.config, self.window = engine, config, window
+        self.current_location = None
         self.lock = threading.Lock()
         # 本锁只协调本轮计时器与结算；跨轮原生调用互斥由共享引擎负责。
         self.ocr_lock = threading.Lock()
@@ -102,30 +104,9 @@ class CatchObserver:
         self.finalized = False
         self.save_done = threading.Event()
         self.save_done.set()
-        # 关闭提示是灰字。先套亮白阈值再匹配会把缩放后的模板清空，
-        # TM_CCOEFF_NORMED 对常量模板返回 1，导致任意场景都被判为面板。
-        self.close_patterns = []
-        for name, reference_width, reference_height in (
-            ("settlement_close", 875, 492),
-            ("settlement_close_945", 945, 532),
-        ):
-            close_template = cv2.imdecode(
-                np.frombuffer(
-                    (Path(__file__).with_name("assets") / f"{name}.png").read_bytes(), np.uint8
-                ),
-                cv2.IMREAD_GRAYSCALE,
-            )
-            if close_template is None or close_template.std() < 1:
-                raise ValueError("结算关闭提示模板无有效字形")
-            width = round(close_template.shape[1] * window.width / reference_width)
-            height = round(close_template.shape[0] * window.height / reference_height)
-            # 实际 945 字形补充旧 875 字形的缩放误差，仍限定 ±1 像素和原门槛。
-            self.close_patterns.extend(
-                cv2.resize(close_template, (max(2, width + dx), max(2, height + dy)))
-                for dx in (-1, 0, 1)
-                for dy in (-1, 0, 1)
-            )
-        self.page_reader = FishingPageReader(window)
+        self.scene_reader = FishingSceneReader(config, window)
+        self.page_reader = self.scene_reader.idle
+        self.panel_reader = self.scene_reader.panels
 
     def observe_timer(self, frame, stamp):
         if not self.ocr_lock.acquire(blocking=False):
@@ -178,18 +159,7 @@ class CatchObserver:
             self.ocr_lock.release()
 
     def _panel_open(self, frame):
-        roi = frame[
-            round(self.window.height * 0.88) : round(self.window.height * 0.97),
-            round(self.window.width * 0.40) : round(self.window.width * 0.60),
-        ]
-        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        for pattern in self.close_patterns:
-            if pattern.std() < 1 or any(a < b for a, b in zip(gray.shape, pattern.shape)):
-                continue
-            score = cv2.minMaxLoc(cv2.matchTemplate(gray, pattern, cv2.TM_CCOEFF_NORMED))[1]
-            if score >= 0.85:
-                return True
-        return False
+        return self.panel_reader.is_open(frame)
 
     def finish(self):
         """QTE 确认退出后、关闭面板前执行；耗时从原结算等待时间中扣除。"""
@@ -275,6 +245,7 @@ class CatchObserver:
         self.evidence_metadata["panel_open"] = False
         samples = []
         idle_since = None
+        stable_page = None
         with FeedbackCapture(self.window) as capture:
             # 同时限制次数与时间；逐次响应取消/窗口保护，只保留首帧与最新帧。
             for _ in range(151):
@@ -284,8 +255,12 @@ class CatchObserver:
                 stamp = time.monotonic()
                 if candidate is not None:
                     frame, captured = candidate, stamp
-                    panel = self._panel_open(frame)
-                    idle, scores = self.page_reader.inspect(frame) if not panel else (False, {})
+                    reading = self.scene_reader.inspect(frame)
+                    panel = reading.state == "panel"
+                    idle, scores = reading.state in {"idle", "waiting"}, reading.idle_scores
+                    if reading.state != stable_page:
+                        idle_since = None
+                    stable_page = reading.state
                     idle_since = (
                         stamp if idle and idle_since is None else idle_since if idle else None
                     )
@@ -298,9 +273,10 @@ class CatchObserver:
                         captured_at_monotonic=stamp,
                         panel_open=panel,
                         idle_scores=scores,
+                        waiting_scores=reading.waiting_scores,
                         page_state="panel"
                         if panel
-                        else "idle"
+                        else reading.state
                         if idle_confirmed
                         else "unrecognized",
                     )
@@ -330,28 +306,30 @@ class CatchObserver:
             frame = capture.grab()
         run_control.checkpoint()
         stamp = time.monotonic()
-        if frame is None:
-            state, scores = "unavailable", {}
-        else:
-            panel = self._panel_open(frame)
-            idle, scores = self.page_reader.inspect(frame) if not panel else (False, {})
-            state = "panel" if panel else "idle" if idle else "unrecognized"
+        reading = self.scene_reader.inspect(frame)
+        if frame is not None:
             self.evidence_frames["resume_latest.png"] = frame.copy()
             if "resume_first.png" not in self.evidence_frames:
                 self.evidence_frames["resume_first.png"] = frame.copy()
         self.evidence_metadata["resume_check"] = dict(
-            state=state, captured_at_monotonic=stamp, idle_scores=scores
+            captured_at_monotonic=stamp, **asdict(reading)
         )
-        return state
+        return reading.state
 
-    def wait_until_idle(self):
+    def wait_until_idle(self, *, on_panel=None):
         """关闭面板后或续钓前，需要两次间隔观察确认操作控件已恢复。"""
         budget = bounded_float(self.config, "time", "fish_end_wait_time", 4, 0, 30)
         deadline = time.monotonic() + budget
         idle_since = None
-        for _ in range(151):
+        # 初始等待及至多两种新弹窗各有完整预算；时间和次数同时有界。
+        for _ in range(451 if on_panel is not None else 151):
             state = self.inspect_current_page()
             stamp = time.monotonic()
+            if state == "panel" and on_panel is not None and on_panel():
+                # 已识别的新弹窗获得自己的响应时间；调用者按类型限制点击总数。
+                deadline = time.monotonic() + budget
+                idle_since = None
+                continue
             if state == "idle":
                 if idle_since is not None and stamp - idle_since >= 0.19:
                     self.evidence_metadata["resume_confirmed"] = True
@@ -369,7 +347,7 @@ class CatchObserver:
                 break
             run_control.sleep(min(0.2, max(0, deadline - stamp)))
         self.evidence_metadata["resume_confirmed"] = False
-        raise TimeoutError("未确认钓鱼待机控件恢复，已停止，未重新抛竿")
+        raise RoundObservationError("未确认钓鱼待机控件恢复，未重新抛竿")
 
     def finalize(self, reason):
         """观察线程关闭后落盘完整账本；这里只使用缓存，停止后不截图或 OCR。"""
@@ -382,7 +360,7 @@ class CatchObserver:
         elif self.result.reason == "尚未观察到结算":
             self.result = CatchResult(
                 "unknown",
-                "QTE 控制超时，未确认退出页面，任务停止"
+                "QTE 控制超时，未确认捕获结果；续钓检查见 round_recovery"
                 if reason == "control_timeout"
                 else "QTE 已返回，但未观察到结算"
                 if reason == "returned"
@@ -407,7 +385,13 @@ class CatchObserver:
         metadata.setdefault(
             "timer_readings", [dict(time=t, value=v, score=s) for t, v, _, s in self.readings]
         )
+        frames = select_round_frames(frames, metadata)
         metadata["screenshots_available"] = bool(frames)
+        metadata["evidence_roles"] = dict(
+            qte_failure="qte_feedback: 按 round_id 和 attempt 查找决策、未命中/未确认前后帧",
+            mechanism="qte_scenes: 同轮机制连续帧",
+            settlement="本包为轮次摘要；普通未确认后返回待机的空场景已省略",
+        )
         counts = Counter(event["result"] for event in self.game_feedback)
         attempts = [item for item in self.attempt_outcomes if item.get("attempt") is not None]
         unknown = sum(item["result"] == "unknown" for item in attempts)
@@ -418,11 +402,12 @@ class CatchObserver:
             "interrupted": "已中断",
         }
         self.log.debug(
-            "本轮结果：%s；游戏反馈：暴击=%d 普通命中=%d 未命中=%d；按键尝试=%d，其中归属未确认=%d；原因=%s",
+            "本轮结果：%s；游戏反馈：暴击=%d 普通命中=%d 未命中=%d FAIL=%d；按键尝试=%d，其中归属未确认=%d；原因=%s",
             labels[self.result.status],
             counts["critical"],
             counts["hit"],
             counts["miss"],
+            counts["fail"],
             len(attempts),
             unknown,
             self.result.reason,
@@ -433,8 +418,10 @@ class CatchObserver:
         )
         if unknown:
             summary += f" · {unknown} 次按键反馈未确认"
+        if counts["fail"]:
+            summary += f" · {counts['fail']} 次 FAIL 原因待确认"
         if self.result.status in ("unknown", "suspected_escape"):
-            self.log.warning("%s；请结合异常截图检查。", summary)
+            self.log.warning("%s；QTE 命中问题请查看按键前后截图，页面异常见恢复记录。", summary)
         else:
             self.log.info("%s", summary)
         if self.result.status == "caught":
@@ -480,38 +467,52 @@ def confirm_ready_for_next_cast(config, region):
         raise
 
 
-def run_observed_qte(strategy, capture):
-    """覆盖正常、超时、异常和停止路径；最终按键归因完成后再保存整轮证据。"""
-    reason = "returned"
+def _play_and_cleanup(strategy, capture):
+    """先完成输入清理，清理失败不得被轮次恢复吞掉。"""
     primary_error = None
     try:
         return strategy.play_qte(capture)
-    except QTEControlTimeout as exc:
-        primary_error = exc
-        reason = "control_timeout"
-        raise
-    except run_control.RunStopped as exc:
-        primary_error = exc
-        reason = "interrupted"
-        raise
     except BaseException as exc:
         primary_error = exc
-        reason = f"exception:{type(exc).__name__}"
         raise
     finally:
-        observer = getattr(strategy, "catch_observer", None)
         try:
             strategy._stop_feedback()
         except Exception as exc:
+            strategy._qte_cleanup_failed = True
             log.exception("QTE 反馈收尾失败；仍封存整轮证据")
             if primary_error is None:
-                reason = f"exception:{type(exc).__name__}"
                 raise
             primary_error.add_note(f"QTE 收尾重试失败：{type(exc).__name__}: {exc}")
-        finally:
-            if observer is not None:
-                try:
-                    observer.finalize(reason)
-                    observer.wait_for_evidence()
-                except Exception:
-                    log.exception("整条鱼记录收尾失败；保留原流程的停止或异常信号")
+
+
+def run_observed_qte(strategy, capture):
+    """先清理、再恢复、最后封存证据；恢复成功也保留原异常分类。"""
+    reason = "returned"
+    observer = getattr(strategy, "catch_observer", None)
+    strategy._qte_cleanup_failed = False
+    try:
+        try:
+            return _play_and_cleanup(strategy, capture)
+        except (QTEControlTimeout, RoundObservationError) as exc:
+            reason = (
+                "control_timeout" if isinstance(exc, QTEControlTimeout) else "round_unconfirmed"
+            )
+            if observer is not None and not strategy._qte_cleanup_failed:
+                if recover_round(strategy, observer, exc):
+                    return observer.evidence_metadata["round_recovery"].get("next_state")
+            raise
+    except run_control.RunStopped:
+        reason = "interrupted"
+        raise
+    except BaseException as exc:
+        if reason == "returned":
+            reason = f"exception:{type(exc).__name__}"
+        raise
+    finally:
+        if observer is not None:
+            try:
+                observer.finalize(reason)
+                observer.wait_for_evidence()
+            except Exception:
+                log.exception("整条鱼记录收尾失败；保留原流程的停止或异常信号")

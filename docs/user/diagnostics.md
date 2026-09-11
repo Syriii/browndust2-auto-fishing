@@ -1,10 +1,25 @@
 # 运行记录与维护取证
 
+2026-09-11 新源码补充：游戏 `FAIL` 与明确的 `MISS` 分开显示。FAIL 可能来自机制或到期，
+单独保留截图和候选按键，不直接计作某次按键失败；原按键仍等待后续 HIT/MISS，超时则记未确认。
+诊断类别 `unattributed_fail` 表示 FAIL 原因待确认，`fail_without_input_result` 表示等待期间只见 FAIL。
+这些变化不修改旧 EXE 的记录，也不能把新旧 MISS 数量直接比较成命中率提升。
+
+`yellow_obscured_rejected.png` 是每轮第一张“遮挡旁黄色残片不足以放行按键”的控制帧，
+与零星像素过滤的 `yellow_sparse_rejected.png` 分开。仍复用现有帧并后台保存。
+导航动作中的 `click_point` 为实际屏幕落点，`reference_bounds` 为采用的规范化按钮范围。
+
 [文档目录](../README.md) · [实测工具](../development/tools.md) · [机制参考](../reference/fishing-mechanics.md)
 
 失败、未确认结果和异常现场是正常运行能力，不需要调试模式。“逐帧诊断写入文件”仅控制额外逐帧文本，不控制截图与结算观察。旧配置里的 enabled=false、qte_feedback_enabled=false 和 interval_seconds 不再关闭必要取证；个人配置的其他选项和注释保留。
 
 本文对应 v0.2.0 及当前源码。旧 EXE 不会自动随源码变化，旧记录仍可能位于 debug/ 或 diagnostics/，也可能缺少新版字段。更新与保留规则见[便携更新](updating.md)。
+
+## QTE 命中失败与整条鱼结果
+
+维护 QTE 命中问题时，优先打开 `qte_feedback/` 中的按键前决策图 `decision.png` 和 `frame_*.png` 连续观察帧，通过 `round_id`、`outcome.attempt` 关联日志。即使最终捕获成功，中间的按键未命中也保存；无对应按键的 FAIL 与按键反馈未确认单列，后者不能直接当作 MISS。
+
+`catch_result/` 是整轮结果/恢复上下文，不能用已经返回待机的全屏图解释此前为何 QTE 未命中。0.3.0 之后的源码省略普通未确认后返回待机的这类空场景图，保留账本、QTE 末帧和机制图。游戏错误弹窗、恢复失败和奖励 OCR 漏记仍保存整屏现场，以便维护页面恢复能力；此调整尚未打包。新版 QTE 包增加 `evidence_kind`，旧包可按 outcome 读取相同含义。
 
 ## 遇到问题先做什么
 
@@ -35,6 +50,7 @@
 
 ```text
 screenshots/               发布版；源码仍为 .local/diagnostics
+├── startup/                启动弹窗处理、页面未确认和启动中断，不计入鱼获
 ├── incidents/              任务异常、恢复前现场和带原因的停止记录
 ├── hook_timeouts/          上钩超时原图、掩膜和检测参数
 ├── qte_feedback/           MISS/FAIL、按键归属未确认的前后帧
@@ -48,6 +64,10 @@ screenshots/               发布版；源码仍为 .local/diagnostics
 ```
 
 显式源码录制工具另在 `.local/diagnostics/` 生成 `qte_live_时间戳/`，普通 EXE 运行不会自行启动该工具。
+
+`startup/` 为尚未打包的源码新增目录，保存 `startup.samples` 页面判断与匹配依据、首末帧和各弹窗点击前的画面。
+它不包含鱼获 `result`，不应与失败鱼数相加；数量沿用 `diagnostics.failure_max_events`，由后台证据写入器轮转清理。
+从已有 QTE 接续的鱼获包带 `resumed_qte=true`，其中反馈统计仅涵盖接管之后。
 
 每份 ZIP 使用时间和唯一标识命名，内含图片及 metadata.json。按 round_id 关联日志，按 evidence_id 确认具体证据。运行图片不会写进源码、识别模板或测试样本目录；有回归价值的样本经整理后另存入 tests/fixtures/。
 
@@ -80,7 +100,7 @@ screenshots/               发布版；源码仍为 .local/diagnostics
 | 满包 | 清包或停止前的现场及自动清包设置 |
 | 换岛确认超时 | 当前游戏画面和错误原因；停止本次任务，不继续抛竿 |
 | QTE 未命中或归属未确认 | 按键前后、反馈发生时的 ROI，以及可用的控制决策原图 |
-| 整轮 QTE 控制达到时间上限 | 只读核对倒计时/结算现场，记录 `control_timeout`，停止任务；不自动关闭面板、补按或进入下一轮 |
+| 整轮 QTE 控制达到时间上限 | 记录 `control_timeout`；当前源码在释放输入后检查恢复条件，待机确认后续钓；v0.2.0 仍停止 |
 | QTE 特殊外观候选 | 多光标、目标存在但亮光标缺失、蓝黄区异常、红/紫/绿色内容的前后观察帧；无按键或最终成功也保存 |
 | 每轮 QTE | 有上限的低频时间线，供回看尚未识别的机制；不是连续录像 |
 | 整轮未确认、疑似逃脱 | 结算图、计时器/QTE 缓存帧、OCR 依据、逐次反馈与退出原因 |
@@ -110,11 +130,21 @@ CRITICAL 为暴击，HIT 为普通命中，MISS/FAIL 为未命中；按键归属
 这些数据来自实际观察过程，旧包不具备这些字段；不能从旧包筛选后的八帧伪造实时采集统计。
 整轮超时的 `control_timeout` 保存只读检查状态、原图采集时间/区域、上限及检查错误（若有）；
 `timeout_control.png` 为该次 DXcam 原始控制区，结算检查若执行，另存不同来源/时刻的 `settlement.png`。
-任务会停止并释放输入，即使看到了结算面板也不自动关闭；请确认页面后再开始。
+当前源码释放 QTE 输入后检查恢复条件，按类型关闭新确认的结算弹窗，确认待机后续钓。
+升级标题和属性标签与底部关闭提示共同确认 LEVEL UP；鱼获与升级各有一次关闭额度。
+`closed_panel_kinds` 和 `panel_close_history` 保存已操作类型、时间和匹配依据；
+`panel_before_result.png` / `panel_before_level_up.png` 保留各自关闭前原图。升级不是新鱼获，不增加捕获统计。
+这些升级弹窗字段属于 0.2.1 之后的源码修复，尚未打包；0.2.1 仍使用同轮一次关闭限制。
+`round_recovery` 记录原异常类型、堆栈、恢复检查状态、时间和失败原因；
+状态 `resumed` 只表示页面允许续钓，不表示本轮捕获成功。
+待机要求鱼钩按钮与方向键；水花按钮与 SPACE、无方向键且无活动计时条属于等待咬钩，不能授权重抛。异常恢复时 `round_recovery.next_state=waiting` 表示交给主循环接续等鱼，相关鱼获标记 `resumed_waiting=true`。
+等待接续超时或无法识别的证据在 `startup/`，原 QTE 故障包仍保留；此修正尚未打包，旧 0.2.1 对水花布局的分类不可靠。
+`failure_settlement.png` / `failure_resume_latest.png` 保留恢复前已有原图，后续检查不会覆盖故障现场。
+清理失败、未知页面未恢复或达到续钓上限仍停止。v0.2.0 的旧记录没有恢复字段，仍执行超时停止规则。
 
 正常 QTE 结束后的结算检查在完整 `fish_end_wait_time` 预算内复查面板或待机控件，设置范围 0–30 秒、最多检查 151 次，
 每次检查响应停止和窗口保护；OCR 耗时另计。首次即就绪时不增加轮询等待，等待时间计入原结算等待。
-面板与待机页均未确认时停止；已确认待机页可按续钓次数上限继续，unknown 不改写。
+面板与待机页均未确认时进入额外恢复观察；仍未确认则停止。已确认待机页可按续钓次数上限继续，unknown 不改写。
 动作前、关闭后和下一次抛竿前复核页面，`resume_first.png`、`resume_latest.png`、`resume_check`
 及 `resume_confirmed` 记录相应证据；旧版本包不具备这些字段。
 `settlement_first.png` 与 `settlement.png` 分别保留首个有效帧和最终有效帧，
@@ -175,3 +205,8 @@ auto_fishing.log 保留项目 DEBUG 及以上和 RapidOCR 原始警告。主日�
 QTE 汇总记录采样、挡板变化与输入次数；逐帧额外文本由 qte_detail_log=true 开启。每轮从抛竿分配轮次 ID，恢复重抛沿用原轮次；“已发送按键”不等于机制已解除或成功捕获。
 
 scripts/live/record_qte_session.py --seconds 45 --feedback --no-full-frames 会实际控制游戏，用于显式授权的限时采样。--probe-outcomes 会刻意尝试不同输入区域，--probe-escape 会不发送 QTE 按键以采集逃脱样本，均不是正常运行模式。完整选项与影响范围见[工具说明](../development/tools.md)。
+
+
+## 稀疏黄色被拒绝的取证（0.3.0 之后源码，尚未打包）
+
+当普通黄色残色不足最低原始像素支持时，新源码拒绝把它膨胀为目标，计入 `yellow_source_rejected` 控制统计。每轮最多保留一张 `yellow_sparse_rejected.png` 小控制 ROI，与同轮 QTE 图关联；这不是一次已发送的按键或游戏失败。后续实际输入元数据提供 `yellow_source_pixels` 和 `yellow_source_min_pixels`，用于区分颜色证据不足与没有按到。

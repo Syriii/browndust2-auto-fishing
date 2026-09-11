@@ -87,6 +87,13 @@ class EvidenceWriter:
                 k: dict(lower=v.lower.tolist(), upper=v.upper.tolist()) for k, v in ranges.items()
             },
             decision_frame_available=decision_frame is not None,
+            evidence_kind=(
+                "unassigned_fail"
+                if outcome.attempt is None
+                else "input_miss"
+                if outcome.result == "miss"
+                else "input_unconfirmed"
+            ),
             note="仅 QTE 结果证据；frame_* 是独立观察帧，decision.png（若有）是该次按键的控制决策原图。各自掩膜与原图同帧，原始颜色掩膜不含策略膨胀。不含真假指针判定，不是整条鱼捕获结果。",
         )
         with evidence_archive(path, self.max_events) as archive:

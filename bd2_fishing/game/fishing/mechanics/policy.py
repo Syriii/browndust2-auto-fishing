@@ -10,6 +10,7 @@ from bd2_fishing.game.fishing.mechanics.blue_target import BlueTarget
 from bd2_fishing.game.fishing.mechanics.bubbles import BubbleController
 from bd2_fishing.game.fishing.mechanics.green_control import GreenHoldController
 from bd2_fishing.game.fishing.mechanics.regions import MechanismRegions
+from bd2_fishing.game.fishing.mechanics.yellow_aim import YellowAim
 from bd2_fishing.game.fishing.trigger_rules import TargetEntryTrigger
 
 
@@ -27,25 +28,33 @@ class TargetPolicy:
     def __init__(self):
         self.trigger = TargetEntryTrigger()
         self.blue_confirmations = 0
+        self.yellow_aim = YellowAim()
 
     def invalidate(self):
         # 无图、无光标、遮挡或专用动作不证明离开普通目标。
         self.blue_confirmations = 0
+        self.yellow_aim.reset()
 
     def suspend_for_green(self):
         self.invalidate()
         self.trigger.armed, self.trigger.target = True, None
 
     def observe(
-        self, *, yellow_present, yellow_overlap=None, blue: BlueTarget | None = None, blocked=False
+        self,
+        *,
+        yellow_present,
+        yellow_overlap=None,
+        blue: BlueTarget | None = None,
+        blocked=False,
     ):
         if blocked:
             self.invalidate()
             return None
         if yellow_present:
-            self.invalidate()
+            self.blue_confirmations = 0
             target, overlap = "yellow", yellow_overlap
         else:
+            self.yellow_aim.reset()
             self.blue_confirmations = (
                 min(2, self.blue_confirmations + 1) if blue is not None and blue.safe_spans else 0
             )

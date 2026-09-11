@@ -97,3 +97,23 @@
 包检查要求候选目录同级存在 `BD2_AutoFishing-windows.zip` 及同名 `.zip.sha256`，并验证目录与 ZIP 的清单一致。真实助手只更新隔离目录中的测试 EXE，临时目录位于 `.local/maintenance/`，报告位置由 `--report` 指定。
 
 工具不代替公开下载验收：正式发布后仍需检查 Release 附件、版本查询与实际下载，见[发布步骤](releasing.md#github-构建)。
+
+## 仅验证航海导航
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 -B scripts/live/record_qte_session.py --seconds 90 --location 亚特兰蒂斯 --navigation-only --no-full-frames
+```
+
+此模式使用源码，从码头、地图、换岛确认或已确认待机的钓场进入目标岛屿，到达后立即停止，不抛竿。
+钓场内通过本帧“更改”进入地图；按配置核对并确认普通换岛，不点击船锚或购买许可证。
+不能与故意命中/脱钩探针参数组合。正常模式仍会钓鱼。
+导航读数、动作和截图保存在 `.local/diagnostics/navigation/`；窗口变化和失焦照常停止。
+
+### 验证自动换点往返
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 -B scripts/live/record_qte_session.py --seconds 180 --location 亚特兰蒂斯 --refresh-island-only --no-full-frames
+```
+
+使用正式 `game/islands/travel.py` 的中转、返回路径，回到原钓场即停止，不抛竿。
+仅此模式允许 180 秒测试上限；两段导航各自最多 75 秒。单程 `--navigation-only` 和普通钓鱼仍最多 90 秒，模式之间及 QTE 探针互斥。测试不修改个人配置中的自动换点开关。

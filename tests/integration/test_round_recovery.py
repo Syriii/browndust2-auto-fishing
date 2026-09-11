@@ -25,10 +25,13 @@ class RoundRecoveryTests(unittest.TestCase):
         with (
             patch("bd2_fishing.app.fishing_task.window.WindowGuard"),
             patch.object(control, "sleep"),
+            patch("bd2_fishing.game.fishing.startup.prepare_start", return_value="idle"),
             patch.object(settlement, "CatchObserver"),
             patch.object(settlement, "run_observed_qte") as qte,
             patch.object(
-                settlement, "confirm_ready_for_next_cast", side_effect=TimeoutError("changed")
+                settlement,
+                "confirm_ready_for_next_cast",
+                side_effect=[None, TimeoutError("changed")],
             ) as check,
             patch.object(actions, "cast_rod") as cast,
         ):
@@ -36,7 +39,7 @@ class RoundRecoveryTests(unittest.TestCase):
                 bot.run()
         cast.assert_called_once()
         qte.assert_called_once()
-        check.assert_called_once()
+        self.assertEqual(check.call_count, 2)
 
     def test_resume_evidence_failure_preserves_original_stop(self):
         observer = Mock()

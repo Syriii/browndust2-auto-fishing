@@ -1,0 +1,147 @@
+{
+  "recorded_on": "2026-09-11",
+  "source": "用户在本次会话先后提供的七张截图及说明",
+  "status": "offline_regression_and_runtime_navigation_implemented",
+  "license_purchase": "用户已完成的不可逆操作；本次未操作游戏；样本05须保留",
+  "samples": [
+    {
+      "file": "01_loading.png",
+      "source_file": "codex-clipboard-cf4583de-fa8b-4821-8792-77b03505f65a.png",
+      "sha256": "70459c6efbd3642b448fb4df4f02399383fa17d2354457bada0ab9ed39496748",
+      "width": 947,
+      "height": 564,
+      "page_label": "loading",
+      "user_annotation": "加载过场，右下角显示进度",
+      "raw_unchanged": true,
+      "capture_scope": "window_including_title_bar",
+      "client_crop": [
+        1,
+        31,
+        946,
+        563
+      ]
+    },
+    {
+      "file": "02_dock.png",
+      "source_file": "codex-clipboard-1bc562f8-5c7d-4f52-bfb6-d5ffb920060e.png",
+      "sha256": "97b134e5b1dac4c47e3f4acf9449e958281bdb63e99f4a2d889e59ced3624645",
+      "width": 947,
+      "height": 564,
+      "page_label": "dock",
+      "user_annotation": "码头；开始钓鱼进入地图选择",
+      "raw_unchanged": true,
+      "capture_scope": "window_including_title_bar",
+      "client_crop": [
+        1,
+        31,
+        946,
+        563
+      ]
+    },
+    {
+      "file": "03_map_yanbo.png",
+      "source_file": "codex-clipboard-6265a0e6-137c-4fc1-8196-1e17651fcabb.png",
+      "sha256": "1b561cc0c32c36a2fdca253d11edfadd70d0baf7b02382f03b429d89d9362461",
+      "width": 947,
+      "height": 564,
+      "page_label": "map_selection",
+      "user_annotation": "选中烟波湖；启航按钮",
+      "raw_unchanged": true,
+      "capture_scope": "window_including_title_bar",
+      "client_crop": [
+        1,
+        31,
+        946,
+        563
+      ]
+    },
+    {
+      "file": "04_map_shallow_panned.png",
+      "source_file": "codex-clipboard-203ea66e-5d8e-4861-b632-6ee80cdfe924.png",
+      "sha256": "f1c4741469ca119e85297259cdbd04c681778bd741c0a5342b8ca1db1155e578",
+      "width": 947,
+      "height": 564,
+      "page_label": "map_selection",
+      "user_annotation": "拖动后的地图；选中浅岸，左侧显示天空岛锁图标",
+      "raw_unchanged": true,
+      "capture_scope": "window_including_title_bar",
+      "client_crop": [
+        1,
+        31,
+        946,
+        563
+      ]
+    },
+    {
+      "file": "05_sky_before_license.png",
+      "source_file": "codex-clipboard-fbf572d8-0bc8-45c4-b4a2-287980d986aa.png",
+      "sha256": "d122936312633f1d2db3df7856c013d0b003bca50f3abe3ce6d82e1d56e00e84",
+      "width": 947,
+      "height": 564,
+      "page_label": "map_selection",
+      "user_annotation": "天空岛购买许可证前；未解锁，推荐等级31红色，购买进入许可证20000",
+      "raw_unchanged": true,
+      "capture_scope": "window_including_title_bar",
+      "client_crop": [
+        1,
+        31,
+        946,
+        563
+      ]
+    },
+    {
+      "file": "06_sky_after_license.png",
+      "source_file": "codex-clipboard-88d88dfb-1bd3-43e9-95de-52d75600243a.png",
+      "sha256": "91472c14252dc8fc40469e277f2e7bd44da54c4369a5b21e42df15a683dcb622",
+      "width": 947,
+      "height": 564,
+      "page_label": "map_selection",
+      "user_annotation": "用户购买许可证后；天空岛，推荐等级31仍红色，按钮变为启航",
+      "raw_unchanged": true,
+      "capture_scope": "window_including_title_bar",
+      "client_crop": [
+        1,
+        31,
+        946,
+        563
+      ]
+    },
+    {
+      "file": "07_atlantis_fish_unlocks.png",
+      "source_file": "codex-clipboard-bca8aeef-608e-4361-8596-1732002d39e5.png",
+      "sha256": "fd64d3829c856764fe0c292d9875ddc5c911599e4d2da96e344e2f1f2fe3d6e9",
+      "width": 947,
+      "height": 564,
+      "page_label": "map_selection",
+      "user_annotation": "选中亚特兰蒂斯；黑色剪影表示未解锁的鱼，彩色图标表示已解锁的鱼",
+      "raw_unchanged": true,
+      "capture_scope": "window_including_title_bar",
+      "client_crop": [
+        1,
+        31,
+        946,
+        563
+      ],
+      "fish_unlock_reference": {
+        "row_count": 3,
+        "column_count": 5,
+        "index_base": 1,
+        "order": "row_major",
+        "locked_cells": [
+          [
+            3,
+            4
+          ],
+          [
+            3,
+            5
+          ]
+        ],
+        "unlocked_count": 13,
+        "locked_count": 2,
+        "annotation_basis": "用户解释解锁含义；格位和数量由截图人工核对，并非程序识别结果"
+      }
+    }
+  ],
+  "client_crop_convention": "left,top,right,bottom; half-open; original images unchanged"
+}

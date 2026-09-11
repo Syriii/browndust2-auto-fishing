@@ -14,6 +14,7 @@ from bd2_fishing.game.constants import GAME_TITLE
 from bd2_fishing.game.fishing import actions as fishing_actions
 from bd2_fishing.game.fishing import cast_feedback as cast_feedback
 from bd2_fishing.game.fishing import qte as strategy
+from bd2_fishing.game.fishing.hook import BITE_PIXEL_THRESHOLD, BITE_TIMEOUT_SECONDS
 from bd2_fishing.game.fishing.hook_diagnostics import HookDiagnostics
 from bd2_fishing.game.inventory import actions as inventory_actions
 from bd2_fishing.game.islands import reading as island_reading
@@ -32,12 +33,6 @@ from bd2_fishing.runtime.context import get_logger
 from bd2_fishing.runtime.geometry import Rect
 
 log = get_logger(__name__)
-
-
-BITE_PIXEL_THRESHOLD = 220
-
-
-BITE_TIMEOUT_SECONDS = 15
 
 
 DEFAULT_LOOP_SLEEP_SECONDS = 0.01
@@ -145,7 +140,7 @@ class FishingBot:
             incidents.report(event, location=str(self.selected_location_name), **details)
         return frame
 
-    def wait_for_bite(self, sct: DxCameraCapture) -> None:
+    def wait_for_bite(self, sct: DxCameraCapture) -> str:
         """轮询感叹号区域，检测到足够多黄色像素后按空格进入 QTE。"""
         run_control.set_status("等待上钩")
         log.info("等待鱼上钩")
@@ -178,9 +173,11 @@ class FishingBot:
                     context_frame=timeout_frame,
                 )
                 run_control.set_status("恢复钓鱼状态")
-                fishing_actions.recover_from_timeout(self.region)
+                recovered = self._recover_bite_timeout()
+                if recovered:
+                    return recovered
                 run_control.set_status("等待上钩")
-                # 恢复包含移动、点击和重新抛竿；下一窗口从动作完成后开始。
+                # 仅在重新确认待机后重抛；下一等待窗口从动作完成后开始。
                 wait_start_time = time.monotonic()
                 max_yellow_pixel = 0
                 self.hook_diagnostics.reset()
@@ -256,7 +253,7 @@ class FishingBot:
                     extra={"user_message": "鱼上钩了，准备 QTE。"},
                 )
                 pydirectinput.press("space")
-                return
+                return "hooked"
             self._sleep_loop()
 
     def choose_strategy(self, sct: DxCameraCapture) -> strategy.BaseQTEStrategy:
@@ -318,28 +315,26 @@ class FishingBot:
             qte_strategy = self.choose_strategy(sct)
             log.debug("使用策略: %s", type(qte_strategy).__name__)
             run_control.sleep(self.begin_fish_wait_time)
+            from bd2_fishing.game.fishing.startup import prepare_start
+
+            entry = prepare_start(self.config, self.region)
             completed_rounds = 0
             while True:
                 run_control.checkpoint()
-                if self.should_change_location(sct):
-                    try:
-                        island_travel.change_location(
-                            sct, self.ocr_context, self.selected_location_name
-                        )
-                    except island_travel.LocationChangeFailed:
-                        self._record_incident(sct, "location_change_failed")
-                        raise
-
                 from bd2_fishing.runtime.context import fishing_round
 
                 with fishing_round():
                     log.info("第 %d 轮 · 开始钓鱼", completed_rounds + 1)
-                    if completed_rounds:
-                        from bd2_fishing.game.fishing.settlement import confirm_ready_for_next_cast
+                    resumed_waiting = entry == "waiting"
+                    if resumed_waiting:
+                        from bd2_fishing.game.fishing.startup import resume_waiting_for_bite
 
-                        confirm_ready_for_next_cast(self.config, self.region)
-                    fishing_actions.cast_rod()
-                    self.wait_for_bite(sct)
+                        entry = resume_waiting_for_bite(self.config, self.region)
+                    resume_qte = entry == "qte"
+                    if entry == "idle":
+                        self._prepare_cast(sct)
+                        fishing_actions.cast_rod()
+                        resume_qte = self.wait_for_bite(sct) == "qte"
                     qte_strategy.catch_observer = None
                     if qte_strategy.feedback_enabled:
                         try:
@@ -348,14 +343,56 @@ class FishingBot:
                             qte_strategy.catch_observer = CatchObserver(
                                 self.ocr_context.engine, self.config, self.region
                             )
+                            qte_strategy.catch_observer.current_location = (
+                                self.selected_location_name
+                            )
+                            if resume_qte:
+                                qte_strategy.catch_observer.evidence_metadata["resumed_qte"] = True
+                            if resumed_waiting:
+                                qte_strategy.catch_observer.evidence_metadata["resumed_waiting"] = (
+                                    True
+                                )
                         except Exception:
                             log.exception("整条鱼结算观察初始化失败；继续原钓鱼流程")
                     from bd2_fishing.game.fishing.settlement import run_observed_qte
 
-                    run_observed_qte(qte_strategy, sct)
+                    next_entry = run_observed_qte(qte_strategy, sct)
+                    entry = "waiting" if next_entry == "waiting" else "idle"
                     completed_rounds += 1
                     run_control.set_status("等待下一轮")
                     catch_observer = getattr(qte_strategy, "catch_observer", None)
                     if catch_observer is None:
                         log.info("本轮 QTE 流程已退出，等待下一轮；捕获结果尚未核实")
-                    run_control.sleep(self.round_end_wait_time)
+                    if entry != "waiting":
+                        run_control.sleep(self.round_end_wait_time)
+
+    def _prepare_cast(self, sct):
+        """首次抛竿和换点前也须确认待机，换点后再次核对。"""
+        from bd2_fishing.game.fishing.settlement import confirm_ready_for_next_cast
+
+        confirm_ready_for_next_cast(self.config, self.region)
+
+        if not self.should_change_location(sct):
+            return
+        try:
+            island_travel.change_location(
+                self.config, self.region, self.ocr_context, self.selected_location_name
+            )
+        except island_travel.LocationChangeFailed:
+            self._record_incident(sct, "location_change_failed")
+            raise
+        confirm_ready_for_next_cast(self.config, self.region)
+
+    def _recover_bite_timeout(self):
+        """普通等待超时也按页面分流，未知状态不再移动或重抛。"""
+        from bd2_fishing.game.fishing.settlement import confirm_ready_for_next_cast
+        from bd2_fishing.game.fishing.startup import prepare_start, resume_waiting_for_bite
+
+        entry = prepare_start(self.config, self.region)
+        if entry == "waiting":
+            entry = resume_waiting_for_bite(self.config, self.region)
+        if entry in {"hooked", "qte"}:
+            return entry
+        confirm_ready_for_next_cast(self.config, self.region)
+        fishing_actions.cast_rod()
+        return False
