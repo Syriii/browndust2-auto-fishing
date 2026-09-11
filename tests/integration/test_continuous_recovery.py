@@ -12,6 +12,7 @@ from bd2_fishing.game.fishing import qte, recovery
 from bd2_fishing.game.fishing.scene import FishingSceneReader
 from bd2_fishing.game.fishing.settlement_rules import CatchResult
 from bd2_fishing.game.fishing.tracing import QTEControlTimeout
+from bd2_fishing.game.navigation import reentry
 from bd2_fishing.infrastructure.settings import DEFAULT_CONFIG_CONTENT
 from bd2_fishing.runtime import control
 from bd2_fishing.runtime.geometry import Rect
@@ -28,6 +29,9 @@ class ContinuousRecoveryTests(unittest.TestCase):
         patch.object(control, "sleep", side_effect=self.sleep).start()
         patch.object(recovery.time, "monotonic", side_effect=lambda: self.clock).start()
         self.inputs = patch.object(recovery, "game_input").start()
+        self.reenter = patch.object(
+            reentry, "reenter_fishing", side_effect=reentry.NavigationFailed("unrecognized")
+        ).start()
 
     def sleep(self, seconds):
         self.clock += seconds
@@ -54,6 +58,66 @@ class ContinuousRecoveryTests(unittest.TestCase):
         self.assertEqual(strategy._unconfirmed_rounds, 501)
         self.assertEqual(observer.evidence_metadata["round_recovery"]["next_state"], "waiting")
         self.assertEqual(self.inputs.mock_calls, [])
+
+    def test_stalled_fishing_escalates_to_reentry(self):
+        self.reenter.side_effect = None
+        observer = Mock(evidence_metadata={}, evidence_frames={}, result=CatchResult())
+        strategy = SimpleNamespace(_feedback_config=self.config)
+        self.assertTrue(
+            recovery.recover_round(strategy, observer, recovery.FishingStalled("stuck"))
+        )
+        self.reenter.assert_called_once_with(observer)
+        observer.inspect_current_page.assert_not_called()
+        self.assertEqual(observer.evidence_metadata["round_recovery"]["next_state"], "idle")
+
+    def test_failed_reentry_keeps_waiting_and_retries_after_cooldown(self):
+        self.reenter.side_effect = [reentry.NavigationFailed("transition"), None]
+        observer = Mock(
+            evidence_metadata={},
+            evidence_frames={},
+            result=CatchResult(),
+            inspect_current_page=Mock(return_value="unrecognized"),
+        )
+        strategy = SimpleNamespace(_feedback_config=self.config)
+        self.assertTrue(
+            recovery.recover_round(strategy, observer, recovery.FishingStalled("stuck"))
+        )
+        attempts = observer.evidence_metadata["round_recovery"]["reentry_attempts"]
+        self.assertEqual([x["status"] for x in attempts], ["pending", "resumed"])
+        self.assertGreaterEqual(attempts[1]["started_at"] - attempts[0]["started_at"], 30)
+
+    def test_stop_during_reentry_is_not_swallowed(self):
+        self.reenter.side_effect = control.RunStopped("manual")
+        observer = Mock(evidence_metadata={}, evidence_frames={}, result=CatchResult())
+        with self.assertRaises(control.RunStopped):
+            recovery.recover_round(
+                SimpleNamespace(_feedback_config=self.config),
+                observer,
+                recovery.FishingStalled("stuck"),
+            )
+        self.reenter.assert_called_once()
+
+    def test_partially_closed_bug_must_finish_reentry_even_if_idle_looks_normal(self):
+        observer = Mock(
+            evidence_metadata={},
+            evidence_frames={},
+            result=CatchResult(),
+            inspect_current_page=Mock(return_value="idle"),
+        )
+
+        def first_attempt(value):
+            value.evidence_metadata["stamina_reentry"] = {"actions": [{"action": "close_150402"}]}
+            self.reenter.side_effect = None
+            raise reentry.NavigationFailed("closed but not returned")
+
+        self.reenter.side_effect = first_attempt
+        strategy = SimpleNamespace(_feedback_config=self.config)
+        self.assertTrue(
+            recovery.recover_round(strategy, observer, recovery.FishingStalled("stuck"))
+        )
+        self.assertEqual(self.reenter.call_count, 2)
+        observer.wait_until_idle.assert_not_called()
+        self.assertGreaterEqual(self.clock, 30)
 
     def test_unknown_page_waits_past_budget_without_clicking_and_keeps_bounded_samples(self):
         observer = Mock(

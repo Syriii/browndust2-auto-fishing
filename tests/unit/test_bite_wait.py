@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 
 from bd2_fishing.game.fishing.cast_feedback import CastPositionBlocked
-from bd2_fishing.game.fishing.recovery import RoundObservationError
+from bd2_fishing.game.fishing.recovery import FishingStalled, RoundObservationError
 from bd2_fishing.runtime import control as run_control
 from tests.support import ROOT
 
@@ -39,6 +39,7 @@ class BiteWaitTests(unittest.TestCase):
         )
         self.namespace = {
             "RoundObservationError": RoundObservationError,
+            "FishingStalled": FishingStalled,
             "time": SimpleNamespace(monotonic=lambda: self.now),
             "BITE_TIMEOUT_SECONDS": 15,
             "log": Mock(),

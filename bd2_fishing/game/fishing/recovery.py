@@ -15,6 +15,10 @@ class RoundObservationError(TimeoutError):
     """本轮未能确认页面或结果，可在释放输入后重新检查是否具备续钓条件。"""
 
 
+class FishingStalled(RoundObservationError):
+    """长时间等不到咬钩或调整位置仍失败，尝试退出重进当前钓场。"""
+
+
 def record_unconfirmed_round(strategy, observer):
     """只记录未确认次数；能否续钓由当前页面决定，不按鱼获统计中止任务。"""
     if observer.evidence_metadata.get("unconfirmed_counted") is not True:
@@ -100,7 +104,10 @@ def recover_round(strategy, observer, error):
     control.set_status("本轮异常，等待页面恢复")
     try:
         record_unconfirmed_round(strategy, observer)
-        _wait_for_recovery(strategy, observer, details)
+        if isinstance(error, FishingStalled) and _try_reentry(observer, details):
+            details["next_state"] = "idle"
+        else:
+            _wait_for_recovery(strategy, observer, details)
     except control.RunStopped:
         details["status"] = "interrupted"
         raise
@@ -121,6 +128,30 @@ def recover_round(strategy, observer, error):
     return True
 
 
+def _try_reentry(observer, details, *, stamina=False):
+    from bd2_fishing.game.navigation.reentry import reenter_after_stamina_error, reenter_fishing
+    from bd2_fishing.game.navigation.voyage import NavigationFailed
+
+    attempt = dict(started_at=time.monotonic(), mode="150402" if stamina else "general")
+    attempts = details.setdefault("reentry_attempts", [])
+    attempts.append(attempt)
+    del attempts[:-10]
+    try:
+        (reenter_after_stamina_error if stamina else reenter_fishing)(observer)
+    except (NavigationFailed, RoundObservationError) as exc:
+        attempt.update(status="pending", error=str(exc))
+        if observer.evidence_metadata.get("stamina_reentry", {}).get("actions"):
+            details["reentry_pending"] = True
+        log.warning("退出重进尚未完成，继续观察当前页面后再接续：%s", exc)
+        return False
+    else:
+        attempt["status"] = "resumed"
+        details["reentry_pending"] = False
+        return True
+    finally:
+        details["next_reentry_at"] = time.monotonic() + 30
+
+
 def _wait_for_recovery(strategy, observer, details):
     budget = max(
         1.0, bounded_float(strategy._feedback_config, "recovery", "page_wait_seconds", 10, 0, 60)
@@ -137,12 +168,11 @@ def _wait_for_recovery(strategy, observer, details):
         details["observations"] = details.get("observations", 0) + 1
         del details["samples"][:-300]
         if page == "blocked_dialog" and _panel_kind(observer) == "stamina_error":
-            from bd2_fishing.game.navigation.reentry import reenter_after_stamina_error
-
-            reenter_after_stamina_error(observer)
-            details["next_state"] = "idle"
-            return
-        if page in {"waiting", "qte"}:
+            if stamp >= details.get("next_reentry_at", 0):
+                if _try_reentry(observer, details, stamina=True):
+                    details["next_state"] = "idle"
+                    return
+        if page == "qte" or (page == "waiting" and not details.get("reentry_pending")):
             ready_since = stamp if page != previous_page else ready_since
             delay = 0.049 if page == "qte" else 0.19
             if ready_since is not None and stamp - ready_since >= delay:
@@ -155,13 +185,17 @@ def _wait_for_recovery(strategy, observer, details):
             if page == "panel" and _can_close_panel(observer):
                 close_confirmed_panel(strategy, observer)
                 return
-            if page == "idle":
+            if page == "idle" and not details.get("reentry_pending"):
                 observer.wait_until_idle()
                 return
         except RoundObservationError as exc:
             # 转场或已发送的关闭尚未生效，继续观察；不重复关闭同一弹窗。
             details["last_transition_error"] = str(exc)
         if stamp >= deadline:
+            if stamp >= details.get("next_reentry_at", 0):
+                if _try_reentry(observer, details):
+                    details["next_state"] = "idle"
+                    return
             details["pending_windows"] = details.get("pending_windows", 0) + 1
             log.warning("页面暂未恢复，任务仍在等待；识别到可继续的页面后自动接续。")
             control.set_status("等待页面恢复，任务未停止")

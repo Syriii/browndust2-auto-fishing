@@ -6,7 +6,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from bd2_fishing.game.fishing.hook import BITE_TIMEOUT_SECONDS, HookReader
-from bd2_fishing.game.fishing.recovery import RoundObservationError, close_confirmed_panel
+from bd2_fishing.game.fishing.recovery import (
+    FishingStalled,
+    RoundObservationError,
+    close_confirmed_panel,
+)
 from bd2_fishing.game.fishing.settlement import CatchObserver
 from bd2_fishing.infrastructure import paths
 from bd2_fishing.infrastructure.diagnostics import bundle_writer
@@ -145,4 +149,4 @@ def _wait_for_bite(observer, details):
         if stamp >= deadline:
             break
         control.sleep(min(0.05, max(0, deadline - stamp)))
-    raise RoundObservationError("接续等待咬钩超时，未重抛；已保留页面与咬钩检测依据")
+    raise FishingStalled("接续等待咬钩超时，尝试返回码头重进；已保留页面与咬钩检测依据")

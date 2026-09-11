@@ -16,7 +16,7 @@ from bd2_fishing.game.fishing import cast_feedback as cast_feedback
 from bd2_fishing.game.fishing import qte as strategy
 from bd2_fishing.game.fishing.hook import BITE_PIXEL_THRESHOLD, BITE_TIMEOUT_SECONDS
 from bd2_fishing.game.fishing.hook_diagnostics import HookDiagnostics
-from bd2_fishing.game.fishing.recovery import RoundObservationError, recover_round
+from bd2_fishing.game.fishing.recovery import FishingStalled, RoundObservationError, recover_round
 from bd2_fishing.game.inventory import actions as inventory_actions
 from bd2_fishing.game.islands import reading as island_reading
 from bd2_fishing.game.islands import travel as island_travel
@@ -202,7 +202,7 @@ class FishingBot:
                         position_recovery_attempts,
                         extra={"user_message": reason},
                     )
-                    raise RoundObservationError(reason)
+                    raise FishingStalled(reason)
                 position_recovery_attempts += 1
                 run_control.set_status("调整抛竿位置")
                 log.warning("无法在当前位置抛竿，正在调整位置并重试。")
