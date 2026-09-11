@@ -2,7 +2,11 @@
 
 [文档目录](../README.md) · [更新记录](../../CHANGELOG.md) · [验证计划](validation-plan.md)
 
-当前交付版本为 **0.3.1**，发布附件见 [v0.3.1](https://github.com/Syriii/browndust2-auto-fishing/releases/tag/v0.3.1)。逐轮测试、旧候选和迁移记录见[阶段档案](../history/development-2026-09.md)；以下历史小节中的“未打包”是当时状态，以最新验收记录为准。
+GitHub 正式版本为 **0.3.1**，发布附件见 [v0.3.1](https://github.com/Syriii/browndust2-auto-fishing/releases/tag/v0.3.1)。本机测试交付为 **0.3.3**（495 项离线回归，待用户实际游戏验证），固定入口 `dist/BD2_AutoFishing/BD2_AutoFishing.exe`。逐轮测试、旧候选和迁移记录见[阶段档案](../history/development-2026-09.md)；以下历史小节中的“未打包”是当时状态，以最新验收记录为准。
+
+## 0.3.3 最终开发验收与交付（2026-09-12）
+
+补充重进过程中关闭结算面板不能跳过返回原岛屿的边界，并记录从码头/地图开始的未完成重进。495 项完整离线回归、Ruff/格式/架构、UI 启停/设置和更新窗口模拟均通过。最终包 1208 项文件、EXE 启动退出、更新助手隔离替换及中断恢复通过。旧交付及 0.3.2/早期 0.3.3 候选完整归档，固定 dist 已换为最终 0.3.3，原 285 个用户文件逐一哈希相同；外层 deployment 未更改。未游戏实测、未发布 GitHub。
 
 ## 等待页中断修复（v0.3.1 之后，源码）
 

@@ -163,6 +163,7 @@ class FishingReentry:
         """上次恢复中途失败时，从当前页续接，避免重复退出和重复确认。"""
         with control.use_input_guard(self.guard), FeedbackCapture(self.region) as camera:
             entry = self.wait(camera, "entry")
+            self.details["entry_page"] = entry[0]
             if entry[0] == "error":
                 self.click(self.wait(camera, "error"), "close_150402")
                 self.wait(camera, "closed")

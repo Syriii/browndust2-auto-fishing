@@ -97,6 +97,27 @@ class ContinuousRecoveryTests(unittest.TestCase):
             )
         self.reenter.assert_called_once()
 
+    def test_panel_during_partial_reentry_cannot_skip_return_to_original_island(self):
+        observer = Mock(evidence_metadata={}, evidence_frames={}, result=CatchResult())
+        pages = iter(["panel", "panel"])
+        observer.inspect_current_page.side_effect = lambda: next(pages, "idle")
+
+        def partial(value):
+            value.evidence_metadata["stamina_reentry"] = {"entry_page": "dock", "actions": []}
+            self.reenter.side_effect = None
+            raise reentry.NavigationFailed("departure not confirmed")
+
+        self.reenter.side_effect = partial
+        strategy = SimpleNamespace(_feedback_config=self.config, region=self.region)
+        self.assertTrue(
+            recovery.recover_round(strategy, observer, recovery.FishingStalled("stuck"))
+        )
+        self.inputs.click.assert_called_once_with()
+        observer.wait_until_idle.assert_called_once()
+        self.assertEqual(self.reenter.call_count, 2)
+        self.assertGreaterEqual(self.clock, 30)
+        self.assertFalse(observer.evidence_metadata["round_recovery"]["reentry_pending"])
+
     def test_partially_closed_bug_must_finish_reentry_even_if_idle_looks_normal(self):
         observer = Mock(
             evidence_metadata={},

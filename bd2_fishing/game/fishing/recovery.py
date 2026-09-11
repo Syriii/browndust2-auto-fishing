@@ -140,7 +140,8 @@ def _try_reentry(observer, details, *, stamina=False):
         (reenter_after_stamina_error if stamina else reenter_fishing)(observer)
     except (NavigationFailed, RoundObservationError) as exc:
         attempt.update(status="pending", error=str(exc))
-        if observer.evidence_metadata.get("stamina_reentry", {}).get("actions"):
+        reentry = observer.evidence_metadata.get("stamina_reentry", {})
+        if reentry.get("actions") or reentry.get("entry_page") in {"dock", "map", "return"}:
             details["reentry_pending"] = True
         log.warning("退出重进尚未完成，继续观察当前页面后再接续：%s", exc)
         return False
@@ -184,7 +185,8 @@ def _wait_for_recovery(strategy, observer, details):
         try:
             if page == "panel" and _can_close_panel(observer):
                 close_confirmed_panel(strategy, observer)
-                return
+                if not details.get("reentry_pending"):
+                    return
             if page == "idle" and not details.get("reentry_pending"):
                 observer.wait_until_idle()
                 return
