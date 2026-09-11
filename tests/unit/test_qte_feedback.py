@@ -147,7 +147,6 @@ class OutcomeTests(unittest.TestCase):
             ("critical", "critical"),
             ("hit", "hit"),
             ("miss", "miss"),
-            ("fail", "miss"),
         ):
             with self.subTest(label=label):
                 tracker = OutcomeTracker()
@@ -247,7 +246,46 @@ class OutcomeTests(unittest.TestCase):
     def test_unassigned_fail_keeps_evidence_without_inventing_a_press(self):
         (result,) = OutcomeTracker().observe("fail", 1)
         self.assertIsNone(result.attempt)
-        self.assertEqual(result.result, "miss")
+        self.assertEqual(result.result, "unknown")
+        self.assertEqual(result.feedback, "fail")
+
+    def test_fail_does_not_consume_press_before_actual_hit(self):
+        tracker = OutcomeTracker()
+        tracker.begin(1)
+        fail = tracker.observe("fail", 1.1)[0]
+        self.assertIsNone(fail.attempt)
+        self.assertEqual(fail.diagnostics["candidate_attempts"], [1])
+        self.assertEqual(tracker.observe("fail", 1.2), [])
+        hit = tracker.observe("hit", 1.3)[0]
+        self.assertEqual((hit.attempt, hit.result), (1, "hit"))
+        self.assertEqual(hit.diagnostics["unattributed_fail_events"], 1)
+        self.assertEqual([x["result"] for x in tracker.feedback_events], ["fail", "hit"])
+
+    def test_fail_does_not_resolve_ambiguous_multiple_presses(self):
+        tracker = OutcomeTracker()
+        tracker.begin(1)
+        tracker.begin(1.1)
+        tracker.observe("fail", 1.2)
+        hit = tracker.observe("hit", 1.3)[0]
+        self.assertEqual(hit.result, "unknown")
+        self.assertEqual(hit.diagnostics["category"], "ambiguous_feedback")
+        self.assertEqual(tracker.feedback_events[-1]["candidate_attempts"], [1, 2])
+
+    def test_real_fail_timings_remain_unattributed_and_press_expires_unknown(self):
+        records = json.loads(
+            (FIXTURES.parent / "qte_control/afternoon_misses/manifest.json").read_text("utf-8")
+        )
+        for row in records:
+            if row["id"] not in {"M01", "M06", "M11"}:
+                continue
+            original = row["outcome"]
+            tracker = OutcomeTracker()
+            tracker.begin(original["pressed_at"])
+            fail = tracker.observe("fail", original["observed_at"], original["score"])[0]
+            self.assertIsNone(fail.attempt)
+            result = tracker.expire(original["pressed_at"] + 0.8)[0]
+            self.assertEqual(result.result, "unknown")
+            self.assertEqual(result.diagnostics["category"], "fail_without_input_result")
 
 
 class IntegrationTests(unittest.TestCase):

@@ -2,41 +2,15 @@
 
 from __future__ import annotations
 
-import time
-
 from bd2_fishing.game.islands.catalog import LOCATION_MATCH_ALIASES, FishingLocation
 from bd2_fishing.game.observation import OCRContext
-from bd2_fishing.perception.ocr import get_result_by_keyword, get_texts_from_ocr
-from bd2_fishing.perception.ocr_types import OCRText
+from bd2_fishing.perception.ocr import get_texts_from_ocr
 from bd2_fishing.perception.text import build_normalized_ocr_candidates, has_alias_match
 from bd2_fishing.runtime import control as run_control
 from bd2_fishing.runtime.context import get_logger
 from bd2_fishing.runtime.ports import FrameSource as DxCameraCapture
 
 log = get_logger(__name__)
-
-
-CHANGE_LOCATION_POLL_TOTAL_SECONDS = 10
-
-
-CHANGE_LOCATION_POLL_INTERVAL_SECONDS = 1.0
-
-
-def get_change_btn_position(
-    sct: DxCameraCapture, ocr_context: OCRContext, change_location_keyword: str
-) -> OCRText | None:
-    """在限定时间内轮询地图的“更改”按钮位置。"""
-    now = time.monotonic()
-    while time.monotonic() - now < CHANGE_LOCATION_POLL_TOTAL_SECONDS:
-        result = get_result_by_keyword(
-            sct, ocr_context.engine, ocr_context.regions.location, change_location_keyword
-        )
-        if result is not None:
-            return result
-
-        run_control.sleep(CHANGE_LOCATION_POLL_INTERVAL_SECONDS)
-
-    return None
 
 
 def detect_location_from_ocr(
@@ -73,30 +47,15 @@ def detect_location_from_ocr(
     return None
 
 
-def check_if_have_keyword(sct: DxCameraCapture, ocr_context: OCRContext, keyword: str) -> bool:
-    """检查地图 OCR 文本中是否包含指定关键词。"""
+def check_if_time_to_change_location(sct: DxCameraCapture, ocr_context: OCRContext) -> bool:
+    """保留时间文字缺“时”的可选刷新规则；OCR 不可用或空读数不是刷新信号。"""
     if not ocr_context.enabled or ocr_context.engine is None:
         return False
-
-    texts = get_texts_from_ocr(
-        sct, ocr_context.engine, ocr_context.regions.map, purpose=f"钓场时间:{keyword}"
-    )
-    if texts is None:
-        log.debug("OCR 没有识别到任何文本")
+    texts = get_texts_from_ocr(sct, ocr_context.engine, ocr_context.regions.map, purpose="钓场时间")
+    if not texts or not any(text.strip() for text in texts):
+        log.debug("钓场时间未读到文字，跳过本次自动换点检查")
         return False
-    if any(keyword in text for text in texts):
-        return True
-
-    return False
-
-
-def check_if_time_to_change_location(sct: DxCameraCapture, ocr_context: OCRContext) -> bool:
-    """把地图时间文字中的“时”缺失作为需要刷新钓点的信号。"""
-    if check_if_have_keyword(sct, ocr_context, "时"):
-        return False
-
-    log.debug("OCR 没有检测到“时”字，可能需要切换钓鱼点")
-    return True
+    return not any("时" in text for text in texts)
 
 
 def match_location_name(texts: list[str]) -> FishingLocation | None:

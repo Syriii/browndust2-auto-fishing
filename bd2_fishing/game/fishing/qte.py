@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import configparser
 import time
+from dataclasses import asdict
 
 import cv2
 import numpy as np
@@ -13,6 +14,11 @@ from bd2_fishing.game.fishing.mechanics.blue_target import read_blue_target
 from bd2_fishing.game.fishing.mechanics.policy import MechanismPolicy
 from bd2_fishing.game.fishing.mechanics.regions import read_mechanism_regions
 from bd2_fishing.game.fishing.pointer import read_pointer
+from bd2_fishing.game.fishing.recovery import (
+    RoundObservationError,
+    check_unconfirmed_limit,
+    close_confirmed_panel,
+)
 from bd2_fishing.game.fishing.tracing import QTEControlTimeout, trace_qte
 from bd2_fishing.infrastructure import settings as settings
 from bd2_fishing.infrastructure.windows import capture as capture_backend
@@ -70,6 +76,12 @@ class BaseQTEStrategy:
             5,
             self.pixel_threshold_scale,
         )
+        self.yellow_source_min_pixels = max(
+            5, geometry.scale_pixel_threshold(8, self.pixel_threshold_scale)
+        )
+        self._yellow_source_pixels = 0
+        self._yellow_source_mask = None
+        self._yellow_aim_decision = None
         self.abyss_yellow_pixel_threshold = geometry.scale_pixel_threshold(
             300,
             self.pixel_threshold_scale,
@@ -115,7 +127,8 @@ class BaseQTEStrategy:
     def play_qte(self, sct: capture_backend.DxCameraCapture) -> None:
         self._mechanism_policy = MechanismPolicy()
         no_bar_frames = 0
-        qte_started = False
+        observer = getattr(self, "catch_observer", None)
+        qte_started = observer is not None and observer.evidence_metadata.get("resumed_qte") is True
         loading_logged = False
         start_time = time.monotonic()
 
@@ -459,40 +472,24 @@ class BaseQTEStrategy:
                     catch_observer.evidence_metadata.get("panel_open") is not True
                     and catch_observer.evidence_metadata.get("page_state") != "idle"
                 ):
-                    raise RuntimeError("结算观察失败，已停止，未操作页面") from exc
+                    raise RoundObservationError("结算观察失败，未操作页面") from exc
             if (
                 catch_observer.evidence_metadata.get("panel_open") is not True
                 and catch_observer.evidence_metadata.get("page_state") != "idle"
             ):
-                raise TimeoutError("等待后仍未确认结算面板，已停止；请确认游戏页面后重新开始")
-        unconfirmed = (
-            0
-            if catch_observer.result.status == "caught"
-            else getattr(self, "_unconfirmed_rounds", 0) + 1
-        )
-        self._unconfirmed_rounds = unconfirmed
-        limit = self._feedback_config.getint("recovery", "max_unconfirmed_rounds", fallback=2)
-        if not 0 <= limit <= 5:
-            raise ValueError("未确认续钓上限必须为 0–5")
-        if unconfirmed > limit:
-            raise RuntimeError("连续未确认轮次达到续钓上限，已停止，请检查证据")
+                raise RoundObservationError("等待后仍未确认结算面板")
+        check_unconfirmed_limit(self, catch_observer)
         run_control.sleep(max(0, self.fish_end_wait_time - (time.monotonic() - started)))
         page = catch_observer.inspect_current_page()
         if page == "idle":
             catch_observer.wait_until_idle()
             return
         if page != "panel":
-            raise TimeoutError("结算页面已变化，已停止，未发送关闭点击")
-        window_center_x, window_center_y = self.region.center
-        pydirectinput.moveTo(window_center_x, window_center_y)
-        run_control.sleep(0.2)
-        if catch_observer.inspect_current_page() != "panel":
-            raise TimeoutError("关闭前未再次确认面板，已停止，未发送点击")
-        pydirectinput.click()
-        catch_observer.wait_until_idle()
+            raise RoundObservationError("结算页面已变化，未发送关闭点击")
+        close_confirmed_panel(self, catch_observer)
 
     def _on_control_timeout(self, sct) -> None:
-        """期限后只读核对现场并停止；不因循环结束而关闭未知页面或重抛。"""
+        """期限后只读保存现场；释放 QTE 输入后由轮次边界检查恢复条件。"""
         run_control.checkpoint()
         observer = getattr(self, "catch_observer", None)
         details = dict(limit_seconds=self.longest_keep_time, state="capture_unavailable")
@@ -514,6 +511,8 @@ class BaseQTEStrategy:
                         observer.finish()
                         if observer.evidence_metadata.get("panel_open"):
                             details["state"] = "settlement_visible"
+                        elif observer.evidence_metadata.get("page_state") in {"idle", "waiting"}:
+                            details["state"] = observer.evidence_metadata["page_state"]
         except Exception as exc:
             details["inspection_error"] = type(exc).__name__
         finally:
@@ -524,13 +523,22 @@ class BaseQTEStrategy:
             "qte_active": "游戏倒计时条仍可见",
             "unrecognized_page": "未确认当前页面",
             "settlement_visible": "已看到结算面板，尚未关闭",
+            "idle": "已看到钓鱼待机控件",
+            "waiting": "已看到等待咬钩控件，不能重复抛竿",
         }
         raise QTEControlTimeout(
             f"QTE 控制达到 {self.longest_keep_time} 秒上限：{labels[details['state']]}；"
-            "任务已停止，请确认游戏页面后重新开始"
+            "本轮未确认，等待恢复检查"
         )
 
     def _yellow_mask(self, roi_hsv: np.ndarray) -> np.ndarray:
+        raw = cv2.inRange(roi_hsv, self.yellow_range.lower, self.yellow_range.upper)
+        self._yellow_source_mask = raw
+        self._yellow_source_pixels = cv2.countNonZero(raw)
+        # 真实 M04/M06/M12/M14 仅有 1–4 个残色像素，膨胀后却被当成黄条。
+        # 有效目标仍沿用原膨胀填孔；是否延后当前机会由中心偏好规则决定。
+        if self._yellow_source_pixels < self.yellow_source_min_pixels:
+            return np.zeros_like(raw)
         # 膨胀核随窗口宽度缩放：光标宽度随分辨率变大，核跟着变大才能填掉光标压住黄条挖出的洞。
         kernel_size = geometry.scale_pixel_length(
             7,
@@ -539,19 +547,48 @@ class BaseQTEStrategy:
         )
         if kernel_size % 2 == 0:
             kernel_size += 1
-        return vision.create_color_mask(
-            self.yellow_range.lower,
-            self.yellow_range.upper,
-            roi_hsv,
-            is_dilate=True,
-            dilate_kernel_size=(kernel_size, kernel_size),
-            dilate_iterations=2,
-        )
+        return cv2.dilate(raw, np.ones((kernel_size, kernel_size), np.uint8), iterations=2)
 
     def _blue_mask(self, qte_hsv: np.ndarray) -> np.ndarray:
         return vision.create_color_mask(
             self.blue_range.lower, self.blue_range.upper, qte_hsv, is_dilate=False
         )
+
+    def _yellow_overlap(self, mask, cursor, regions, *, active_range=None):
+        forbidden = regions.blocked.copy()
+        for left, right in regions.bubble_spans:
+            forbidden[left:right] = True
+        if regions.green_present:
+            forbidden[:] = True
+        if active_range is not None:
+            left, right = active_range
+            forbidden[:left] = True
+            forbidden[right + 1 :] = True
+        self._yellow_aim_decision = self._mechanism_policy.targets.yellow_aim.observe(
+            self._yellow_source_mask,
+            cursor,
+            time.monotonic(),
+            overlap=self._mask_column_has_color(mask, cursor),
+            forbidden=forbidden,
+            loop_seconds=self.loop_sleep_seconds,
+        )
+        if self._yellow_aim_decision.reason == "prefer_center":
+            self._qte_trace.observe("yellow_center_wait")
+        elif self._yellow_aim_decision.reason == "obscured_yellow_source":
+            self._qte_trace.observe("yellow_obscured_rejected")
+            self._cache_mechanism_frame("yellow_obscured_rejected.png", first_only=True)
+        return self._yellow_aim_decision.overlap
+
+    def _yellow_evidence(self, target):
+        if target != "yellow" or self._yellow_aim_decision is None:
+            return {}
+        return {"yellow_aim": asdict(self._yellow_aim_decision)}
+
+    def _record_sparse_yellow(self):
+        if 0 < self._yellow_source_pixels < self.yellow_source_min_pixels:
+            self._qte_trace.observe("yellow_source_rejected")
+            # 每轮仅缓存第一张小控制帧，封存时后台编码；不为诊断额外截图。
+            self._cache_mechanism_frame("yellow_sparse_rejected.png", first_only=True)
 
     def _on_bar_disappeared(self, no_bar_frames: int) -> bool:
         """连续多帧看不到倒计时条时确认本轮结束，避免单帧闪烁误判。"""
@@ -573,6 +610,7 @@ class FrostStraitQTEStrategy(BaseQTEStrategy):
     def _track_targets(self, qte_hsv, cursor_x, regions):
         ordinary_hsv = regions.ordinary_pixels(qte_hsv)
         yellow_mask = regions.mask_target(self._yellow_mask(ordinary_hsv))
+        self._record_sparse_yellow()
         yellow_present = bool(cv2.countNonZero(yellow_mask))
         blue_target = None
         if not yellow_present:
@@ -587,7 +625,7 @@ class FrostStraitQTEStrategy(BaseQTEStrategy):
             )
         target = self._mechanism_policy.targets.observe(
             yellow_present=yellow_present,
-            yellow_overlap=self._mask_column_has_color(yellow_mask, cursor_x)
+            yellow_overlap=self._yellow_overlap(yellow_mask, cursor_x, regions)
             if yellow_present
             else None,
             blue=blue_target,
@@ -599,6 +637,9 @@ class FrostStraitQTEStrategy(BaseQTEStrategy):
                 cursor_x=cursor_x,
                 check_x=cursor_x,
                 target=target,
+                yellow_source_pixels=self._yellow_source_pixels,
+                yellow_source_min_pixels=self.yellow_source_min_pixels,
+                **self._yellow_evidence(target),
                 **self._blue_evidence(target, blue_target),
             )
         self._qte_trace.observe("tracking", cursor=cursor_x, pressed=target is not None)
@@ -658,6 +699,7 @@ class AbyssMawQTEStrategy(BaseQTEStrategy):
     def _track_targets(self, qte_hsv, cursor_x, regions):
         ordinary_hsv = regions.ordinary_pixels(qte_hsv)
         yellow_mask = regions.mask_target(self._yellow_mask(ordinary_hsv))
+        self._record_sparse_yellow()
         blue_mask = regions.mask_target(self._blue_mask(ordinary_hsv))
         blocker_rect = self._blocker_detector.read(qte_hsv, self._cursor_mask(qte_hsv))
         left_x, right_x = active_range_for_blocker(blocker_rect, cursor_x, yellow_mask.shape[1])
@@ -673,7 +715,9 @@ class AbyssMawQTEStrategy(BaseQTEStrategy):
         yellow_present = yellow_pixels > self.abyss_yellow_pixel_threshold
         target = self._mechanism_policy.targets.observe(
             yellow_present=yellow_present,
-            yellow_overlap=self._mask_column_has_color(yellow_mask, check_x)
+            yellow_overlap=self._yellow_overlap(
+                yellow_mask, check_x, regions, active_range=(left_x, right_x)
+            )
             if yellow_present
             else None,
             blue=blue_target,
@@ -688,6 +732,9 @@ class AbyssMawQTEStrategy(BaseQTEStrategy):
                 blocker_rect=blocker_rect,
                 yellow_pixels=yellow_pixels,
                 yellow_threshold=self.abyss_yellow_pixel_threshold,
+                yellow_source_pixels=self._yellow_source_pixels,
+                yellow_source_min_pixels=self.yellow_source_min_pixels,
+                **self._yellow_evidence(target),
                 **self._blue_evidence(target, blue_target),
             )
         self._qte_trace.observe(

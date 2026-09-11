@@ -18,9 +18,11 @@ log = get_logger(__name__)
 
 
 def _run_fishing_session(
-    config=None, *, location=None, interactive=True, capture_factory=None
+    config=None, *, location=None, interactive=True, capture_factory=None, navigation_mode=None
 ) -> None:
     """每次启动重新定位窗口、读取配置并建立 OCR 上下文。"""
+    if navigation_mode not in (None, "travel", "refresh"):
+        raise ValueError("未知导航验证模式")
     run_control.checkpoint()
     region = window.get_window_region(GAME_TITLE)
     if not region:
@@ -43,6 +45,24 @@ def _run_fishing_session(
 
     ocr_context = ocr_setup.build_ocr_context(config, region)
     run_control.checkpoint()
+    if navigation_mode == "refresh":
+        from bd2_fishing.game.islands.travel import change_location
+
+        change_location(config, region, ocr_context, location)
+        log.info("往返换点验证完成，停在原钓场，不开始抛竿。")
+        return
+    from bd2_fishing.game.navigation.voyage import prepare_voyage
+
+    arrived_location = prepare_voyage(
+        config, region, ocr_context.engine, location, change_from_island=navigation_mode == "travel"
+    )
+    if navigation_mode == "travel":
+        if arrived_location is None:
+            raise RuntimeError("当前未完成换图；导航验证要求码头、地图或可换图的待机页面。")
+        log.info("导航验证完成，停在钓场待机，不开始抛竿。")
+        return
+    if arrived_location is not None:
+        location = arrived_location
     bot = FishingBot(
         config,
         region,
@@ -59,7 +79,9 @@ def _run_fishing_session(
             worker.join(timeout=2)
 
 
-def _run_once(config=None, *, location=None, interactive=True, capture_factory=None) -> None:
+def _run_once(
+    config=None, *, location=None, interactive=True, capture_factory=None, navigation_mode=None
+) -> None:
     # 每次启动使用新线程，须在该线程初始化截图依赖的 COM 环境。
     window.enable_dpi_awareness()
     from bd2_fishing.infrastructure.windows.session import focus_game, keep_awake
@@ -74,20 +96,30 @@ def _run_once(config=None, *, location=None, interactive=True, capture_factory=N
         with keep_awake(config.getboolean("app", "prevent_sleep", fallback=False)):
             run_control.set_status("初始化截图与 OCR")
             _run_fishing_session(
-                config, location=location, interactive=interactive, capture_factory=capture_factory
+                config,
+                location=location,
+                interactive=interactive,
+                capture_factory=capture_factory,
+                navigation_mode=navigation_mode,
             )
     finally:
         ctypes.windll.ole32.CoUninitialize()
 
 
-def run_once(config=None, *, location=None, interactive=True, capture_factory=None) -> None:
+def run_once(
+    config=None, *, location=None, interactive=True, capture_factory=None, navigation_mode=None
+) -> None:
     limit = config.getint("diagnostics", "failure_max_events", fallback=100) if config else 100
     with incidents.recording_session(
         max_events=limit, context={"location": str(location)}
     ) as recorder:
         try:
             _run_once(
-                config, location=location, interactive=interactive, capture_factory=capture_factory
+                config,
+                location=location,
+                interactive=interactive,
+                capture_factory=capture_factory,
+                navigation_mode=navigation_mode,
             )
         except run_control.RunStopped as exc:
             if str(exc):

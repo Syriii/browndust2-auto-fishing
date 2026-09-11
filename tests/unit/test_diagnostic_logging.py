@@ -116,6 +116,7 @@ class QTELoggingTests(unittest.TestCase):
                 strategy._find_cursor_x = Mock(return_value=20)
                 strategy._start_feedback = Mock()  # 明确禁止离线检查连接真实采集器。
                 strategy._yellow_mask = Mock(return_value=mask)
+                strategy._yellow_source_mask = mask
                 strategy._sleep_loop = Mock()
                 strategy._finish_fishing = Mock()
                 strategy.play_qte(Mock())

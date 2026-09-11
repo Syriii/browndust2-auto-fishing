@@ -21,8 +21,10 @@ class BiteWaitTests(unittest.TestCase):
         self.press = Mock()
         self.recover = Mock(side_effect=self.recovery)
         self.backpack = Mock(return_value=False)
+        self.timeout_recover = Mock(side_effect=self.timeout_recovery)
         self.bot = SimpleNamespace(
             _record_incident=Mock(),
+            _recover_bite_timeout=self.timeout_recover,
             hook_diagnostics=self.diagnostics,
             bite_pixel_threshold=212,
             region=None,
@@ -78,6 +80,11 @@ class BiteWaitTests(unittest.TestCase):
         self.advance(0.5)
         self.cast_at = self.now
 
+    def timeout_recovery(self):
+        self.advance(3)
+        self.cast()
+        return False
+
     def recovery(self, region):
         if self.recover.call_count > 1:
             self.fail("新抛竿未获得完整等待时间，提前再次恢复")
@@ -97,7 +104,8 @@ class BiteWaitTests(unittest.TestCase):
         checked_at = []
         self.backpack.side_effect = lambda *a: checked_at.append(self.now) or False
         self.wait()
-        self.recover.assert_called_once()
+        self.timeout_recover.assert_called_once()
+        self.recover.assert_not_called()
         self.press.assert_called_once_with("space")
         self.assertIn(self.cast_at, checked_at)
 

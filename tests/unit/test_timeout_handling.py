@@ -25,6 +25,7 @@ class TimeoutTests(unittest.TestCase):
     def setUp(self):
         self.config = configparser.ConfigParser()
         self.config.read_string(settings.DEFAULT_CONFIG_CONTENT)
+        self.config.set("recovery", "page_wait_seconds", "0")
         self.region = Rect(1, 460, 946, 992)
         root = Path(__file__).parents[1] / "fixtures" / "qte_control"
         self.active = cv2.imread(str(root / "u07_observer_control.png"))
@@ -50,6 +51,7 @@ class TimeoutTests(unittest.TestCase):
                     patch.object(qte.pydirectinput, "press") as press,
                     patch.object(qte.pydirectinput, "click") as click,
                     patch.object(observer, "finish") as finish,
+                    patch.object(observer, "inspect_current_page", return_value="unrecognized"),
                 ):
                     with self.assertRaises(QTEControlTimeout):
                         run_observed_qte(strategy, capture)

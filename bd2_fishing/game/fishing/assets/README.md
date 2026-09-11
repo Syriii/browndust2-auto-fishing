@@ -58,3 +58,34 @@ BGR `[391:513,803:909]` 裁剪，参考客户区 945×532。
 独立原图、同轮空白/FAIL/CRITICAL 负例及来源见 `tests/fixtures/qte_feedback/README.md`。
 
 110243 因用户停止而没有完成 metadata 写入，仅从 ZIP 的完整本地文件记录恢复 PNG，可确认字形，不可恢复准确按键时间。QTE 字形匹配不推断真假指针、进度增减或最终捕获结果；结算关闭字形也只能说明面板出现，确认捕获还需要数量和尺寸证据。多分辨率、语言、未采样特殊机制尚未实机验证，未知文字应保留“未确认”。
+
+## 水花图形语义更正（2026-09-11）
+
+`idle_splash.png`、`idle_space.png` 保留历史文件名，当前只用于等待咬钩，不再授权待机抛竿。用户补充原图及旧标签追溯见 `tests/fixtures/catch_result/README.md`。新增截图没有生成角色、海面或正面专用模板。
+
+## 导航确认框（2026-09-11）
+
+来源均在 `tests/fixtures/voyage_pages/controls/`，完整原图哈希见该目录 manifest。
+先将整帧以 INTER_AREA 规范化到 945×532，再按下表半开区间裁剪并转灰度保存。
+
+| 模板 | 来源 | 裁剪 (left, top, right, bottom) |
+| --- | --- | --- |
+| return_dock_title.png | return_to_dock_confirmation.png | (440,188,511,212) |
+| return_dock_question.png | return_to_dock_confirmation.png | (395,232,551,250) |
+| travel_title.png | travel_consumables_confirmation.png | (420,192,534,215) |
+| travel_warning.png | travel_consumables_confirmation.png | (340,254,605,272) |
+
+返回与换岛各要求标题和正文同时达到 0.88，搜索边距 ±10 px，有限尺度 0.98/1/1.02。
+它们只用于防止弹窗背景误认待机，不能触发鱼获关闭；换岛仍需导航 OCR 核对目标岛屿和确认按钮。
+`travel_confirmation_user.png` 是后补独立尺寸原图，未参与模板生成；已覆盖目的地与动作的真实 OCR 回归。
+这些识别不加入逐帧 QTE 输入路径。
+
+
+## 150402 专用错误提示（2026-09-11，源码待实测）
+
+原图为 `tests/fixtures/voyage_pages/errors/stamina_150402.png`，来自第 181d269e-179 轮结算首帧，另一张为同轮恢复末帧；哈希见该目录 manifest。945×532 客户区原图灰度裁剪：
+
+- `stamina_error_text.png`：(390,246,556,264)，错误正文及代码。
+- `stamina_error_confirm.png`：(458,282,489,301)，确认字形。
+
+沿用两图同时 0.88、±10 像素搜索和三种小尺度，只作阻挡弹窗分类。实际关闭还必须两帧 OCR 准确认出 `error:150402`（置信度至少 0.85），其他错误码不能触发此恢复。模板不加入实时 QTE 循环。

@@ -1,0 +1,12 @@
+[
+  {
+    "file": "stamina_150402.png",
+    "source": ".local\\maintenance\\runtime-review-20260911-afternoon\\event_1789112314865549000_9ced1b9b\\settlement_first.png",
+    "sha256": "8a1809257eedeca23e5e0a1509fd89f129683b67cf8c465f846479eb9560bc45"
+  },
+  {
+    "file": "stamina_150402_holdout.png",
+    "source": ".local\\maintenance\\runtime-review-20260911-afternoon\\event_1789112314865549000_9ced1b9b\\resume_latest.png",
+    "sha256": "ed057fc11423b31b00aeaceeca349eda299b7605cb32902bdfbbba763ee24028"
+  }
+]

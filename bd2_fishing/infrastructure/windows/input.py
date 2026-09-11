@@ -10,6 +10,7 @@ import win32api
 
 from bd2_fishing.infrastructure.windows.display import normalize_virtual_point
 from bd2_fishing.runtime import control as run_control
+from bd2_fishing.runtime.click_area import random_point
 
 
 def press(*args, **kwargs):
@@ -106,12 +107,44 @@ def click(x=None, y=None, *args, **kwargs):
     return run_control.call_input(_input.click, None, None, *args, **kwargs)
 
 
+def click_in_rect(bounds, *, inset_ratio=0.2):
+    """在已确认区域内点击一次，返回实际屏幕落点；沿用窗口/取消检查。"""
+    point = random_point(bounds, inset_ratio=inset_ratio)
+    click(*point)
+    return point
+
+
 def release_inputs():
     previous = _input.FAILSAFE
     try:
         _input.FAILSAFE = False
         for key in ("space", "up", "t"):
             _input.keyUp(key, _pause=False)
+        _input.mouseUp(_pause=False)
+    finally:
+        _input.FAILSAFE = previous
+
+
+def drag_between(start, end, *, duration=0.6):
+    """可取消的地图拖动；每一步复核窗口，停止或异常也释放鼠标。"""
+    if not math.isfinite(duration) or not 0.1 <= duration <= 2:
+        raise ValueError("拖动时长超出允许范围")
+    moveTo(*start, _pause=False)
+    try:
+        run_control.call_input(_input.mouseDown, _pause=False)
+        for step in range(1, 13):
+            run_control.sleep(duration / 12)
+            moveTo(
+                *(a + (b - a) * step / 12 for a, b in zip(start, end, strict=True)), _pause=False
+            )
+    finally:
+        run_control.call_release(_release_mouse)
+
+
+def _release_mouse():
+    previous = _input.FAILSAFE
+    try:
+        _input.FAILSAFE = False
         _input.mouseUp(_pause=False)
     finally:
         _input.FAILSAFE = previous

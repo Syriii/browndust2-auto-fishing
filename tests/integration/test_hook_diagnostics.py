@@ -222,7 +222,7 @@ class TimeoutIntegrationTests(unittest.TestCase):
         class StopTest(Exception):
             pass
 
-        def recover(region):
+        def recover():
             events.append("recover")
             raise StopTest()
 
@@ -246,6 +246,7 @@ class TimeoutIntegrationTests(unittest.TestCase):
         diagnostics.save_timeout.side_effect = lambda *args, **kwargs: events.append("snapshot")
         bot = SimpleNamespace(
             _record_incident=Mock(),
+            _recover_bite_timeout=recover,
             hook_diagnostics=diagnostics,
             bite_pixel_threshold=212,
             region=None,

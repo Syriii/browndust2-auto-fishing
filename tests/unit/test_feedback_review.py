@@ -10,6 +10,25 @@ from scripts.checks.review_feedback import markdown, review
 
 
 class FeedbackReviewTests(unittest.TestCase):
+    def test_fail_categories_remain_distinct_from_confirmed_miss(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for category in ("unattributed_fail", "fail_without_input_result"):
+                self.bundle(
+                    root,
+                    category + ".zip",
+                    dict(
+                        outcome=dict(
+                            result="unknown",
+                            feedback="fail",
+                            diagnostics=dict(category=category),
+                        )
+                    ),
+                )
+            report = review([root])
+            self.assertEqual(report["results"], {"unknown": 2})
+            self.assertTrue(all("FAIL" in row["category_label"] for row in report["records"]))
+
     def bundle(self, root, name, metadata):
         path = root / name
         with ZipFile(path, "w") as archive:

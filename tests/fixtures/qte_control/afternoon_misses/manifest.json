@@ -1,0 +1,1500 @@
+[
+  {
+    "id": "M01",
+    "round_id": "181d269e-024",
+    "source_zip": "qte_1789107265374757300_9c498547.zip",
+    "outcome": {
+      "attempt": 12,
+      "pressed_at": 23076.375,
+      "observed_at": 23077.0,
+      "result": "miss",
+      "feedback": "fail",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.8790093660354614,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "yellow_overlap",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 23076.375,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [
+            [
+              188,
+              207
+            ]
+          ],
+          "red_spans": [],
+          "bubble_spans": []
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 212,
+              "brightness": 255.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 212,
+        "check_x": 212,
+        "target": "yellow"
+      },
+      "diagnostics": {
+        "frames": 13,
+        "unmatched_frames": 12,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.0790000000015425,
+        "max_match_score": 0.8790093660354614,
+        "last_frame_at": 23077.0,
+        "window_seconds": 0.625,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 23076.375,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_06.png",
+      "captured_at_monotonic": 23077.0,
+      "relative_to_press_ms": 625.0,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M01_decision.png": "35323428f818c5376c16088c232a441725e8d742265d1be8eb0e521907962cc5",
+      "M01_feedback.png": "bcd19fae643be50c144131c421900b37b973315bc436c5ff1ff6a6449450e5ce"
+    }
+  },
+  {
+    "id": "M02",
+    "round_id": "181d269e-032",
+    "source_zip": "qte_1789107482099325600_a7267e61.zip",
+    "outcome": {
+      "attempt": 6,
+      "pressed_at": 23293.687,
+      "observed_at": 23293.734,
+      "result": "miss",
+      "feedback": "miss",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.878391444683075,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "yellow_overlap",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 23293.687,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [],
+          "red_spans": [],
+          "bubble_spans": [
+            [
+              49,
+              80
+            ]
+          ]
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 104,
+              "brightness": 255.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 104,
+        "check_x": 104,
+        "target": "yellow"
+      },
+      "diagnostics": {
+        "frames": 2,
+        "unmatched_frames": 1,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.046999999998661224,
+        "max_match_score": 0.878391444683075,
+        "last_frame_at": 23293.734,
+        "window_seconds": 0.046999999998661224,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 23293.687,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_03.png",
+      "captured_at_monotonic": 23293.734,
+      "relative_to_press_ms": 46.999999998661224,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M02_decision.png": "25653ed6f3f2e4e3eb61d162026f5824e16207c3285718eb689452189b3142bc",
+      "M02_feedback.png": "79384f98fc75b282ee176b0b253cdcc1f91dd0083e5a8375c6730c82c5ec758d"
+    }
+  },
+  {
+    "id": "M03",
+    "round_id": "181d269e-046",
+    "source_zip": "qte_1789107869372644000_de417d5b.zip",
+    "outcome": {
+      "attempt": 3,
+      "pressed_at": 23681.0,
+      "observed_at": 23681.015,
+      "result": "miss",
+      "feedback": "miss",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.8796849250793457,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "yellow_overlap",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 23681.0,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [],
+          "red_spans": [],
+          "bubble_spans": []
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 136,
+              "brightness": 255.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 136,
+        "check_x": 136,
+        "target": "yellow"
+      },
+      "diagnostics": {
+        "frames": 1,
+        "unmatched_frames": 0,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.014999999999417923,
+        "max_match_score": 0.8796849250793457,
+        "last_frame_at": 23681.015,
+        "window_seconds": 0.014999999999417923,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 23681.0,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_03.png",
+      "captured_at_monotonic": 23681.015,
+      "relative_to_press_ms": 14.999999999417923,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M03_decision.png": "e5436c2abbaf6a840d2464ab81fdd5a247b4d66f33d996ce514bf0860a041258",
+      "M03_feedback.png": "b3eac7db28ef5c43de048223135a5013352c988adc001ce355a6d3d326cee3ca"
+    }
+  },
+  {
+    "id": "M04",
+    "round_id": "181d269e-051",
+    "source_zip": "qte_1789108011271143600_5c2fbc6f.zip",
+    "outcome": {
+      "attempt": 12,
+      "pressed_at": 23822.921,
+      "observed_at": 23822.937,
+      "result": "miss",
+      "feedback": "miss",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.8801935315132141,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "yellow_overlap",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 23822.921,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [
+            [
+              169,
+              185
+            ]
+          ],
+          "red_spans": [],
+          "bubble_spans": []
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 195,
+              "brightness": 255.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 195,
+        "check_x": 195,
+        "target": "yellow"
+      },
+      "diagnostics": {
+        "frames": 1,
+        "unmatched_frames": 0,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.01600000000325963,
+        "max_match_score": 0.8801935315132141,
+        "last_frame_at": 23822.937,
+        "window_seconds": 0.01600000000325963,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 23822.921,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_03.png",
+      "captured_at_monotonic": 23822.937,
+      "relative_to_press_ms": 16.00000000325963,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M04_decision.png": "9b94b0b5951907b9e25b2febde3c62fabbebc0c3fc7d18db05f9fc7c53eab102",
+      "M04_feedback.png": "40f83158b9fac2220cb7b77423f85a65e114bd0f0380955fbfe83d39632387de"
+    }
+  },
+  {
+    "id": "M05",
+    "round_id": "181d269e-054",
+    "source_zip": "qte_1789108103011603400_76ea56eb.zip",
+    "outcome": {
+      "attempt": 14,
+      "pressed_at": 23914.593,
+      "observed_at": 23914.656,
+      "result": "miss",
+      "feedback": "miss",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.908088207244873,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "yellow_overlap",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 23914.593,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [],
+          "red_spans": [],
+          "bubble_spans": [
+            [
+              190,
+              215
+            ]
+          ]
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 74,
+              "brightness": 255.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 74,
+        "check_x": 74,
+        "target": "yellow"
+      },
+      "diagnostics": {
+        "frames": 2,
+        "unmatched_frames": 1,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.046999999998661224,
+        "max_match_score": 0.908088207244873,
+        "last_frame_at": 23914.656,
+        "window_seconds": 0.06299999999828287,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 23914.593,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_04.png",
+      "captured_at_monotonic": 23914.656,
+      "relative_to_press_ms": 62.999999998282874,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M05_decision.png": "23045253ec6593c5ae6094a61a36f934751fbac3accec1b1b7cb4d40afefc825",
+      "M05_feedback.png": "9c7373f50a7b428ad93db91b8bab34a182192034a2fac0fd833e781cb45e5838"
+    }
+  },
+  {
+    "id": "M06",
+    "round_id": "181d269e-054",
+    "source_zip": "qte_1789108105190390400_066031fe.zip",
+    "outcome": {
+      "attempt": 15,
+      "pressed_at": 23916.359,
+      "observed_at": 23916.828,
+      "result": "miss",
+      "feedback": "fail",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.8735653758049011,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "yellow_overlap",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 23916.359,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [],
+          "red_spans": [],
+          "bubble_spans": [
+            [
+              189,
+              211
+            ]
+          ]
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 180,
+              "brightness": 211.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 180,
+        "check_x": 180,
+        "target": "yellow"
+      },
+      "diagnostics": {
+        "frames": 10,
+        "unmatched_frames": 9,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.06300000000192085,
+        "max_match_score": 0.8735653758049011,
+        "last_frame_at": 23916.828,
+        "window_seconds": 0.4690000000009604,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 23916.359,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_05.png",
+      "captured_at_monotonic": 23916.828,
+      "relative_to_press_ms": 469.0000000009604,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M06_decision.png": "8007a2d4afd353092a2c22b8f71734fa38ceddbdc1f0fac4de0d2da43d5e6a52",
+      "M06_feedback.png": "923fd1738d4fa05e05eae2613eb22d6ffb66a05880e72d58cc5c30facfcc0256"
+    }
+  },
+  {
+    "id": "M07",
+    "round_id": "181d269e-061",
+    "source_zip": "qte_1789108935518240100_24434562.zip",
+    "outcome": {
+      "attempt": 13,
+      "pressed_at": 24747.093,
+      "observed_at": 24747.14,
+      "result": "miss",
+      "feedback": "miss",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.877274215221405,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "yellow_overlap",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 24747.093,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [],
+          "red_spans": [],
+          "bubble_spans": []
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 101,
+              "brightness": 255.0
+            },
+            {
+              "x": 224,
+              "brightness": 202.0
+            },
+            {
+              "x": 75,
+              "brightness": 201.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 101,
+        "check_x": 101,
+        "target": "yellow"
+      },
+      "diagnostics": {
+        "frames": 2,
+        "unmatched_frames": 1,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.046999999998661224,
+        "max_match_score": 0.877274215221405,
+        "last_frame_at": 24747.14,
+        "window_seconds": 0.046999999998661224,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 24747.093,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_04.png",
+      "captured_at_monotonic": 24747.14,
+      "relative_to_press_ms": 46.999999998661224,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M07_decision.png": "ea29a3157d1de0fe5e6923679769ecee4e29c6d706ccccf7295be01a26ce7209",
+      "M07_feedback.png": "6d8928069e7ed93a63c4045fc52aba1f8d1a53b79c17cec9a84f79fe8d6c5b2a"
+    }
+  },
+  {
+    "id": "M08",
+    "round_id": "181d269e-062",
+    "source_zip": "qte_1789108971132885500_ce64bb3a.zip",
+    "outcome": {
+      "attempt": 12,
+      "pressed_at": 24782.718,
+      "observed_at": 24782.796,
+      "result": "miss",
+      "feedback": "miss",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.8313575983047485,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "yellow_overlap",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 24782.718,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [],
+          "red_spans": [],
+          "bubble_spans": []
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 74,
+              "brightness": 221.0
+            },
+            {
+              "x": 125,
+              "brightness": 169.0
+            },
+            {
+              "x": 176,
+              "brightness": 150.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 74,
+        "check_x": 74,
+        "target": "yellow"
+      },
+      "diagnostics": {
+        "frames": 2,
+        "unmatched_frames": 1,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.0459999999984575,
+        "max_match_score": 0.8313575983047485,
+        "last_frame_at": 24782.796,
+        "window_seconds": 0.0779999999977008,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 24782.718,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_03.png",
+      "captured_at_monotonic": 24782.796,
+      "relative_to_press_ms": 77.9999999977008,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M08_decision.png": "ae5d71794d9e2eb2d4594cbf1c493fd3e8b508308338f25f69fc38cd5422b141",
+      "M08_feedback.png": "e60676e0c11dcba785800ab48ea5eb020aedfcca87d29ec384ee8073453a70a4"
+    }
+  },
+  {
+    "id": "M09",
+    "round_id": "181d269e-076",
+    "source_zip": "qte_1789109357768571200_d4565930.zip",
+    "outcome": {
+      "attempt": 13,
+      "pressed_at": 25169.359,
+      "observed_at": 25169.421,
+      "result": "miss",
+      "feedback": "miss",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.8872278928756714,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "yellow_overlap",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 25169.359,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [],
+          "red_spans": [],
+          "bubble_spans": []
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 82,
+              "brightness": 255.0
+            },
+            {
+              "x": 181,
+              "brightness": 208.0
+            },
+            {
+              "x": 221,
+              "brightness": 208.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 82,
+        "check_x": 82,
+        "target": "yellow"
+      },
+      "diagnostics": {
+        "frames": 2,
+        "unmatched_frames": 1,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.06199999999807915,
+        "max_match_score": 0.8872278928756714,
+        "last_frame_at": 25169.421,
+        "window_seconds": 0.06199999999807915,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 25169.359,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_03.png",
+      "captured_at_monotonic": 25169.421,
+      "relative_to_press_ms": 61.99999999807915,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M09_decision.png": "28258a4adaba64c6f43c65e5a3dfa8a34b21aa8d11e6b2c531e5e1b0431fe249",
+      "M09_feedback.png": "d4e8e430c2023684f6f51440a0a873ed0b332468852a60b9bd6e1a9e1bcb5c61"
+    }
+  },
+  {
+    "id": "M10",
+    "round_id": "181d269e-081",
+    "source_zip": "qte_1789109489466919500_cb3bc30b.zip",
+    "outcome": {
+      "attempt": 2,
+      "pressed_at": 25301.062,
+      "observed_at": 25301.093,
+      "result": "miss",
+      "feedback": "miss",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.9206739664077759,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "yellow_overlap",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 25301.062,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [],
+          "red_spans": [],
+          "bubble_spans": []
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 121,
+              "brightness": 255.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 121,
+        "check_x": 121,
+        "target": "yellow"
+      },
+      "diagnostics": {
+        "frames": 1,
+        "unmatched_frames": 0,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.030999999999039574,
+        "max_match_score": 0.9206739664077759,
+        "last_frame_at": 25301.093,
+        "window_seconds": 0.030999999999039574,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 25301.062,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_03.png",
+      "captured_at_monotonic": 25301.093,
+      "relative_to_press_ms": 30.999999999039574,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M10_decision.png": "1234244ae06ce3f70f45c1d02b8317cc5f1eedb86e8771b252e05e3ccdcdeb5c",
+      "M10_feedback.png": "fa783fe8ec1a22c5b1bead61188f514b1f4fb2d5836b729a16c0e62bacb5036c"
+    }
+  },
+  {
+    "id": "M11",
+    "round_id": "181d269e-102",
+    "source_zip": "qte_1789110081330820900_2bc906d1.zip",
+    "outcome": {
+      "attempt": 5,
+      "pressed_at": 25892.75,
+      "observed_at": 25893.0,
+      "result": "miss",
+      "feedback": "fail",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.8825361728668213,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "bubble_target",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 25892.75,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [],
+          "red_spans": [],
+          "bubble_spans": [
+            [
+              163,
+              182
+            ]
+          ]
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 169,
+              "brightness": 224.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 169,
+        "check_x": 169,
+        "target": "bubble",
+        "bubble_span": [
+          163,
+          182
+        ]
+      },
+      "diagnostics": {
+        "frames": 5,
+        "unmatched_frames": 4,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.06299999999828287,
+        "max_match_score": 0.8825361728668213,
+        "last_frame_at": 25893.0,
+        "window_seconds": 0.25,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 25892.75,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_06.png",
+      "captured_at_monotonic": 25893.0,
+      "relative_to_press_ms": 250.0,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M11_decision.png": "56dce336a1fd088c3e98c9a5de3d3579ea4310045bda89baee959c1d4ddf509b",
+      "M11_feedback.png": "913a443f92cb11036a27c04173086c7cceff64eb1342ab9c33b0fd5b1bcf677a"
+    }
+  },
+  {
+    "id": "M12",
+    "round_id": "181d269e-103",
+    "source_zip": "qte_1789110116483557600_cbad3488.zip",
+    "outcome": {
+      "attempt": 5,
+      "pressed_at": 25928.031,
+      "observed_at": 25928.109,
+      "result": "miss",
+      "feedback": "miss",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.8828796148300171,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "yellow_overlap",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 25928.031,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [],
+          "red_spans": [
+            [
+              181,
+              214
+            ]
+          ],
+          "bubble_spans": []
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 176,
+              "brightness": 255.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 176,
+        "check_x": 176,
+        "target": "yellow"
+      },
+      "diagnostics": {
+        "frames": 2,
+        "unmatched_frames": 1,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.046999999998661224,
+        "max_match_score": 0.8828796148300171,
+        "last_frame_at": 25928.109,
+        "window_seconds": 0.07800000000133878,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 25928.031,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_04.png",
+      "captured_at_monotonic": 25928.109,
+      "relative_to_press_ms": 78.00000000133878,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M12_decision.png": "fec5f55bbad61490dc54294053e6c598e77ce2886404c4c7b96debee3689156e",
+      "M12_feedback.png": "25e5f57c97cd8e1474f42abb2ed8a4d51006386aea9d8a82eb90eca1554f38d9"
+    }
+  },
+  {
+    "id": "M13",
+    "round_id": "181d269e-156",
+    "source_zip": "qte_1789111647996560000_bb0c0d01.zip",
+    "outcome": {
+      "attempt": 13,
+      "pressed_at": 27459.593,
+      "observed_at": 27459.671,
+      "result": "miss",
+      "feedback": "miss",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.9172003865242004,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "yellow_overlap",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 27459.593,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [],
+          "red_spans": [
+            [
+              168,
+              201
+            ]
+          ],
+          "bubble_spans": []
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 208,
+              "brightness": 255.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 208,
+        "check_x": 208,
+        "target": "yellow"
+      },
+      "diagnostics": {
+        "frames": 2,
+        "unmatched_frames": 1,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.06199999999807915,
+        "max_match_score": 0.9172003865242004,
+        "last_frame_at": 27459.671,
+        "window_seconds": 0.0779999999977008,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 27459.593,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_04.png",
+      "captured_at_monotonic": 27459.671,
+      "relative_to_press_ms": 77.9999999977008,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M13_decision.png": "ee31cf7cbb82baa4d009150bfcd2fa1926b096ea0953e97910478dd564e3955a",
+      "M13_feedback.png": "f6013f3173737a547778f3a8b472cd92d6057c70a12d9971dec9a02f0e84bfb7"
+    }
+  },
+  {
+    "id": "M14",
+    "round_id": "181d269e-159",
+    "source_zip": "qte_1789111728704202600_6b738e11.zip",
+    "outcome": {
+      "attempt": 4,
+      "pressed_at": 27540.328,
+      "observed_at": 27540.359,
+      "result": "miss",
+      "feedback": "miss",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.869676411151886,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "yellow_overlap",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 27540.328,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [
+            [
+              51,
+              72
+            ]
+          ],
+          "red_spans": [],
+          "bubble_spans": []
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 83,
+              "brightness": 255.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 83,
+        "check_x": 83,
+        "target": "yellow"
+      },
+      "diagnostics": {
+        "frames": 1,
+        "unmatched_frames": 0,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.030999999999039574,
+        "max_match_score": 0.869676411151886,
+        "last_frame_at": 27540.359,
+        "window_seconds": 0.030999999999039574,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 27540.328,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_02.png",
+      "captured_at_monotonic": 27540.359,
+      "relative_to_press_ms": 30.999999999039574,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M14_decision.png": "b743edaf78fc501e0f6af58a3842a08a813d9b8bfa3e9b08482c49c922bb9d9b",
+      "M14_feedback.png": "74369a0027e93a4374388137e792407223e472e6c4c8752456d70b476dce837f"
+    }
+  },
+  {
+    "id": "M15",
+    "round_id": "181d269e-179",
+    "source_zip": "qte_1789112289001406600_6608be26.zip",
+    "outcome": {
+      "attempt": 6,
+      "pressed_at": 28100.64,
+      "observed_at": 28100.671,
+      "result": "miss",
+      "feedback": "miss",
+      "reason": "新出现的游戏反馈文字",
+      "score": 0.9062625765800476,
+      "decision": {
+        "strategy": "FrostStraitQTEStrategy",
+        "reason": "yellow_overlap",
+        "stage": "before_input_call",
+        "captured_at_monotonic": 28100.64,
+        "capture_backend": "control DXcam (BGR)",
+        "frame_region": [
+          2243,
+          970,
+          2555,
+          1012
+        ],
+        "qte_crop_percent": [
+          50,
+          97,
+          22,
+          100
+        ],
+        "coordinate_space": "QTE crop local pixels",
+        "press_tolerance_pixels": 0,
+        "mechanism_regions": {
+          "green_present": false,
+          "purple_spans": [],
+          "red_spans": [],
+          "bubble_spans": []
+        },
+        "configured_timing": {
+          "loop_sleep_seconds": 0.02,
+          "hold_seconds": 0.1,
+          "settle_seconds": 0.2
+        },
+        "pointer": {
+          "reason": "brightest_pointer",
+          "candidates": [
+            {
+              "x": 52,
+              "brightness": 255.0
+            }
+          ],
+          "minimum_brightness": 200,
+          "minimum_separation": 12
+        },
+        "cursor_x": 52,
+        "check_x": 52,
+        "target": "yellow"
+      },
+      "diagnostics": {
+        "frames": 1,
+        "unmatched_frames": 0,
+        "unchanged_feedback_frames": 0,
+        "max_frame_gap_seconds": 0.030999999999039574,
+        "max_match_score": 0.9062625765800476,
+        "last_frame_at": 28100.671,
+        "window_seconds": 0.030999999999039574,
+        "category": "confirmed_feedback"
+      }
+    },
+    "decision_frame": {
+      "file": "decision.png",
+      "shape": [
+        42,
+        312,
+        3
+      ],
+      "captured_at_monotonic": 28100.64,
+      "frame_region": [
+        2243,
+        970,
+        2555,
+        1012
+      ]
+    },
+    "feedback_frame": {
+      "file": "frame_03.png",
+      "captured_at_monotonic": 28100.671,
+      "relative_to_press_ms": 30.999999999039574,
+      "relative_to_feedback_ms": 0.0
+    },
+    "sha256": {
+      "M15_decision.png": "01dcd1f85c752929a7c58d341f88a8a5e02a04ad6b2715ef053b8053180cf971",
+      "M15_feedback.png": "aad4538e4fae68b2940dd0194ab7bcf758c04412bc1ca2f1c90e7a9e1929ea4f"
+    }
+  }
+]

@@ -1,0 +1,13 @@
+[
+  {
+    "file": "early_miss.png",
+    "source": ".local\\diagnostics\\qte_feedback\\qte_1789103425343593000_1b67a0df.zip",
+    "member": "decision.png",
+    "cursor": 114,
+    "expected": "unresolved",
+    "round": "4f2002fe-002",
+    "attempt": 5,
+    "sha256": "a4e48874b4ec8d5358acde6c3bf93f40744cc50cf854b7b1d2cdc18ce0015840",
+    "note": "当前帧光标位于可见黄区左侧，但不能据此推断输入生效时的位置；严格内部判定实测恶化，已撤回。"
+  }
+]

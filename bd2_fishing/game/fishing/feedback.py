@@ -195,7 +195,12 @@ class FeedbackSession:
                     dict(event, session_started_at=self.session_started_at)
                 )
             self.observed_counts[event["result"]] += 1
-            labels = {"critical": "暴击", "hit": "普通命中", "miss": "未命中"}
+            labels = {
+                "critical": "暴击",
+                "hit": "普通命中",
+                "miss": "未命中",
+                "fail": "FAIL（原因待确认）",
+            }
             self._log(
                 logging.INFO,
                 "QTE 第 %d 次游戏反馈 · %s",
@@ -476,11 +481,12 @@ class FeedbackSession:
         )
         self.log.log(
             logging.INFO if self.catch_observer is None else logging.DEBUG,
-            "QTE 游戏反馈统计: 总数=%d 暴击=%d 普通命中=%d 未命中=%d（按反馈去重，不等于按键次数）",
+            "QTE 游戏反馈统计: 总数=%d 暴击=%d 普通命中=%d 未命中=%d FAIL=%d（按反馈去重，不等于按键次数）",
             self.event_count,
             self.observed_counts["critical"],
             self.observed_counts["hit"],
             self.observed_counts["miss"],
+            self.observed_counts["fail"],
         )
 
     @staticmethod

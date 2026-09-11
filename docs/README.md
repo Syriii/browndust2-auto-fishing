@@ -32,6 +32,7 @@
 | --- | --- |
 | [统一目录布局](design/repository-layout.md) | 源码、便携目录、构建产物及维护者本机工作区 |
 | [架构说明](design/architecture.md) | 当前职责、真实依赖、QTE 链路及尚未实施的扩展 |
+| [页面识别与启动接续](design/scene-recognition.md) | 当前页面能力、启动分支、未知状态和验证边界 |
 | [QTE 时延设计](design/qte-performance.md) | 控制与输入预算、后台争用、待建立的端到端基线 |
 | [便携更新设计](design/portable-update.md) | 文件所有权、清单、独立助手和回滚 |
 | [特殊机制处理设计](design/special-mechanism-handling.md) | 样本驱动的处理方案与历史设计过程 |
@@ -42,6 +43,7 @@
 
 - [钓鱼机制参考](reference/fishing-mechanics.md)：注明读取日期的社区资料与争议，不视为全部已实现。
 - [Fishing Voyage 封面](reference/fishing-voyage.md)：原图、可见标题和页面识别边界。
+- [入口、选岛与许可证](reference/voyage-navigation.md)：七张用户原图、页面转换、天空岛购买前后、鱼种解锁与待实现规则。
 - [Python 结构参考](reference/python-project-architecture.md)：架构选择的参考依据与当时审视。
 - [回归样本](../tests/fixtures/README.md)：真实图片来源和用途；不是运行时模板。
 

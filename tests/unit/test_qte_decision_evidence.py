@@ -103,7 +103,7 @@ class DecisionEvidenceTests(unittest.TestCase):
         session.publish(session.tracker.observe("fail", 11, 0.95))
         session.flush_evidence(12, force=True)
         records = observer.attempt_outcomes
-        self.assertEqual([r["result"] for r in records], ["unknown", "unknown", "miss"])
+        self.assertEqual([r["result"] for r in records], ["unknown", "unknown", "unknown"])
         self.assertEqual(
             [r["decision"]["reason"] for r in records[:2]], ["yellow_overlap", "blue_fallback"]
         )
@@ -169,6 +169,7 @@ class DecisionEvidenceTests(unittest.TestCase):
                     if reason == "yellow_overlap":
                         target[:, 40:80] = 255
                     strategy._yellow_mask = Mock(return_value=target)
+                    strategy._yellow_source_mask = target
                     if cls is qte_strategy.AbyssMawQTEStrategy:
                         blue_target = np.zeros_like(cursor)
                         blue_target[:, 40:80] = 255

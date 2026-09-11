@@ -1,0 +1,122 @@
+[
+  {
+    "id": "M03",
+    "source_zip": "qte_1789107869372644000_de417d5b.zip",
+    "frames": [
+      {
+        "file": "M03_before_frame_00.png",
+        "time": 23680.875,
+        "crop": [
+          117,
+          136,
+          86,
+          330
+        ],
+        "sha256": "23ae169bfbba3a477cea6603c35c86aab3331b6b1e4968755ea4de083f3b4bad"
+      },
+      {
+        "file": "M03_before_frame_01.png",
+        "time": 23680.937,
+        "crop": [
+          117,
+          136,
+          86,
+          330
+        ],
+        "sha256": "324334b70a312cf693ea976fa789e22c878ddbfc781102a34fb2651b584882d7"
+      },
+      {
+        "file": "M03_before_frame_02.png",
+        "time": 23680.968,
+        "crop": [
+          117,
+          136,
+          86,
+          330
+        ],
+        "sha256": "a0eacc64ceaa5ec671fbf6296e2f9a623e4e37973d88f919338034309e226516"
+      }
+    ],
+    "decision_time": 23681.0
+  },
+  {
+    "id": "M10",
+    "source_zip": "qte_1789109489466919500_cb3bc30b.zip",
+    "frames": [
+      {
+        "file": "M10_before_frame_00.png",
+        "time": 25300.937,
+        "crop": [
+          117,
+          136,
+          86,
+          330
+        ],
+        "sha256": "f8deb859435b90abac06268269550b80f21bdf4481ed8b800af0606cf243234f"
+      },
+      {
+        "file": "M10_before_frame_01.png",
+        "time": 25301.0,
+        "crop": [
+          117,
+          136,
+          86,
+          330
+        ],
+        "sha256": "cb1ed54568408e3098733dadcfdb7bfc4929b8af8c99404aec864a35a711a680"
+      },
+      {
+        "file": "M10_before_frame_02.png",
+        "time": 25301.046,
+        "crop": [
+          117,
+          136,
+          86,
+          330
+        ],
+        "sha256": "e1216026ea632a5e48c4adec34bb8d78b0947f83c72e53ebf74851e54c6ab075"
+      }
+    ],
+    "decision_time": 25301.062
+  },
+  {
+    "id": "M15",
+    "source_zip": "qte_1789112289001406600_6608be26.zip",
+    "frames": [
+      {
+        "file": "M15_before_frame_00.png",
+        "time": 28100.531,
+        "crop": [
+          117,
+          136,
+          86,
+          330
+        ],
+        "sha256": "b0610a7d5b11a8359984a543bc8ffc579875d069744100664f0bfc15b4678c94"
+      },
+      {
+        "file": "M15_before_frame_01.png",
+        "time": 28100.578,
+        "crop": [
+          117,
+          136,
+          86,
+          330
+        ],
+        "sha256": "bc497bdf89d9b0b3942a42b06ab80b373161e608aaa531049808cbe59a047e9d"
+      },
+      {
+        "file": "M15_before_frame_02.png",
+        "time": 28100.625,
+        "crop": [
+          117,
+          136,
+          86,
+          330
+        ],
+        "sha256": "2ffb05f37f95a0e67ff51e0e329932b8d20be9c445fe0e7b5f540026b615967f"
+      }
+    ],
+    "decision_time": 28100.64
+  }
+]

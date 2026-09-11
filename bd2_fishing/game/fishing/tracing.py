@@ -12,7 +12,7 @@ log = get_logger(__name__)
 
 
 class QTEControlTimeout(TimeoutError):
-    """控制期限结束，不代表游戏已退出 QTE；调用者必须终止后续轮次。"""
+    """控制期限结束，不代表游戏已退出 QTE；调用者须检查恢复条件。"""
 
 
 class QTETrace:
@@ -110,6 +110,7 @@ def trace_qte(method):
         run_control.set_status("QTE 进行中")
         trace = QTETrace(detailed=self.qte_detail_log)
         self._qte_trace = trace
+        self._qte_cleanup_failed = False
         log.info("QTE 开始")
         log.debug(
             "QTE 参数: 策略=%s ROI=%s 最长秒=%s 逐帧文件日志=%s",
@@ -142,6 +143,7 @@ def trace_qte(method):
                 if stop_feedback is not None:
                     stop_feedback()
             except Exception as exc:
+                self._qte_cleanup_failed = True
                 if primary_error is None:
                     trace.reason = f"exception:{type(exc).__name__}"
                     raise

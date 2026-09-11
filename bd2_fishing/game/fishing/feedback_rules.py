@@ -56,6 +56,7 @@ class OutcomeTracker:
             frames=0,
             unmatched_frames=0,
             unchanged_feedback_frames=0,
+            unattributed_fail_events=0,
             max_frame_gap_seconds=0.0,
             max_match_score=0.0,
             last_frame_at=now,
@@ -73,7 +74,9 @@ class OutcomeTracker:
         )
         samples["window_seconds"] = max(0, end - pressed)
         if category == "feedback_timeout":
-            if not samples["frames"]:
+            if samples["unattributed_fail_events"]:
+                category = "fail_without_input_result"
+            elif not samples["frames"]:
                 category = "no_observation"
             elif samples["max_frame_gap_seconds"] > 0.20:
                 category = "observation_gap"
@@ -118,7 +121,7 @@ class OutcomeTracker:
             self.blank_confirmed = self.blank_confirmed or now - self.blank_since >= 0.10
         self.last_sample_at = now
         if fresh:
-            result = "miss" if label in ("miss", "fail") else label
+            result = label
             candidates = [
                 attempt
                 for attempt, stamp in self.recent_attempts
@@ -134,9 +137,12 @@ class OutcomeTracker:
                     candidate_attempts=candidates,
                 )
             )
+            if label == "fail":
+                results.append(self._unattributed_fail(now, score, candidates))
+                return results
             self.previous_feedback_at = now
             if self.pending is None:
-                # 无对应按键的 FAIL 原因未确认；蓝区缩完等也可能触发，不能反推某次输入失败。
+                # 可能观察到接管前的输入结果，不能补造按键。
                 results.append(
                     Outcome(None, None, now, result, label, "无待确认按键的新反馈", score)
                 )
@@ -156,6 +162,21 @@ class OutcomeTracker:
             else:
                 results.append(self.finish(now, result, label, "新出现的游戏反馈文字", score))
         return results
+
+    def _unattributed_fail(self, now, score, candidates):
+        """机制/到期 FAIL 单列，保留等待窗口与后续 HIT/MISS 的归属候选。"""
+        if self.pending is not None and now >= self.pending[1]:
+            self.pending_samples["unattributed_fail_events"] += 1
+        return Outcome(
+            None,
+            None,
+            now,
+            "unknown",
+            "fail",
+            "检测到 FAIL，尚不能归因于某次按键",
+            score,
+            diagnostics=dict(category="unattributed_fail", candidate_attempts=candidates),
+        )
 
     def close(self, now, reason="QTE 退出前未获得明确反馈", *, category="qte_ended"):
         return (
