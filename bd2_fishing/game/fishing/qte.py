@@ -16,8 +16,8 @@ from bd2_fishing.game.fishing.mechanics.regions import read_mechanism_regions
 from bd2_fishing.game.fishing.pointer import read_pointer
 from bd2_fishing.game.fishing.recovery import (
     RoundObservationError,
-    check_unconfirmed_limit,
     close_confirmed_panel,
+    record_unconfirmed_round,
 )
 from bd2_fishing.game.fishing.tracing import QTEControlTimeout, trace_qte
 from bd2_fishing.infrastructure import settings as settings
@@ -33,6 +33,7 @@ log = get_logger(__name__)
 
 
 DEFAULT_LOOP_SLEEP_SECONDS = 0.01
+QTE_ENTRY_WAIT_SECONDS = 3.0
 
 
 class BaseQTEStrategy:
@@ -149,6 +150,15 @@ class BaseQTEStrategy:
                 self._mechanism_policy.targets.invalidate()
                 if not qte_started:
                     self._qte_trace.observe("loading")
+                    if time.monotonic() - start_time >= QTE_ENTRY_WAIT_SECONDS:
+                        if observer is not None:
+                            observer.evidence_metadata["qte_entry_timeout"] = dict(
+                                limit_seconds=QTE_ENTRY_WAIT_SECONDS,
+                                timer_seen=False,
+                            )
+                        raise QTEControlTimeout(
+                            "拉竿后 3 秒内未出现 QTE 倒计时，重新识别页面并接续钓鱼"
+                        )
                     if not loading_logged:
                         log.debug("倒计时条尚未出现，等待 QTE 界面加载")
                         loading_logged = True
@@ -478,7 +488,7 @@ class BaseQTEStrategy:
                 and catch_observer.evidence_metadata.get("page_state") != "idle"
             ):
                 raise RoundObservationError("等待后仍未确认结算面板")
-        check_unconfirmed_limit(self, catch_observer)
+        record_unconfirmed_round(self, catch_observer)
         run_control.sleep(max(0, self.fish_end_wait_time - (time.monotonic() - started)))
         page = catch_observer.inspect_current_page()
         if page == "idle":

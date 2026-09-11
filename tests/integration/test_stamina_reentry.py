@@ -192,7 +192,8 @@ class StaminaReentryTests(TestCase):
             enter.assert_called_once_with(observer)
         self.assertEqual(details["next_state"], "idle")
         observer.evidence_metadata["resume_check"]["panel_kind"] = "return_to_dock"
+        observer.inspect_current_page.side_effect = ["blocked_dialog", control.RunStopped("manual")]
         with patch.object(reentry, "reenter_after_stamina_error") as enter:
-            with self.assertRaises(recovery.RoundObservationError):
+            with self.assertRaises(control.RunStopped):
                 recovery._wait_for_recovery(strategy, observer, {"samples": []})
             enter.assert_not_called()

@@ -314,10 +314,40 @@ class EntryRoutingTests(unittest.TestCase):
         # 唯一等待是启动配置的等待，不插入轮间 4 秒耽误咬钩。
         sleep.assert_called_once_with(self.bot.begin_fish_wait_time)
 
+    def test_qte_recovery_handoff_skips_second_cast_and_round_delay(self):
+        self.play.side_effect = ["qte", control.RunStopped("done")]
+        with patch.object(control, "sleep") as sleep:
+            with self.assertRaises(control.RunStopped):
+                self.bot.run()
+        self.cast.assert_called_once()
+        self.bot.wait_for_bite.assert_called_once()
+        sleep.assert_called_once_with(self.bot.begin_fish_wait_time)
+
+    def test_waiting_timeout_recovers_then_waits_for_bite_instead_of_stopping(self):
+        self.entry.return_value = "waiting"
+        with (
+            patch.object(
+                startup,
+                "resume_waiting_for_bite",
+                side_effect=[recovery.RoundObservationError("15 seconds"), "hooked"],
+            ) as resume,
+            patch.object(self.bot, "_recover_entry", return_value="waiting") as recover,
+        ):
+            with self.assertRaises(control.RunStopped):
+                self.bot.run()
+        self.assertEqual(resume.call_count, 2)
+        recover.assert_called_once()
+        self.cast.assert_not_called()
+        self.play.assert_called_once()
+
     def test_first_cast_requires_fresh_idle_after_startup(self):
         self.ready.side_effect = recovery.RoundObservationError("changed")
-        with self.assertRaises(recovery.RoundObservationError):
-            self.bot.run()
+        with patch.object(
+            self.bot, "_recover_entry", side_effect=control.RunStopped("manual")
+        ) as recover:
+            with self.assertRaises(control.RunStopped):
+                self.bot.run()
+        recover.assert_called_once()
         self.cast.assert_not_called()
         self.bot.should_change_location.assert_not_called()
 

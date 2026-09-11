@@ -73,21 +73,22 @@ class QTERecoveryTests(unittest.TestCase):
     def test_panel_changed_before_click_preserves_original_error_and_sends_no_click(self):
         error = QTEControlTimeout("late")
         strategy = FailingStrategy(error)
-        strategy.catch_observer.inspect_current_page.side_effect = ["panel", "unrecognized"]
-        with self.assertRaises(QTEControlTimeout) as raised:
-            self.run_round(strategy)
-        self.assertIs(raised.exception, error)
+        strategy.catch_observer.inspect_current_page.side_effect = ["panel", "unrecognized", "idle"]
+        self.run_round(strategy)
         self.inputs.click.assert_not_called()
         self.assertEqual(
-            strategy.catch_observer.evidence_metadata["round_recovery"]["status"], "failed"
+            strategy.catch_observer.evidence_metadata["round_recovery"]["status"], "resumed"
         )
 
     def test_unknown_unavailable_and_active_qte_do_not_authorize_input(self):
         for state in ("unrecognized", "unavailable", "qte_active"):
             with self.subTest(state=state):
                 strategy = FailingStrategy(QTEControlTimeout(state))
-                strategy.catch_observer.inspect_current_page.return_value = state
-                with self.assertRaises(QTEControlTimeout):
+                strategy.catch_observer.inspect_current_page.side_effect = [
+                    state,
+                    control.RunStopped("manual"),
+                ]
+                with self.assertRaises(control.RunStopped):
                     self.run_round(strategy)
                 strategy.catch_observer.wait_until_idle.assert_not_called()
         self.assertEqual(self.inputs.mock_calls, [])
@@ -129,7 +130,7 @@ class QTERecoveryTests(unittest.TestCase):
     def test_limit_counts_once_per_round_and_confirmed_catch_resets_it(self):
         strategy = FailingStrategy(QTEControlTimeout("late"))
         first = strategy.catch_observer
-        recovery.check_unconfirmed_limit(strategy, first)
+        recovery.record_unconfirmed_round(strategy, first)
         self.run_round(strategy)
         self.assertEqual(strategy._unconfirmed_rounds, 1)
         strategy.catch_observer = Mock(
@@ -140,35 +141,39 @@ class QTERecoveryTests(unittest.TestCase):
         strategy.catch_observer = Mock(
             evidence_metadata={}, evidence_frames={}, result=CatchResult()
         )
-        with self.assertRaises(QTEControlTimeout):
-            self.run_round(strategy)
-        strategy.catch_observer.inspect_current_page.assert_not_called()
+        strategy.catch_observer.inspect_current_page.return_value = "idle"
+        self.run_round(strategy)
+        self.assertEqual(strategy._unconfirmed_rounds, 3)
+        strategy.catch_observer.wait_until_idle.assert_called_once()
         caught = SimpleNamespace(evidence_metadata={}, result=CatchResult("caught", "reward"))
-        recovery.check_unconfirmed_limit(strategy, caught)
+        recovery.record_unconfirmed_round(strategy, caught)
         self.assertEqual(strategy._unconfirmed_rounds, 0)
 
-    def test_disabled_recovery_stops_before_page_inspection(self):
+    def test_legacy_zero_limit_no_longer_disables_recovery(self):
         strategy = FailingStrategy(QTEControlTimeout("late"))
         strategy._feedback_config.set("recovery", "max_unconfirmed_rounds", "0")
-        with self.assertRaises(QTEControlTimeout):
-            self.run_round(strategy)
-        strategy.catch_observer.inspect_current_page.assert_not_called()
+        self.run_round(strategy)
+        strategy.catch_observer.wait_until_idle.assert_called_once()
 
     def test_existing_close_attempt_is_not_repeated_during_recovery(self):
         strategy = FailingStrategy(recovery.RoundObservationError("close pending"))
         strategy.catch_observer.evidence_metadata["panel_close_attempted"] = True
-        strategy.catch_observer.inspect_current_page.return_value = "panel"
-        with self.assertRaises(recovery.RoundObservationError):
-            self.run_round(strategy)
+        strategy.catch_observer.inspect_current_page.side_effect = ["panel", "idle"]
+        self.run_round(strategy)
         self.assertEqual(self.inputs.mock_calls, [])
 
     def test_failed_idle_confirmation_after_click_never_casts_or_clicks_again(self):
         strategy = FailingStrategy(QTEControlTimeout("late"))
-        strategy.catch_observer.inspect_current_page.return_value = "panel"
-        strategy.catch_observer.wait_until_idle.side_effect = recovery.RoundObservationError(
-            "pending"
-        )
-        with self.assertRaises(QTEControlTimeout):
-            self.run_round(strategy)
+        strategy.catch_observer.inspect_current_page.side_effect = [
+            "panel",
+            "panel",
+            "panel",
+            "idle",
+        ]
+        strategy.catch_observer.wait_until_idle.side_effect = [
+            recovery.RoundObservationError("pending"),
+            None,
+        ]
+        self.run_round(strategy)
         self.inputs.click.assert_called_once_with()
         self.assertTrue(strategy.catch_observer.evidence_metadata["panel_close_attempted"])

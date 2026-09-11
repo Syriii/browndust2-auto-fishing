@@ -179,7 +179,7 @@ class SettlementWaitTests(unittest.TestCase):
         for value in (0, 190, 255):
             self.assertFalse(self.observer.page_reader.inspect(np.full_like(frame, value))[0])
 
-    def test_idle_recovery_does_not_click_and_continuation_is_bounded(self):
+    def test_idle_recovery_does_not_click_or_stop_after_three_unknown_results(self):
         strategy = qte.FrostStraitQTEStrategy(self.config, self.region)
         strategy.catch_observer = self.observer
         self.camera.grab.return_value = self.idle
@@ -192,8 +192,9 @@ class SettlementWaitTests(unittest.TestCase):
             strategy.catch_observer = settlement.CatchObserver(
                 self.observer.engine, self.config, self.region
             )
-            with self.assertRaisesRegex(RuntimeError, "续钓上限"):
-                strategy._finish_fishing()
+            strategy._finish_fishing()
+            self.assertEqual(strategy._unconfirmed_rounds, 3)
+            self.assertTrue(strategy.catch_observer.evidence_metadata["resume_confirmed"])
         click.assert_not_called()
         self.assertTrue(self.observer.evidence_metadata["resume_confirmed"])
         self.assertEqual(self.observer.result.status, "unknown")

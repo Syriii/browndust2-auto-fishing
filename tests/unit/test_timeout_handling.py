@@ -51,9 +51,13 @@ class TimeoutTests(unittest.TestCase):
                     patch.object(qte.pydirectinput, "press") as press,
                     patch.object(qte.pydirectinput, "click") as click,
                     patch.object(observer, "finish") as finish,
-                    patch.object(observer, "inspect_current_page", return_value="unrecognized"),
+                    patch.object(
+                        observer,
+                        "inspect_current_page",
+                        side_effect=["unrecognized", control.RunStopped("manual")],
+                    ),
                 ):
-                    with self.assertRaises(QTEControlTimeout):
+                    with self.assertRaises(control.RunStopped):
                         run_observed_qte(strategy, capture)
                     press.assert_not_called()
                     click.assert_not_called()
@@ -66,9 +70,9 @@ class TimeoutTests(unittest.TestCase):
                         np.frombuffer(archive.read("timeout_control.png"), np.uint8), 1
                     )
                 self.assertTrue(np.array_equal(frame, self.active))
-                self.assertEqual(metadata["exit_reason"], "control_timeout")
+                self.assertEqual(metadata["exit_reason"], "interrupted")
                 self.assertEqual(metadata["control_timeout"]["state"], "qte_active")
-                self.assertEqual(metadata["result"]["status"], "unknown")
+                self.assertEqual(metadata["result"]["status"], "interrupted")
 
     def test_missing_frame_unknown_page_and_panel_never_trigger_blind_close(self):
         for frame, panel, expected in (
