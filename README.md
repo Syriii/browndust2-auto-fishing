@@ -4,7 +4,7 @@
 
 [下载最新正式版](https://github.com/Syriii/browndust2-auto-fishing/releases/latest) · [使用指南](docs/user/usage.md) · [更新记录](CHANGELOG.md) · [完整文档](docs/README.md)
 
-**版本说明：** 当前源码与固定 dist EXE 为 **0.4.0**，主界面整合钓鱼、图鉴、目标、鱼获和设置。EXE 构建与交付状态见[当前状态](docs/development/status.md)；正式附件以对应 Release 为准。
+**版本说明：** 当前源码与固定 dist EXE 为 **0.4.0**，主界面整合钓鱼、图鉴、目标、鱼获和设置。[正式 Release](https://github.com/Syriii/browndust2-auto-fishing/releases/tag/v0.4.0) 已完成构建、上传和官方下载验收；本地与线上交付证据见[当前状态](docs/development/status.md)。
 
 支持图片多选、任意尺寸／MAX／MIN 目标、跨岛与昼夜等待，以及带图鱼获历史。红色 `Maximum Size`、黄色 `New Record`、等级与边框颜色分别记录；MIN 和彩色三级成功页尚缺实图验证，见[截图复核](docs/development/catch-markers-2026-09-14.md)。
 

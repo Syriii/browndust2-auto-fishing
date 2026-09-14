@@ -90,7 +90,7 @@ EXE、运行库及 ZIP 均生成到该目录，不更新 deployment，也不复�
 4. 实际下载验证 SHA-256、包内版本与文件清单，并检查旧版本发现更新、当前版本无更新。
 5. 在状态文档记录结果及实机覆盖范围；后续文档合并不会重建已发布附件。
 
-当前 v0.3.9 已完成发布构建与附件上传，结果见[本版验收](cases/2026-09-14-release-0.3.9.md)。下一次发布使用新版本号与新标签，不移动已发布标签或覆盖旧附件。
+当前 v0.4.0 已完成发布构建、附件上传和官方下载／EXE 验收，结果见[本版验收](cases/2026-09-14-release-0.4.0.md)。下一次发布使用新版本号与新标签，不移动已发布标签或覆盖旧附件。
 
 发布后检查 Actions 的 Build Release Package 成功，并确认 Release 的 Assets 同时包含
 Windows ZIP 和同名 SHA-256 文件。附件尚未上传时更新器会提示缺少兼容包；失败时先查 Actions
@@ -111,3 +111,5 @@ deployment 是维护者本机约定，不是普通用户需要建立的目录。
 构建版本取自 pyproject.toml；助手独立 onefile，主程序保持 onedir。程序目录不携带个人配置；生成 manifest.json 后再压缩 ZIP，并生成 ZIP SHA-256。所有运行文件纳入清单，更新时自动处理过期依赖。首次迁移旧版和手动 ZIP 导入见[使用说明](../user/updating.md)，事务约束见[设计](../design/portable-update.md)。
 
 图鉴包还须运行 `scripts/checks/smoke_catalogue.py`，核对 84 张本地图与 JSON 哈希，并通过 `BD2_AutoFishing.exe --preview-catalogue` 实际打开图鉴，确认 Pillow Tk 图像组件未被裁剪。该参数采用只读预览服务，不连接游戏。
+
+跨环境比对包内 Python 模块时，应使用与该包相同的 Python 补丁版本编译源码。3.12.4 与 3.12.14 的行号表及部分异常处理字节码可能不同，不能直接用不同编译器的二进制差异断言源码不一致；本版使用包内 Python DLL 在隔离检查宿主中编译，除构建路径外完整比较代码对象。
