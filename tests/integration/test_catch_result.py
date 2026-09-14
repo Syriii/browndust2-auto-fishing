@@ -158,6 +158,22 @@ class CatchResultTests(unittest.TestCase):
         result = read_settlement_texts(engine, np.zeros((30, 70, 3), np.uint8))
         self.assertEqual((result[0].text, result[0].score), ("×1", 0.81))
 
+    def test_real_evening_reward_recovers_quantity_without_lowering_confidence(self):
+        from bd2_fishing.infrastructure.ocr.engine import RapidOCREngine
+
+        path = (
+            Path(__file__).parents[1] / "fixtures/catch_result/caught_low_confidence_20260912.png"
+        )
+        frame = cv2.imread(str(path))
+        h, w = frame.shape[:2]
+        reward = frame[round(h * 0.08) : round(h * 0.21), round(w * 0.36) : round(w * 0.65)]
+        texts = read_settlement_texts(RapidOCREngine(), reward)
+        result = classify_settlement(True, texts, [], [])
+        self.assertEqual(result.status, "caught")
+        self.assertEqual(result.reward, "×1")
+        self.assertEqual(result.size_cm, 16.2)
+        self.assertEqual(classify_settlement(False, texts, [], []).status, "unknown")
+
     def test_refinement_disagreement_does_not_invent_distance(self):
         box = OCRBox(((0, 0), (25, 0), (25, 12), (0, 12)), 0.70)
         engine = Mock()

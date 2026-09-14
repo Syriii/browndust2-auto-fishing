@@ -79,6 +79,17 @@
       "client_crop": null,
       "user_annotation": "返回码头确认框参考；用户说明尚无游戏 Bug 完整恢复过程截图，先按同类退出提示实现",
       "usage": "independent_return_dialog_regression_not_bug_recovery_validation"
+    },
+    {
+      "file": "dock_day_retry_20260912.png",
+      "source_file": "event_1789179458076894600_11a1668d.zip/reentry_latest.png",
+      "width": 945,
+      "height": 532,
+      "sha256": "d5153359f0b9d3a0d537d4a7dae0593e619c58c29176fc20f7803275b04cd58b",
+      "user_annotation": "2026-09-12 第 a6a206a2-068 轮退出重进失败现场：已返回白天码头，OCR 漏掉标题但右侧入口和信息正常。",
+      "raw_unchanged": true,
+      "capture_scope": "runtime_client_frame",
+      "client_crop": null
     }
   ]
 }

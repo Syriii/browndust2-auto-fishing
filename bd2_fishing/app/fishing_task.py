@@ -45,6 +45,8 @@ QTE_STRATEGIES_MAP: dict[FishingLocation, Type[strategy.BaseQTEStrategy]] = {
     FishingLocation.FROST_STRAIT: strategy.FrostStraitQTEStrategy,
     FishingLocation.ABYSS_MAW: strategy.AbyssMawQTEStrategy,
     FishingLocation.ATLANTIS: strategy.FrostStraitQTEStrategy,
+    # 暂用现有通用黄蓝条及机制处理；天空岛专属机制仍待真实样本验证。
+    FishingLocation.SKY_ISLAND: strategy.FrostStraitQTEStrategy,
 }
 
 
@@ -314,6 +316,8 @@ class FishingBot:
             ) as sct,
         ):
             qte_strategy = self.choose_strategy(sct)
+            if self.selected_location_name == FishingLocation.SKY_ISLAND:
+                log.warning("天空岛暂用通用钓鱼策略，尚未实测；异常截图将用于后续优化。")
             log.debug("使用策略: %s", type(qte_strategy).__name__)
             run_control.sleep(self.begin_fish_wait_time)
             from bd2_fishing.game.fishing.startup import prepare_start
@@ -336,7 +340,15 @@ class FishingBot:
                         if entry == "idle":
                             self._prepare_cast(sct)
                             fishing_actions.cast_rod()
-                            resume_qte = self.wait_for_bite(sct) == "qte"
+                            entry = self.wait_for_bite(sct)
+                            resume_qte = entry == "qte"
+                        if entry == "hooked":
+                            from bd2_fishing.game.fishing.startup import confirm_hook_entry
+
+                            entry = confirm_hook_entry(self.config, self.region)
+                            if entry == "idle":
+                                continue
+                            resume_qte = entry == "qte"
                     except RoundObservationError as exc:
                         entry = self._recover_entry(qte_strategy, exc)
                         continue

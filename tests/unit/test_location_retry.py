@@ -11,6 +11,14 @@ from bd2_fishing.runtime.geometry import Rect
 
 
 class LocationRetryTests(unittest.TestCase):
+    def test_sky_island_is_registered_for_ocr_and_strategy(self):
+        from bd2_fishing.app.fishing_task import QTE_STRATEGIES_MAP
+
+        self.assertEqual(FishingLocation("天空岛"), FishingLocation.SKY_ISLAND)
+        self.assertEqual(set(QTE_STRATEGIES_MAP), set(FishingLocation))
+        for text in ("天空岛", "天空島"):
+            self.assertEqual(island_reading.match_location_name([text]), FishingLocation.SKY_ISLAND)
+
     def setUp(self):
         roi = Rect(112, 616, 261, 650)
         self.context = OCRContext(True, Mock(), OCRRegions(roi, roi, roi))

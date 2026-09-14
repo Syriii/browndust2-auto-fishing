@@ -4,6 +4,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from bd2_fishing.game.fishing.mechanics.yellow_geometry import read_yellow_geometry
+
 
 @dataclass(frozen=True)
 class YellowAimDecision:
@@ -15,26 +17,8 @@ class YellowAimDecision:
     next_step: float | None = None
 
 
-def visible_yellow_span(mask, cursor):
-    """实体颜色确定端点；仅修补当前光标遮住、且两侧都有黄区的小孔。"""
-    height, width = mask.shape
-    trim = max(1, height // 10)
-    body = mask[trim:-trim]
-    if not body.size:
-        return None
-    columns = np.count_nonzero(body, axis=0) >= max(2, body.shape[0] * 0.35)
-    xs = np.flatnonzero(columns)
-    if not xs.size:
-        return None
-    lefts, rights = xs[xs < cursor], xs[xs > cursor]
-    if lefts.size and rights.size and not columns[cursor]:
-        left, right = int(lefts[-1]), int(rights[0])
-        if right - left - 1 <= max(3, round(height * 0.5)):
-            columns[left : right + 1] = True
-    edges = np.diff(np.r_[False, columns, False].astype(np.int8))
-    spans = list(zip(np.flatnonzero(edges == 1), np.flatnonzero(edges == -1)))
-    left, right = min(spans, key=lambda span: abs((span[0] + span[1] - 1) / 2 - cursor))
-    return int(left), int(right)
+def visible_yellow_span(mask, cursor, *, forbidden=None):
+    return read_yellow_geometry(mask, cursor, forbidden).span
 
 
 class YellowAim:
@@ -71,8 +55,9 @@ class YellowAim:
             return None
         return self.velocity, max(abs(old_velocity), abs(self.velocity)), dt
 
-    def observe(self, mask, cursor, now, *, overlap, forbidden, loop_seconds):
-        span = visible_yellow_span(mask, cursor)
+    def observe(self, mask, cursor, now, *, overlap, forbidden, loop_seconds, span=...):
+        if span is ...:
+            span = visible_yellow_span(mask, cursor, forbidden=forbidden)
         if span is None:
             self.reset()
             if overlap is True and _obscured_source(mask, cursor, forbidden):
@@ -104,6 +89,22 @@ class YellowAim:
             velocity,
             step,
         )
+
+
+def supported_yellow_overlap(mask, cursor, overlap, *, forbidden=None, span=...):
+    """膨胀只修补光标孔洞，不能靠外溢色块在实体黄条外授权输入。"""
+    if overlap is not True:
+        return overlap
+    if span is ...:
+        span = visible_yellow_span(mask, cursor, forbidden=forbidden)
+    if span is None:
+        return None
+    left, right = span
+    # 保留少量抗锯齿容差；1–2 列残片不足以确定一个可按目标。
+    margin = max(1, round(mask.shape[0] * 0.1))
+    if right - left < max(3, round(mask.shape[0] * 0.16)):
+        return None
+    return True if left - margin <= cursor < right + margin else None
 
 
 def _obscured_source(mask, cursor, forbidden):

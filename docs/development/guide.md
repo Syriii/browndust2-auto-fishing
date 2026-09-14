@@ -36,15 +36,16 @@ py -3.12 -m venv .venv
 | `app/service.py`、`session.py`、`ocr_setup.py` | 单任务工作线程、聚焦、COM、电源、OCR 与资源收尾 |
 | `app/fishing_task.py` | 钓鱼轮次协调、地点策略选择、等待上钩与恢复 |
 | `app/startup.py`、`updates.py` | 配置初始化和迁移、在线/本地更新用例 |
-| `game/islands/` | 五地点目录与别名、文字读取、已有地图往返刷新 |
+| `game/islands/` | 六钓场目录与别名、文字读取、已有地图往返刷新；天空岛暂用通用策略 |
 | `game/navigation/` | 码头、选岛、启航导航及 150402 退出重进；动作前复核页面 |
-| `game/inventory/` | 背包判断、出售与退出检查 |
+| `game/inventory/` | 满包提示判断、固定坐标出售与地点 OCR 退出检查；尚缺逐步页面确认 |
 | `game/fishing/qte.py` | 两套地点策略共用的控制循环与同步输入执行 |
-| `game/fishing/mechanics/` | 同帧区域、黄蓝目标、绿色/泡泡状态、挡板及动作仲裁 |
+| `game/fishing/mechanics/` | 同帧区域、黄条实体/短期边界、中心偏好、蓝区、绿色/泡泡/残影、挡板/贝壳及动作仲裁 |
 | `game/fishing/pointer.py`、`recognition.py` | 真光标候选与游戏反馈字形识别 |
 | `game/fishing/feedback*.py`、`settlement*.py` | 游戏反馈、按键归属、鱼获确认及观察生命周期 |
 | `game/fishing/scene_*.py`、`hook_diagnostics.py` | 特殊外观、场景时间线与上钩取证 |
 | `game/fishing/actions.py`、`cast_feedback.py`、`page.py` | 抛竿与恢复、提示判断、待机页面确认 |
+| `game/fishing/dialogs.py`、`notices.py`、`startup.py` | 分层弹窗、完整错误码核对与启动接续；启动 150302 缺 OCR 见审查报告 |
 | `perception/` | 通用图像、OCR 合同和文字处理 |
 | `runtime/` | 取消、输入锁、几何、有效区域落点、轮次上下文和设备合同 |
 | `infrastructure/windows/`、`ocr/` | Windows 窗口与输入、DXcam/GDI、RapidOCR |
@@ -98,6 +99,8 @@ py -3.12 -m venv .venv
 ```
 
 纯文档改动检查事实、路径、链接和差异即可，不需重复本地游戏或整套回归；GitHub CI 仍按仓库工作流执行。识别改动使用真实正负例；时序改动记录帧龄、输入与停止行为，不能用合成图或平均耗时替代端到端验证。
+
+2026-09-14 的 574 项离线回归通过，仍存在清包保护、配置解析和缓存容错等未覆盖问题，见[全量审查](code-review-2026-09-14.md)。修改时先把对应复现纳入回归；质量工具得分不能替代功能验证。
 
 真实游戏调试从 `scripts/live/` 显式运行源码；发布 EXE 的用户验收另行安排。工具及参数的影响见[工具说明](tools.md)，不要在离线检查中顺带启动实机工具。
 

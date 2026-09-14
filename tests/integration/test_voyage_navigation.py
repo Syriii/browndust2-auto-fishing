@@ -11,7 +11,12 @@ import numpy as np
 from bd2_fishing.app.ocr_setup import build_ocr_engine
 from bd2_fishing.game.fishing.scene import FishingSceneReader
 from bd2_fishing.game.navigation.voyage import NavigationFailed, VoyageNavigator
-from bd2_fishing.game.navigation.voyage_reading import IslandMarker, VoyageReader, VoyageReading
+from bd2_fishing.game.navigation.voyage_reading import (
+    IslandMarker,
+    VoyageReader,
+    VoyageReading,
+    parse_voyage,
+)
 from bd2_fishing.infrastructure import settings
 from bd2_fishing.runtime.control import RunStopped
 from bd2_fishing.runtime.geometry import Rect
@@ -33,6 +38,33 @@ class VoyageImageTests(TestCase):
         self.assertEqual(self.readings["01_loading.png"].page, "loading")
         dock = self.readings["02_dock.png"]
         self.assertEqual((dock.page, dock.action, dock.player_level), ("dock", "start_fishing", 26))
+
+    def test_day_dock_without_title_keeps_start_button_bounds(self):
+        frame = cv2.imread(str(FIXTURES / "controls/dock_day_retry_20260912.png"))
+        reading = self.reader.inspect(frame)
+        items = tuple(t for t in reading.texts if t.text != "码头")
+        result = parse_voyage(frame, items)
+        self.assertEqual((result.page, result.action), ("dock", "start_fishing"))
+        self.assertEqual(result.action_bounds, (841, 494, 890, 510))
+
+    def test_titleless_dock_rejects_missing_or_unreliable_support(self):
+        frame = cv2.imread(str(FIXTURES / "controls/dock_day_retry_20260912.png"))
+        items = tuple(t for t in self.reader.inspect(frame).texts if t.text != "码头")
+        for label in ("开始钓鱼", "我的信息", "船只管理", "图鉴进度"):
+            for mode in ("missing", "low_score", "wrong_position"):
+                with self.subTest(label=label, mode=mode):
+                    changed = []
+                    for item in items:
+                        if item.text == label:
+                            if mode == "missing":
+                                continue
+                            item = (
+                                replace(item, score=0.5)
+                                if mode == "low_score"
+                                else replace(item, box=replace(item.box, points=((0, 0), (20, 20))))
+                            )
+                        changed.append(item)
+                    self.assertEqual(parse_voyage(frame, changed).page, "unknown")
 
     def test_real_button_bounds_contain_their_confirmed_points(self):
         for reading in self.readings.values():
@@ -64,6 +96,25 @@ class VoyageImageTests(TestCase):
         for result in (before, after):
             self.assertEqual(result.recommended_level, 31)
             self.assertIs(result.level_warning, True)
+
+    def test_sky_license_blocks_purchase_but_owned_license_allows_sailing(self):
+        for name, allowed in (
+            ("05_sky_before_license.png", False),
+            ("06_sky_after_license.png", True),
+        ):
+            with self.subTest(name=name):
+                nav = VoyageNavigator(self.config, Rect(0, 0, 945, 532), None, "天空岛")
+                nav.guard = Mock()
+                with patch("bd2_fishing.game.navigation.voyage.game_input.click") as click:
+                    frame = np.zeros((532, 945, 3), np.uint8)
+                    if allowed:
+                        nav.act(self.readings[name], frame)
+                        click.assert_called_once()
+                        self.assertEqual(nav.selected, "天空岛")
+                    else:
+                        with self.assertRaisesRegex(NavigationFailed, "许可证"):
+                            nav.act(self.readings[name], frame)
+                        click.assert_not_called()
 
     def test_fish_and_empty_slots(self):
         fish = self.readings["07_atlantis_fish_unlocks.png"].fish

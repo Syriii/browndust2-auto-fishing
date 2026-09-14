@@ -6,7 +6,7 @@ import time
 from bd2_fishing.game.fishing.scene import FishingSceneReader
 from bd2_fishing.game.islands.catalog import FishingLocation
 from bd2_fishing.game.navigation.voyage import NavigationFailed, prepare_voyage
-from bd2_fishing.game.navigation.voyage_reading import VoyageReader
+from bd2_fishing.game.navigation.voyage_reading import VoyageReader, dock_checks
 from bd2_fishing.infrastructure.windows import input as game_input
 from bd2_fishing.infrastructure.windows.gdi import FeedbackCapture
 from bd2_fishing.infrastructure.windows.window import WindowGuard
@@ -59,18 +59,29 @@ class FishingReentry:
             if stamp >= deadline:
                 break
             control.sleep(min(0.25, max(0, deadline - stamp)))
-        raise NavigationFailed(f"钓场恢复未确认 {stage} 页面，未重复输入。")
+        log.debug(
+            "钓场恢复阶段 %s 未完成；最后识别依据：%s", stage, self.details.get("last_reading")
+        )
+        stage_name = {
+            "entry": "恢复入口",
+            "dock": "码头",
+            "return": "返回确认",
+            "closed": "弹窗关闭",
+            "error": "错误弹窗",
+        }.get(stage, stage)
+        raise NavigationFailed(f"钓场恢复未确认{stage_name}页面，未重复输入；识别依据见诊断日志。")
 
     def read_stage(self, frame, stage):
         self.button_bounds = None
         scene = self.fishing.inspect(frame)
+        self.details["last_reading"] = dict(scene=scene.state, panel=scene.panel_kind)
         if stage == "entry":
             return self.read_entry(frame, scene)
         if stage == "error":
             return self.read_error(frame, scene)
         if scene.panel_kind == "stamina_error":
             return None
-        reading = self.voyage.inspect(frame)
+        reading = self.read_voyage(frame)
         if stage == "closed":
             # 控件可能因游戏 Bug 消失，但必须读到钓场标题与更改入口。
             if (
@@ -105,7 +116,7 @@ class FishingReentry:
             return ("return", *point) if point is not None else None
         if scene.state in {"panel", "blocked_dialog"}:
             return None
-        reading = self.voyage.inspect(frame)
+        reading = self.read_voyage(frame)
         if reading.page in {"dock", "map"}:
             return (reading.page,)
         if reading.page == "island" and reading.island in (None, str(self.origin)):
@@ -116,7 +127,7 @@ class FishingReentry:
         """模板只筛选外观，动作前必须读准完整错误码，避免相似数字误确认。"""
         if scene.panel_kind != "stamina_error":
             return None
-        reading = self.voyage.inspect(frame)
+        reading = self.read_voyage(frame)
         exact_code = any(
             item.score >= 0.85
             and re.search(r"error[:：]150402(?!\d)", re.sub(r"\s+", "", item.text), re.I)
@@ -127,6 +138,13 @@ class FishingReentry:
             self.button_bounds = (458, 282, 489, 301)
             return (472, 292)
         return None
+
+    def read_voyage(self, frame):
+        reading = self.voyage.inspect(frame)
+        self.details.setdefault("last_reading", {}).update(
+            page=reading.page, dock_checks=dock_checks(reading.texts)
+        )
+        return reading
 
     def click(self, point, action):
         self.guard()

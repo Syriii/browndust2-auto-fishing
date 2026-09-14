@@ -2,7 +2,7 @@
 
 [文档目录](../README.md) · [目录布局](repository-layout.md) · [开发指南](../development/guide.md) · [开发规范](../development/standards.md)
 
-本文以 v0.2.0 和当前源码为基线，先描述已实现架构，再列后续目标。首轮方案、旧模块名及迁移过程保存在[架构阶段档案](../history/architecture-2026-09-08.md)。
+本文按当前源码描述已实现架构，再列后续目标；2026-09-14 的实现缺陷与维护热点见[代码审查](../development/code-review-2026-09-14.md)。首轮方案、旧模块名及迁移过程保存在[架构阶段档案](../history/architecture-2026-09-08.md)。
 
 ## 划分依据
 
@@ -59,7 +59,10 @@ game/fishing/
 │   ├── regions.py                同帧红紫绿区域与泡泡几何
 │   ├── blue_target.py            蓝区可靠内部边界与小孔修补
 │   ├── green_control.py          有界按下、持有、释放状态
-│   ├── bubbles.py                泡泡单次尝试许可
+│   ├── bubbles.py / bubble_targets.py  单球许可与多球身份去重
+│   ├── bubble_memory.py          已确认泡泡消失后的局部残影避让
+│   ├── yellow_geometry.py / yellow_aim.py  黄条实体/短期边界与中心偏好
+│   ├── shells.py                 贝壳模板定位与局部禁区
 │   ├── blockers.py               既有深渊单挡板识别
 │   └── lifecycle.py              观察侧多外观实例时间线
 ├── pointer.py / trigger_rules.py  真光标观察与同次入区去重
@@ -69,13 +72,15 @@ game/fishing/
 ├── settlement*.py / page.py       鱼获与待机页面确认
 ├── recovery.py                   失败轮次恢复、按类型关闭连续结算弹窗
 ├── panels.py / templates.py       结算弹窗身份与共用字形匹配
+├── dialogs.py / notices.py        上层提示身份与 150302 完整错误码核对
+├── presence.py                   已开始 QTE 的短暂计时颜色容错
 ├── tracing.py / hook_diagnostics.py  轮次统计与上钩取证
 └── assets/                       运行时识别模板
 ```
 
 两套地点策略共用 `BaseQTEStrategy.play_qte`。控制帧提取目标和机制区域后交给 `MechanismPolicy`，返回 normal、wait、press、down 或 up；只有执行层发送输入，处理器之间不各自按键。
 
-普通目标黄色优先，无有效黄区时检查蓝区安全边界并连续确认；绿色模式约束优先于泡泡尝试，红紫局部障碍约束普通输入。时间从调用方传入，纯状态规则不截图、不等待、不写盘。
+普通目标黄色优先，无有效黄区时检查蓝区安全边界并连续确认。绿色按下/持有/释放独占输入；未确认起按端但有可靠范围时，范围和边距外的普通目标及不相交泡泡仍可独立判断。红紫、贝壳和泡泡残影构成局部约束。时间从调用方传入，纯状态规则不截图、不等待、不写盘。
 
 控制与观察是两条关联但不同的链：
 
@@ -114,7 +119,7 @@ ui/updates 通过 app/updates 调用版本检查、本地包导入与重启交�
 | 方向 | 归属与要求 |
 | --- | --- |
 | 从开始页进入钓鱼 | navigation 补已确认页面、转换与到达验证；app 组合准备任务，未知页面不盲点 |
-| 第六岛及更多岛屿 | islands 补稳定身份、别名、来源和能力覆盖；不以列表下标持久化身份，不写死总数 |
+| 天空岛专属机制及更多岛屿 | 六钓场目录已存在；继续补稳定身份、资料与各岛机制覆盖，不以目录登记代表实测通过 |
 | 玩法信息读取 | 所属功能提供值、时间、来源帧及未知/过期状态，app 汇总；读取失败不填成 0 |
 | 更多机制及组合 | fishing/mechanics 扩充识别、约束与状态，由 policy 统一输入权限；配真实正负例及连续时序证据 |
 | 其他岛屿玩法 | game 新增对应功能，app 增加任务入口；复用运行与导航能力，不复制整个钓鱼包 |

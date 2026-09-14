@@ -79,6 +79,8 @@ class SceneSignals:
         regions = read_mechanism_regions(qte)
         if regions.bubble_spans:
             signals.append("bubble_candidate")
+        if regions.shell_spans:
+            signals.append("shell_occlusion")
         for name in ("red", "purple", "green"):
             if pixels[name] >= threshold:
                 signals.append(f"{name}_content")
@@ -108,11 +110,13 @@ class SceneSignals:
             pointer_reason=reading.reason,
             qte_shape=list(qte.shape),
             bubble_spans=regions.bubble_spans,
+            shell_spans=regions.shell_spans,
             green_hold_candidate=regions.green_present,
             appearance_regions={
                 "red_region": regions.red_spans,
                 "purple_region": regions.purple_spans,
                 "bubble_candidate": regions.bubble_spans,
+                "shell_occlusion": regions.shell_spans,
                 "green_region": ()
                 if regions.green is None
                 else ((regions.green.left, regions.green.right),),

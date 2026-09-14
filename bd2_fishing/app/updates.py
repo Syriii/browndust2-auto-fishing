@@ -10,6 +10,7 @@ from pathlib import Path
 
 from bd2_fishing.infrastructure import paths
 from bd2_fishing.infrastructure.updates import github
+from bd2_fishing.infrastructure.updates.check import ReleaseChecker
 from bd2_fishing.infrastructure.updates.package import HELPER, read_manifest, unpack_verified
 from bd2_fishing.infrastructure.updates.transaction import pending_job, safe_path, write_json
 
@@ -19,6 +20,7 @@ RELEASES_URL = github.RELEASES_URL
 class UpdateService:
     def __init__(self):
         self.root = Path(paths.get_base_path())
+        self.checker = ReleaseChecker(self.root / "cache/release-check.json")
         self.supported = bool(getattr(sys, "frozen", False))
         manifest = self.root / "manifest.json"
         self.version = (
@@ -30,8 +32,12 @@ class UpdateService:
             except PackageNotFoundError:
                 self.version = "0.0.0"
 
-    def check(self):
-        return github.latest_release(self.version)
+    def check(self, *, force=False):
+        return self.checker.check(self.version, force=force)
+
+    @property
+    def check_notice(self):
+        return self.checker.notice
 
     def prepare(self, *, package=None, release=None, cancel=None):
         if not self.supported:

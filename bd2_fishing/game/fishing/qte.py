@@ -13,7 +13,10 @@ from bd2_fishing.game.fishing.mechanics.blockers import BlockerDetector, active_
 from bd2_fishing.game.fishing.mechanics.blue_target import read_blue_target
 from bd2_fishing.game.fishing.mechanics.policy import MechanismPolicy
 from bd2_fishing.game.fishing.mechanics.regions import read_mechanism_regions
+from bd2_fishing.game.fishing.mechanics.yellow_aim import supported_yellow_overlap
+from bd2_fishing.game.fishing.mechanics.yellow_geometry import read_yellow_geometry
 from bd2_fishing.game.fishing.pointer import read_pointer
+from bd2_fishing.game.fishing.presence import QTEPresence
 from bd2_fishing.game.fishing.recovery import (
     RoundObservationError,
     close_confirmed_panel,
@@ -127,7 +130,9 @@ class BaseQTEStrategy:
     @trace_qte
     def play_qte(self, sct: capture_backend.DxCameraCapture) -> None:
         self._mechanism_policy = MechanismPolicy()
+        self._mechanism_combinations = set()
         no_bar_frames = 0
+        presence = QTEPresence()
         observer = getattr(self, "catch_observer", None)
         qte_started = observer is not None and observer.evidence_metadata.get("resumed_qte") is True
         loading_logged = False
@@ -137,6 +142,7 @@ class BaseQTEStrategy:
             run_control.checkpoint()
             frames = self._grab_qte_frames(sct)
             if frames is None:
+                presence.invalidate()
                 self._release_green_on_missing_frame()
                 self._mechanism_policy.targets.invalidate()
                 self._qte_trace.observe("no_frame")
@@ -145,7 +151,22 @@ class BaseQTEStrategy:
 
             time_hsv, qte_hsv = self._split_roi_and_time(frames)
             time_green_mask, time_red_mask = self._time_bar_masks(time_hsv)
-            if not self._time_bar_visible_from_masks(time_green_mask, time_red_mask):
+            timer_visible = self._time_bar_visible_from_masks(time_green_mask, time_red_mask)
+            cursor_x = self._find_cursor_x(qte_hsv) if timer_visible or qte_started else None
+            current_target = False
+            if not timer_visible and cursor_x is not None:
+                yellow = cv2.inRange(qte_hsv, self.yellow_range.lower, self.yellow_range.upper)
+                blue = self._blue_mask(qte_hsv)
+                body = cv2.bitwise_or(yellow, blue)
+                current_target = (
+                    np.count_nonzero(np.count_nonzero(body, axis=0) >= max(2, body.shape[0] * 0.35))
+                    >= 3
+                )
+            visible = presence.observe(timer_visible, current_target, cursor_x, time.monotonic())
+            if visible and not timer_visible:
+                self._qte_trace.observe("timer_color_grace")
+                self._cache_mechanism_frame("timer_color_grace.png", first_only=True)
+            if not visible:
                 self._release_green_on_missing_frame()
                 self._mechanism_policy.targets.invalidate()
                 if not qte_started:
@@ -174,7 +195,6 @@ class BaseQTEStrategy:
             qte_started = True
             no_bar_frames = 0
 
-            cursor_x = self._find_cursor_x(qte_hsv)
             handled, regions = self._mechanism_step(qte_hsv, cursor_x)
             if handled:
                 self._mechanism_policy.targets.invalidate()
@@ -229,9 +249,13 @@ class BaseQTEStrategy:
     def _mechanism_step(self, qte_hsv, cursor):
         """识别同一控制帧，由纯策略仲裁，再同步执行唯一动作。"""
         regions = read_mechanism_regions(qte_hsv, margin=max(3, self.press_tolerance_pixels + 2))
-        self._mechanism_regions = regions
         decision = self._mechanism_policy.observe(regions, cursor, time.monotonic())
+        regions = self._mechanism_policy.regions
+        self._mechanism_regions = regions
         if decision.action == "normal":
+            if decision.reason == "green_spatially_separate":
+                self._qte_trace.observe(decision.reason)
+                self._cache_mechanism_frame("green_separate_ordinary.png", first_only=True)
             self._cache_first_mechanisms(regions)
             return False, regions
         if decision.action == "press":
@@ -288,17 +312,32 @@ class BaseQTEStrategy:
         return True, regions
 
     def _cache_first_mechanisms(self, regions):
+        active = []
         for name, present in (
             ("green", regions.green_present),
             ("purple", bool(regions.purple_spans)),
             ("red", bool(regions.red_spans)),
             ("bubble", bool(regions.bubble_spans)),
+            ("shell", bool(regions.shell_spans)),
+            ("bubble_remnant", bool(regions.bubble_remnant_spans)),
         ):
             if present:
+                active.append(name)
                 self._cache_mechanism_frame(f"mechanism_first_{name}.png", first_only=True)
+        pointer = getattr(self, "_pointer_reading", None)
+        if pointer is not None and len(pointer.candidates) > 1:
+            active.append("pointer_candidates")
+        seen = getattr(self, "_mechanism_combinations", set())
+        combination = tuple(active)
+        if len(active) > 1 and combination not in seen and len(seen) < 8:
+            seen.add(combination)
+            self._mechanism_combinations = seen
+            self._cache_mechanism_frame(
+                "mechanism_combination_" + "_".join(active) + ".png", first_only=True
+            )
 
     def _cache_mechanism_frame(self, name, *, first_only=False):
-        """每轮最多三张首次机制图及两张动作图；复用帧，仅缓存、不编码写盘。"""
+        """保留首次机制图、至多八种组合和动作末帧；复用帧，不编码写盘。"""
         observer = getattr(self, "catch_observer", None)
         if observer is None or self._decision_frame is None:
             return
@@ -359,9 +398,12 @@ class BaseQTEStrategy:
                         if self._mechanism_regions is None
                         else dict(
                             green_present=self._mechanism_regions.green_present,
+                            green_spans=self._mechanism_regions.green_spans,
                             purple_spans=self._mechanism_regions.purple_spans,
                             red_spans=self._mechanism_regions.red_spans,
                             bubble_spans=self._mechanism_regions.bubble_spans,
+                            shell_spans=self._mechanism_regions.shell_spans,
+                            bubble_remnant_spans=self._mechanism_regions.bubble_remnant_spans,
                         ),
                         configured_timing=dict(
                             loop_sleep_seconds=self.loop_sleep_seconds,
@@ -565,23 +607,36 @@ class BaseQTEStrategy:
         )
 
     def _yellow_overlap(self, mask, cursor, regions, *, active_range=None):
-        forbidden = regions.blocked.copy()
+        forbidden = regions.with_green_exclusion().blocked.copy()
         for left, right in regions.bubble_spans:
             forbidden[left:right] = True
-        if regions.green_present:
-            forbidden[:] = True
         if active_range is not None:
             left, right = active_range
             forbidden[:left] = True
             forbidden[right + 1 :] = True
+        stamp = time.monotonic()
+        reading = read_yellow_geometry(self._yellow_source_mask, cursor, forbidden)
+        reading = self._mechanism_policy.targets.yellow_geometry.observe(
+            reading, cursor, stamp, self._yellow_source_mask.shape, forbidden
+        )
+        self._yellow_geometry_reading = reading
+        overlap = self._mask_column_has_color(mask, cursor)
+        supported = supported_yellow_overlap(
+            self._yellow_source_mask, cursor, overlap, forbidden=forbidden, span=reading.span
+        )
+        self._yellow_supported = supported
         self._yellow_aim_decision = self._mechanism_policy.targets.yellow_aim.observe(
             self._yellow_source_mask,
             cursor,
-            time.monotonic(),
-            overlap=self._mask_column_has_color(mask, cursor),
+            stamp,
+            overlap=supported,
             forbidden=forbidden,
             loop_seconds=self.loop_sleep_seconds,
+            span=reading.span,
         )
+        if overlap is True and supported is None:
+            self._qte_trace.observe("yellow_outside_supported_span")
+            self._record_yellow_rejection(reading, cursor, stamp)
         if self._yellow_aim_decision.reason == "prefer_center":
             self._qte_trace.observe("yellow_center_wait")
         elif self._yellow_aim_decision.reason == "obscured_yellow_source":
@@ -589,10 +644,44 @@ class BaseQTEStrategy:
             self._cache_mechanism_frame("yellow_obscured_rejected.png", first_only=True)
         return self._yellow_aim_decision.overlap
 
+    def _record_yellow_rejection(self, reading, cursor, stamp):
+        """仅取光标位于黄区碎片之间的拒绝帧，每轮至多三份，复用控制帧。"""
+        spans = reading.raw_spans
+        observer = getattr(self, "catch_observer", None)
+        if (
+            observer is None
+            or self._decision_frame is None
+            or not spans
+            or not spans[0][0] < cursor < spans[-1][1]
+        ):
+            return
+        records = observer.evidence_metadata.setdefault("yellow_rejections", [])
+        if len(records) >= 3 or (records and stamp - records[-1]["observed_at"] < 0.25):
+            return
+        name = f"yellow_rejected_{len(records)}.png"
+        self._cache_mechanism_frame(name, first_only=True)
+        trigger = self._mechanism_policy.targets.trigger
+        records.append(
+            dict(
+                file=name,
+                observed_at=stamp,
+                captured_at=self._decision_captured_at,
+                cursor=cursor,
+                geometry=asdict(reading),
+                source_pixels=self._yellow_source_pixels,
+                trigger_armed=trigger.armed,
+                trigger_target=trigger.target,
+            )
+        )
+
     def _yellow_evidence(self, target):
         if target != "yellow" or self._yellow_aim_decision is None:
             return {}
-        return {"yellow_aim": asdict(self._yellow_aim_decision)}
+        return {
+            "yellow_aim": asdict(self._yellow_aim_decision),
+            "yellow_overlap_supported": self._yellow_supported,
+            "yellow_geometry": asdict(self._yellow_geometry_reading),
+        }
 
     def _record_sparse_yellow(self):
         if 0 < self._yellow_source_pixels < self.yellow_source_min_pixels:
@@ -713,7 +802,11 @@ class AbyssMawQTEStrategy(BaseQTEStrategy):
         blue_mask = regions.mask_target(self._blue_mask(ordinary_hsv))
         blocker_rect = self._blocker_detector.read(qte_hsv, self._cursor_mask(qte_hsv))
         left_x, right_x = active_range_for_blocker(blocker_rect, cursor_x, yellow_mask.shape[1])
-        check_x = max(left_x, min(cursor_x, right_x))
+        if not left_x <= cursor_x <= right_x:
+            self._mechanism_policy.targets.invalidate()
+            self._qte_trace.observe("cursor_inside_blocker")
+            return
+        check_x = cursor_x
         if regions.blocked[check_x]:
             self._mechanism_policy.targets.invalidate()
             self._qte_trace.observe("mechanism_obstruction")

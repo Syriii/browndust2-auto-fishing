@@ -60,7 +60,7 @@ def read_settlement_texts(engine, image):
             if item.score < 0.75 and token[0] == "quantity":
                 # 生僻鱼名会拉低整行均分；单独读行尾“×数量”，不伪造未读准的鱼名。
                 tail_left = max(
-                    left, right - round((bottom - top) * (1 + len(str(token[1])) * 0.5))
+                    left, right - round((bottom - top) * (1 + len(str(token[1])) * 0.3))
                 )
                 tail = image[
                     max(0, top - 1) : min(image.shape[0], bottom + 2),

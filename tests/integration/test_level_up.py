@@ -60,7 +60,7 @@ class LevelUpTests(unittest.TestCase):
     def sleep(self, seconds):
         self.clock += seconds
 
-    def next_stage(self):
+    def next_stage(self, *args):
         self.stage = min(self.stage + 1, len(self.stages) - 1)
 
     def test_real_level_up_source_and_independent_frame_are_identified(self):
@@ -70,6 +70,78 @@ class LevelUpTests(unittest.TestCase):
             kind, scores = self.observer.panel_reader.inspect(frame, close_visible=True)
             self.assertEqual(kind, "level_up", scores)
             self.assertTrue(all(score >= 0.88 for score in scores.values()), scores)
+
+    def test_new_night_and_day_frames_with_independent_holdouts(self):
+        from bd2_fishing.game.fishing.panels import SettlementPanelReader
+
+        for name in (
+            "level_up_night_20260913.png",
+            "level_up_night_holdout_20260913.png",
+            "level_up_day_holdout_20260913.png",
+        ):
+            for width, height in ((945, 532), (1192, 666), (1280, 720)):
+                with self.subTest(name=name, size=(width, height)):
+                    frame = cv2.resize(self.load(name), (width, height))
+                    reader = SettlementPanelReader(Rect(0, 0, width, height))
+                    kind, scores = reader.inspect(frame, close_visible=reader.is_open(frame))
+                    self.assertEqual(kind, "level_up", scores)
+
+    def test_each_fixed_label_is_required_in_night_fallback(self):
+        reader = self.observer.panel_reader
+        for left, top, right, bottom in reader.LABEL_BOUNDS:
+            frame = self.load("level_up_night_holdout_20260913.png")
+            frame[top - 3 : bottom + 3, left - 3 : right + 3] = 0
+            self.assertNotEqual(reader.inspect(frame, close_visible=True)[0], "level_up")
+
+    def test_lost_upgrade_click_retries_then_confirms_idle(self):
+        self.stages = [self.reward, self.load("level_up_night_20260913.png"), self.idle]
+        self.observer.config.set("time", "fish_end_wait_time", "4")
+        calls = []
+
+        def click(*point):
+            calls.append((self.clock, point))
+            if len(calls) != 2:  # First upgrade click is not acted on by the game.
+                self.next_stage()
+
+        self.input.click.side_effect = click
+        self.strategy._finish_fishing()
+        self.assertEqual(len(calls), 3)
+        self.assertGreaterEqual(calls[2][0] - calls[1][0], 2)
+        self.assertEqual(calls[2][1], (472, 492))
+        self.assertTrue(self.observer.evidence_metadata["resume_confirmed"])
+        self.assertEqual(self.observer.result.status, "caught")
+
+    def test_upgrade_retries_cool_down_and_history_stays_bounded(self):
+        self.stage = 1
+        self.input.click.side_effect = None
+        self.observer.inspect_current_page()
+        for count in range(1, 21):
+            self.assertTrue(recovery._close_new_panel(self.strategy, self.observer))
+            self.assertFalse(recovery._close_new_panel(self.strategy, self.observer))
+            meta = self.observer.evidence_metadata
+            delay = 2 if count < 3 else 30
+            self.assertAlmostEqual(meta["level_up_retry_at"] - self.clock, delay)
+            self.clock = meta["level_up_retry_at"]
+        self.assertEqual(len(meta["panel_close_history"]), 16)
+        self.assertEqual(meta["level_up_close_attempts"], 20)
+        self.assertEqual(meta["closed_panel_kinds"], ["level_up"])
+
+    def test_retry_does_not_click_after_page_changes_or_stop(self):
+        self.stage = 1
+        self.input.click.side_effect = None
+        self.observer.inspect_current_page()
+        recovery._close_new_panel(self.strategy, self.observer)
+        self.clock += 3
+        self.stage = 2
+        with self.assertRaises(recovery.RoundObservationError):
+            recovery._close_new_panel(self.strategy, self.observer)
+        self.input.click.assert_called_once()
+        self.stage = 1
+        self.observer.inspect_current_page()
+        self.input.moveTo.side_effect = control.RunStopped("focus lost")
+        with self.assertRaises(control.RunStopped):
+            recovery._close_new_panel(self.strategy, self.observer)
+        self.input.click.assert_called_once()
 
     def test_title_labels_and_close_prompt_are_all_required(self):
         reader = self.observer.panel_reader
@@ -133,6 +205,82 @@ class LevelUpTests(unittest.TestCase):
             self.strategy._finish_fishing()
         self.input.click.assert_called_once()
 
+    def prepare_exhausted_notice(self):
+        self.stages = [
+            self.load("notice_150302_20260913.png"),
+            self.load("notice_150302_reward_20260913.png"),
+            self.idle,
+        ]
+        self.observer.engine.detect_and_recognize.return_value = [
+            OCRText("已耗尽体力。", 0.99),
+            OCRText("error:150302", 0.99),
+        ]
+        self.observer.inspect_current_page()
+
+    def test_overlay_close_does_not_consume_reward_close(self):
+        self.prepare_exhausted_notice()
+        recovery.close_confirmed_panel(self.strategy, self.observer)
+        self.assertEqual(self.input.click.call_count, 2)
+        self.assertEqual(self.input.click.call_args_list[0].args, (472, 292))
+        metadata = self.observer.evidence_metadata
+        self.assertEqual(metadata["closed_panel_kinds"], ["exhausted_notice", "result"])
+        self.assertTrue(metadata["resume_confirmed"])
+        self.assertTrue(
+            np.array_equal(
+                self.observer.evidence_frames["panel_before_result.png"],
+                self.stages[1],
+            )
+        )
+
+    def test_notice_retries_are_cooled_down_and_do_not_exhaust_reward_permission(self):
+        self.prepare_exhausted_notice()
+        self.input.click.side_effect = None
+        for count in range(1, 5):
+            self.assertTrue(recovery._close_new_panel(self.strategy, self.observer))
+            self.assertFalse(recovery._close_new_panel(self.strategy, self.observer))
+            metadata = self.observer.evidence_metadata
+            self.assertAlmostEqual(
+                metadata["exhausted_notice_retry_at"] - self.clock, 2 if count < 3 else 30
+            )
+            self.clock = metadata["exhausted_notice_retry_at"]
+        self.assertNotIn("result", metadata["closed_panel_kinds"])
+
+    def test_notice_wrong_code_or_low_confidence_never_clicks(self):
+        self.prepare_exhausted_notice()
+        for code, score in [("150402", 0.99), ("1503020", 0.99), ("150302", 0.5)]:
+            self.observer.engine.detect_and_recognize.return_value = [
+                OCRText("已耗尽体力。", 0.99),
+                OCRText(f"error:{code}", score),
+            ]
+            with self.assertRaises(recovery.RoundObservationError):
+                recovery._close_new_panel(self.strategy, self.observer)
+        self.input.click.assert_not_called()
+        self.assertNotIn("closed_panel_kinds", self.observer.evidence_metadata)
+
+    def test_notice_disappearing_during_ocr_does_not_click_underlying_reward(self):
+        self.prepare_exhausted_notice()
+
+        def read(image):
+            self.stage = 1
+            return [OCRText("已耗尽体力。", 0.99), OCRText("error:150302", 0.99)]
+
+        self.observer.engine.detect_and_recognize.side_effect = read
+        with self.assertRaises(recovery.RoundObservationError):
+            recovery._close_new_panel(self.strategy, self.observer)
+        self.input.click.assert_not_called()
+
+    def test_recovery_handles_notice_reward_then_idle_without_reentry(self):
+        self.prepare_exhausted_notice()
+        with patch.object(recovery, "_try_reentry") as reenter:
+            self.assertTrue(
+                recovery.recover_round(
+                    self.strategy, self.observer, recovery.RoundObservationError("layered notice")
+                )
+            )
+        reenter.assert_not_called()
+        self.assertEqual(self.input.click.call_count, 2)
+        self.assertEqual(self.observer.evidence_metadata["round_recovery"]["status"], "resumed")
+
     def test_panel_kind_changes_during_preclick_check_sends_no_click(self):
         self.stage = 1
         self.observer.inspect_current_page()
@@ -172,5 +320,5 @@ class LevelUpTests(unittest.TestCase):
         recovery.close_confirmed_panel(self.strategy, self.observer)
         self.assertGreaterEqual(self.clock, 50)
         self.assertLess(self.clock, 60)
-        self.assertEqual(self.input.click.call_count, 2)
+        self.assertEqual(self.input.click.call_count, 4)
         self.assertTrue(self.observer.evidence_metadata["resume_confirmed"])

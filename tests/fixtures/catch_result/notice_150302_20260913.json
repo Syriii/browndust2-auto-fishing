@@ -1,0 +1,23 @@
+[
+  {
+    "file": "notice_150302_20260913.png",
+    "source_zip": "event_1789292604696000200_579b62f8.zip",
+    "source_frame": "panel_before_result.png",
+    "round_id": "55ea1917-080",
+    "sha256": "f0e756c13dbc28a0c982b5e82600f40c6588e21752ad2edeb96c576dda846934"
+  },
+  {
+    "file": "notice_150302_holdout_20260913.png",
+    "source_zip": "event_1789292604696000200_579b62f8.zip",
+    "source_frame": "resume_first.png",
+    "round_id": "55ea1917-080",
+    "sha256": "132661d068fb75684e01cbd316a3850707b4076a9f04b0db263919e59a74de65"
+  },
+  {
+    "file": "notice_150302_reward_20260913.png",
+    "source_zip": "event_1789292604696000200_579b62f8.zip",
+    "source_frame": "resume_latest.png",
+    "round_id": "55ea1917-080",
+    "sha256": "bcecd794b873fe170fe30daade430dc11cfcc64f49602c46d50b8909cb99239e"
+  }
+]

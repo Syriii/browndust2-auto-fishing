@@ -33,6 +33,9 @@ class FishingSceneReader:
             return SceneReading("unavailable")
         blocked, dialog_scores = self.dialogs.inspect(frame)
         if blocked:
+            # 150302 可叠在鱼获页上；单独处理，不消耗下层 result 的关闭权限。
+            if blocked == "exhausted_notice":
+                return SceneReading("panel", panel_kind=blocked, panel_scores=dialog_scores)
             return SceneReading("blocked_dialog", panel_kind=blocked, panel_scores=dialog_scores)
         panel = self.panels.is_open(frame)
         if panel:

@@ -1,0 +1,24 @@
+{
+  "file": "bubble_transition.png",
+  "source_zip": "event_1789312854049667700_ecbe55a2.zip",
+  "source_frame": "mechanism_combination_green_bubble_remnant.png",
+  "round": "c6d29910-024",
+  "sha256": "227b60f710799fa926e884fb6b6f4f78a96a86b556a485658cb757e4de7bfb14",
+  "capture": {
+    "captured_at_monotonic": 228644.437,
+    "frame_region": [
+      328,
+      968,
+      640,
+      1010
+    ],
+    "qte_crop_percent": [
+      50,
+      97,
+      22,
+      100
+    ],
+    "capture_backend": "control DXcam (BGR)"
+  },
+  "note": "真实控制原帧，当前光标146在黄条154..169外。只证明应继续普通识别，不是命中正例；测试移动光标的位置属于明确合成。"
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "file": "shell_holdout_0.png",
+    "source": "evidence\\event_1789214805158686000_bbf5a94b.zip!frame_033.png",
+    "time": 130614.406,
+    "spans": [
+      [
+        30,
+        65
+      ],
+      [
+        97,
+        132
+      ]
+    ],
+    "sha256": "457d64822eeb17a09e1a2cf68373de0c856e84b990db3b71715dcd3813259e2f"
+  },
+  {
+    "file": "shell_holdout_1.png",
+    "source": "evidence\\event_1789214805158686000_bbf5a94b.zip!frame_036.png",
+    "time": 130614.578,
+    "spans": [
+      [
+        30,
+        65
+      ],
+      [
+        97,
+        132
+      ]
+    ],
+    "sha256": "2f4b66e6ec4dde195019f291a678dd364e4498836c041ec3d973943d9b0f15d8"
+  }
+]

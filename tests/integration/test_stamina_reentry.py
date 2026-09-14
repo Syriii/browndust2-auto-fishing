@@ -68,6 +68,7 @@ class StaminaImageTests(TestCase):
         for name, expected in [
             ("01_loading.png", None),
             ("02_dock.png", ("dock",)),
+            ("controls/dock_day_retry_20260912.png", ("dock",)),
             ("07_atlantis_fish_unlocks.png", ("map",)),
             ("controls/island_navigation_controls.png", ("island",)),
         ]:
@@ -79,6 +80,17 @@ class StaminaImageTests(TestCase):
                 self.config, Rect(0, 0, width, height), self.engine, "亚特兰蒂斯", {}, {}
             )
             self.assertEqual(worker.read_stage(frame, "entry"), expected, name)
+
+    def test_day_dock_is_accepted_after_return_and_records_evidence(self):
+        frame = cv2.imread(str(FIXTURES / "controls/dock_day_retry_20260912.png"))
+        worker = reentry.FishingReentry(
+            self.config, Rect(0, 0, 945, 532), self.engine, "亚特兰蒂斯", {}, {}
+        )
+        self.assertEqual(worker.read_stage(frame, "dock"), ("dock",))
+        evidence = worker.details["last_reading"]
+        self.assertEqual(evidence["page"], "dock")
+        self.assertTrue(evidence["dock_checks"]["船只管理"])
+        self.assertTrue(evidence["dock_checks"]["开始钓鱼"])
 
 
 class FishingReentryTests(TestCase):
@@ -216,7 +228,7 @@ class FishingReentryTests(TestCase):
             self.assertEqual(result is not None, code == "150402")
 
     def test_no_origin_or_ocr_prevents_any_action(self):
-        for origin, engine in ((None, Mock()), ("天空岛", Mock()), ("亚特兰蒂斯", None)):
+        for origin, engine in ((None, Mock()), ("未知钓场", Mock()), ("亚特兰蒂斯", None)):
             with self.assertRaises(reentry.NavigationFailed):
                 reentry.FishingReentry(Mock(), self.worker.region, engine, origin, {}, {})
         self.assertEqual(self.game_input.mock_calls, [])

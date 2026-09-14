@@ -3,6 +3,7 @@
 import logging
 import queue
 import threading
+import time
 import tkinter as tk
 import webbrowser
 from tkinter import filedialog, messagebox, ttk
@@ -46,20 +47,33 @@ class UpdatePanel:
         self._timer = self.app.root.after(3600000, self.hourly)
 
     def _maintain(self, check):
-        removed = self.app.services.maintain_storage()
-        if removed:
-            log.info("已清理 %s 个过期日志或截图文件", removed)
-        return self.service.check() if check else None
+        result = dict(checked=check, release=None, update_error=None, storage_error=None)
+        try:
+            removed = self.app.services.maintain_storage()
+            if removed:
+                log.info("已清理 %s 个过期日志或截图文件", removed)
+        except Exception as exc:
+            result["storage_error"] = exc
+        if check:
+            try:
+                result["release"] = self.service.check()
+            except Exception as exc:
+                result["update_error"] = exc
+        return result
 
     def _startup_result(self, result):
         if isinstance(result, Exception):
-            self.notice.set(f"更新检查或存储维护未完成：{result}。可打开 Release 页面手动下载。")
+            self.notice.set("后台维护未完成，详细原因见诊断日志。")
             log.warning(self.notice.get())
-        elif result:
-            self.release = result
-            self.notice.set(f"发现新版本 {result['version']}，可下载并重启更新。")
-            self.app.update_button.configure(text="发现新版本 · 更新")
-            log.info(self.notice.get())
+            log.debug("后台维护异常：%r", result)
+            return
+        if result["checked"]:
+            self.checked(result["update_error"] or result["release"])
+        if result["storage_error"]:
+            message = "日志或截图清理未完成，已有记录保留；详细原因见诊断日志。"
+            self.notice.set(self.notice.get() + "\n" + message)
+            log.warning(message)
+            log.debug("存储维护异常：%r", result["storage_error"])
 
     def open(self):
         if self.app.controller.running or self.app.preferences.busy:
@@ -169,22 +183,34 @@ class UpdatePanel:
     def check(self):
         if not self.busy:
             self.notice.set("正在检查 GitHub 正式 Release…")
-            self.job(self.service.check, self.checked)
+            self.job(lambda: self.service.check(force=True), self.checked)
 
     def checked(self, result):
         if isinstance(result, Exception):
+            self.release = None
             self.failed(result)
         else:
             self.release = result
             self.notice.set(
-                f"发现新版本 {result['version']}。" if result else "当前已是最新正式版本。"
+                f"发现新版本 {result['version']}。" if result else self.service.check_notice
             )
+            self.app.update_button.configure(text="发现新版本 · 更新" if result else "更新与存储")
+            if result:
+                log.info(self.notice.get())
 
     def failed(self, exc):
-        self.notice.set(
-            f"更新未完成：{exc}\n可打开 Release 页面下载 ZIP，再选择“从本地 ZIP 更新”。"
+        retry_at = getattr(exc, "retry_at", None)
+        retry = (
+            f"；可在 {time.strftime('%H:%M:%S', time.localtime(retry_at))} 后重试"
+            if retry_at
+            else ""
         )
-        log.warning("更新未完成：%s", exc)
+        self.notice.set(
+            f"更新未完成：{exc}{retry}\n可打开 Release 页面下载 ZIP，再选择“从本地 ZIP 更新”。"
+        )
+        writer = log.info if getattr(exc, "cached", False) else log.warning
+        writer("更新未完成：%s%s；不影响钓鱼和日志保存。", exc, retry)
+        log.debug("更新检查或下载异常", exc_info=(type(exc), exc, exc.__traceback__))
 
     def local(self):
         if self.busy or self.app.preview:

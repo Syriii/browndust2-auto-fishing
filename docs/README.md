@@ -2,7 +2,7 @@
 
 [项目首页](../README.md) · [正式版下载](https://github.com/Syriii/browndust2-auto-fishing/releases/latest) · [更新记录](../CHANGELOG.md)
 
-用户说明以 v0.2.0 及当前实现为基线。当前能力看[开发状态](development/status.md)，未来目标看[架构说明](design/architecture.md)，旧测试与原型仅作为历史依据。
+用户说明按当前源码维护；下载包的行为和验证范围以对应 Release 为准，同版本号的旧 EXE 也可能不含未打包修改。当前能力看[开发状态](development/status.md)，待修问题看[代码审查](development/code-review-2026-09-14.md)，旧测试与原型仅作为历史依据。
 
 ## 使用程序
 
@@ -25,6 +25,8 @@
 | [构建与发布](development/releasing.md) | 便携包构建、附件、更新协议和本机部署 |
 | [当前开发状态](development/status.md) | 正式版本、已验证范围与开放问题 |
 | [验证计划](development/validation-plan.md) | 后续机制、时延和游戏验收的完成判据 |
+| [2026-09-14 全量代码审查](development/code-review-2026-09-14.md) | 架构、功能、资源、更新与测试检查；8 项待修问题及复现 |
+| [历史问题闭环复核](development/issue-status-2026-09-14.md) | 修复必要性、源码与 EXE 差异、历史问题的实机验收边界 |
 
 ## 架构和专项分析
 

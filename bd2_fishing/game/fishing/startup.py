@@ -32,6 +32,54 @@ def resume_waiting_for_bite(config, region):
     return _run_entry_check(config, region, _wait_for_bite)
 
 
+def confirm_hook_entry(config, region):
+    """已发送拉竿后确认页面转换；只有感叹号仍在等待页时才补发一次。"""
+    return _run_entry_check(config, region, _wait_for_hook_entry)
+
+
+def _wait_for_hook_entry(observer, details):
+    hook = HookReader(observer.config, observer.window)
+    started = time.monotonic()
+    deadline = started + 3
+    retried = False
+    waiting_since = idle_since = None
+    for _ in range(121):
+        control.checkpoint()
+        state = observer.inspect_current_page()
+        stamp = time.monotonic()
+        detected, pixels = (
+            hook.inspect(observer.evidence_frames.get("resume_latest.png"))
+            if state == "waiting"
+            else (False, 0)
+        )
+        details["samples"].append(
+            dict(observer.evidence_metadata["resume_check"], hook_pixels=pixels)
+        )
+        if state == "qte":
+            return "qte"
+        idle_since = (stamp if idle_since is None else idle_since) if state == "idle" else None
+        if idle_since is not None and stamp - idle_since >= 0.19:
+            return "idle"
+        waiting_since = (stamp if waiting_since is None else waiting_since) if detected else None
+        if (
+            not retried
+            and stamp - started >= 0.8
+            and waiting_since is not None
+            and stamp - waiting_since >= 0.049
+        ):
+            frame = observer.evidence_frames.get("resume_latest.png")
+            if frame is not None:
+                observer.evidence_frames["hook_retry_before.png"] = frame.copy()
+            game_input.press("space")
+            retried = True
+            details["hook_retry_at"] = stamp
+            log.info("拉竿后咬钩提示仍在，已补发一次拉竿，等待 QTE。")
+        if stamp >= deadline:
+            break
+        control.sleep(min(0.05, max(0, deadline - stamp)))
+    raise RoundObservationError("拉竿后页面转换未确认，转入页面恢复；未盲目重抛")
+
+
 def _run_entry_check(config, region, inspect_until_ready):
     observer = CatchObserver(None, config, region)
     details = dict(status="checking", phase=inspect_until_ready.__name__, samples=[])
@@ -61,10 +109,16 @@ def _run_entry_check(config, region, inspect_until_ready):
         )
         raise
     finally:
-        if reason != "startup_prepared" or observer.evidence_metadata.get("panel_close_history"):
+        if (
+            reason != "startup_prepared"
+            or observer.evidence_metadata.get("panel_close_history")
+            or "hook_retry_at" in details
+        ):
             try:
                 _save_startup(observer, reason)
-                observer.wait_for_evidence()
+                # QTE 已出现时立即交还控制，证据编码/写盘由队列完成。
+                if details.get("next_state") != "qte":
+                    observer.wait_for_evidence()
             except Exception:
                 log.exception("启动检查证据保存失败，保留原启动结果")
 

@@ -1,9 +1,11 @@
 """QTE 条内的机制区域；纯图像定位，不执行输入或把颜色等同于技能身份。"""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import cv2
 import numpy as np
+
+from bd2_fishing.game.fishing.mechanics.shells import read_shell_spans
 
 
 @dataclass(frozen=True)
@@ -21,6 +23,25 @@ class MechanismRegions:
     purple_spans: tuple[tuple[int, int], ...]
     red_spans: tuple[tuple[int, int], ...]
     bubble_spans: tuple[tuple[int, int], ...] = ()
+    shell_spans: tuple[tuple[int, int], ...] = ()
+    green_spans: tuple[tuple[int, int], ...] = ()
+    bubble_remnant_spans: tuple[tuple[int, int], ...] = ()
+
+    def with_green_exclusion(self):
+        """普通单击只避让已定位绿色的整个外包范围；无位置证据时禁用全条。"""
+        if not self.green_present:
+            return self
+        blocked = self.blocked.copy()
+        spans = self.green_spans
+        if self.green is not None:
+            spans += ((self.green.left, self.green.right),)
+        if spans:
+            margin = max(3, round(len(blocked) * 0.02))
+            left, right = min(a for a, _ in spans), max(b for _, b in spans)
+            blocked[max(0, left - margin) : right + margin] = True
+        else:
+            blocked[:] = True
+        return replace(self, blocked=blocked)
 
     def ordinary_pixels(self, hsv):
         if not self.bubble_spans and not self.blocked.any():
@@ -82,7 +103,8 @@ def read_mechanism_regions(hsv, margin=3):
         ),
     }
     bubbles = _bubble_spans(hsv, masks["green"])
-    for left, right in bubbles:
+    shells = read_shell_spans(hsv)
+    for left, right in bubbles + shells:
         masks["green"][:, left:right] = 0
     # 牙齿的浅粉边缘饱和度较低：由高饱和红色种子限定连通区域，避免直接放宽全图红色阈值。
     if cv2.countNonZero(masks["red"]) >= 3:
@@ -113,7 +135,7 @@ def read_mechanism_regions(hsv, margin=3):
                 if not any(left <= a and b <= right for left, right in bubbles)
             )
     blocked = np.zeros(width, bool)
-    for left, right in spans["purple"] + spans["red"]:
+    for left, right in spans["purple"] + spans["red"] + shells:
         blocked[max(0, left - margin) : min(width, right + margin)] = True
     green_present = cv2.countNonZero(masks["green"]) >= max(8, round(height * width * 0.003))
     green = None
@@ -122,4 +144,13 @@ def read_mechanism_regions(hsv, margin=3):
         if right - left >= max(8, height):
             # 当前真实样本明暗有多段纹理；未确认起始端时不从几何左边缘猜测 keyDown。
             green = GreenTarget(left, right)
-    return MechanismRegions(green_present, green, blocked, spans["purple"], spans["red"], bubbles)
+    return MechanismRegions(
+        green_present,
+        green,
+        blocked,
+        spans["purple"],
+        spans["red"],
+        bubbles,
+        shells,
+        _spans(np.any(masks["green"], axis=0)),
+    )
