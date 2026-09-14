@@ -11,7 +11,7 @@ from bd2_fishing.ui.scrolling import ScrollablePage
 
 class PreferencesPage(ttk.Frame):
     def __init__(self, parent, services, *, preview=False, on_saved=None):
-        super().__init__(parent, style="Card.TFrame")
+        super().__init__(parent, padding=22)
         self.services, self.preview, self.on_saved = services, preview, on_saved
         self.window = self.winfo_toplevel()
         self.cancel_event = threading.Event()
@@ -37,7 +37,8 @@ class PreferencesPage(ttk.Frame):
         self.calibration_text = tk.StringVar(
             value="约 2 秒；提供本机检测与反馈间隔建议，按键时间仍需实测。"
         )
-        self.page = ScrollablePage(self)
+        ttk.Label(self, text="设置", style="Heading.TLabel").pack(anchor="w", pady=(0, 18))
+        self.page = ScrollablePage(self, padding=0)
         self.page.pack(fill="both", expand=True)
         body = self.page.body
         body.columnconfigure(0, weight=1)
@@ -107,10 +108,10 @@ class PreferencesPage(ttk.Frame):
             wraplength=700,
         ).grid(row=6, column=0, columnspan=4, sticky="w")
         self.advanced.grid_remove()
-        ttk.Label(self, textvariable=self.notice, style="Hint.TLabel", wraplength=520).pack(
+        ttk.Label(self, textvariable=self.notice, style="PageHint.TLabel", wraplength=520).pack(
             fill="x", padx=20, pady=(4, 0), side="bottom"
         )
-        footer = ttk.Frame(self, padding=(20, 12), style="Card.TFrame")
+        footer = ttk.Frame(self, padding=12, style="Sheet.TFrame")
         footer.pack(fill="x")
         self.save_button = ttk.Button(
             footer, text="保存设置", style="Start.TButton", command=self.save
@@ -124,8 +125,14 @@ class PreferencesPage(ttk.Frame):
             variable.trace_add("write", self._changed)
 
     def _section(self, parent, title, row):
-        section = ttk.LabelFrame(parent, text=title, padding=12)
-        section.grid(row=row, column=0, sticky="ew", pady=(0, 16))
+        shell = ttk.Frame(parent, style="Sheet.TFrame", padding=18)
+        shell.grid(row=row, column=0, sticky="ew", pady=(0, 16))
+        shell.columnconfigure(0, weight=1)
+        ttk.Label(shell, text=title, style="CardTitle.TLabel").grid(
+            row=0, column=0, sticky="w", pady=(0, 16)
+        )
+        section = ttk.Frame(shell, style="Card.TFrame")
+        section.grid(row=1, column=0, sticky="ew")
         section.bind("<Configure>", self._wrap_notes)
         return section
 

@@ -5,6 +5,7 @@ from tkinter import ttk
 
 from bd2_fishing.ui.catalogue_page import CataloguePage
 from bd2_fishing.ui.collection_pages import CatchesPage, TargetsPage
+from bd2_fishing.ui.icons import navigation_icon
 from bd2_fishing.ui.preferences import PreferencesPage
 from bd2_fishing.ui.theme import ACCENT, FONT, apply_icon, apply_theme, center_window
 
@@ -18,40 +19,73 @@ def build_workspace(app, locations):
     apply_theme(root)
     ttk.Style(root).configure("FishList.TButton", anchor="w", padding=(10, 6))
     app.brand_icon = apply_icon(root)
-    root.rowconfigure(0, weight=1)
+    root.rowconfigure(1, weight=1)
     root.columnconfigure(0, weight=1)
-    outer = ttk.Frame(root, padding=14)
-    outer.grid(row=0, column=0, sticky="nsew")
+    brand = ttk.Frame(root, style="Card.TFrame", padding=(20, 12))
+    brand.grid(row=0, column=0, sticky="ew")
+    app.header_icon = app.brand_icon.subsample(2)
+    ttk.Label(
+        brand,
+        image=app.header_icon,
+        text="  BD2 自动钓鱼",
+        compound="left",
+        style="CardTitle.TLabel",
+    ).pack(side="left")
+    ttk.Label(
+        brand, text="界面预览" if app.preview else "钓鱼 · 图鉴 · 鱼获", style="Hint.TLabel"
+    ).pack(side="right")
+    outer = ttk.Frame(root)
+    outer.grid(row=1, column=0, sticky="nsew")
     outer.rowconfigure(0, weight=1)
     outer.columnconfigure(1, weight=1)
-    nav = ttk.Frame(outer, width=150, padding=10, style="Card.TFrame")
-    nav.grid(row=0, column=0, sticky="ns", padx=(0, 12))
+    nav = ttk.Frame(outer, width=round(146 * scale), padding=(10, 18), style="Card.TFrame")
+    nav.grid(row=0, column=0, sticky="ns", padx=(0, 1))
     nav.pack_propagate(False)
-    ttk.Label(nav, text="BD2 钓鱼", style="Section.TLabel").pack(anchor="w", pady=(8, 25))
     app.nav_buttons = {}
+    app.nav_icons = {
+        key: navigation_icon(root, key)
+        for key in ("run", "catalogue", "targets", "catches", "settings")
+    }
     for key, title in (
         ("run", "钓鱼"),
         ("catalogue", "图鉴"),
         ("targets", "目标"),
         ("catches", "鱼获"),
     ):
-        button = ttk.Button(nav, text=title, command=lambda page=key: app.show_page(page))
+        button = ttk.Button(
+            nav,
+            text="  " + title,
+            image=app.nav_icons[key],
+            compound="left",
+            style="Nav.TButton",
+            command=lambda page=key: app.show_page(page),
+        )
         button.pack(fill="x", pady=5)
         app.nav_buttons[key] = button
-    spacer = ttk.Frame(nav)
+    spacer = ttk.Frame(nav, style="Card.TFrame")
     spacer.pack(fill="both", expand=True)
-    app.preferences_button = ttk.Button(nav, text="设置", command=app.open_preferences)
+    app.preferences_button = ttk.Button(
+        nav,
+        text="  设置",
+        image=app.nav_icons["settings"],
+        compound="left",
+        style="Nav.TButton",
+        command=app.open_preferences,
+    )
     app.preferences_button.pack(fill="x", pady=5)
     app.nav_buttons["settings"] = app.preferences_button
     app.catalogue_button = app.nav_buttons["catalogue"]
-    app.deck = ttk.Frame(outer, style="Card.TFrame", width=1, height=1)
+    app.deck = ttk.Frame(outer, width=1, height=1)
     app.deck.grid(row=0, column=1, sticky="nsew")
     app.deck.grid_propagate(False)
     app.deck.rowconfigure(0, weight=1)
     app.deck.columnconfigure(0, weight=1)
-    app.run_panel = panel = ttk.Frame(app.deck, style="Card.TFrame", padding=20)
-    ttk.Label(panel, text="钓鱼任务", style="Section.TLabel").pack(anchor="w", pady=(0, 16))
-    controls = ttk.Frame(panel, style="Card.TFrame")
+    app.run_panel = panel = ttk.Frame(app.deck, padding=22)
+    ttk.Label(panel, text="钓鱼任务", style="Heading.TLabel").pack(anchor="w", pady=(0, 16))
+    task = ttk.Frame(panel, style="Sheet.TFrame", padding=20)
+    task.pack(fill="x", pady=(0, 16))
+    ttk.Label(task, text="任务设置", style="CardTitle.TLabel").pack(anchor="w", pady=(0, 12))
+    controls = ttk.Frame(task, style="Card.TFrame")
     controls.pack(fill="x")
     ttk.Label(controls, text="任务模式").grid(row=0, column=0, sticky="w", padx=(0, 12), pady=8)
     app.mode_box = ttk.Combobox(
@@ -67,14 +101,17 @@ def build_workspace(app, locations):
         controls, values=locations, textvariable=app.location, state="readonly", width=22
     )
     app.location_box.grid(row=1, column=1, sticky="w")
-    app.clear_check = ttk.Checkbutton(panel, text="满包时自动清理", variable=app.auto_clear)
+    app.clear_check = ttk.Checkbutton(task, text="满包时自动清理", variable=app.auto_clear)
     app.clear_check.pack(anchor="w", pady=(15, 6))
-    app.awake_check = ttk.Checkbutton(panel, text="运行时保持唤醒", variable=app.awake)
+    app.awake_check = ttk.Checkbutton(task, text="运行时保持唤醒", variable=app.awake)
     app.awake_check.pack(anchor="w")
-    app.target_summary = ttk.Label(panel, style="Hint.TLabel")
+    progress = ttk.Frame(panel, style="Sheet.TFrame", padding=20)
+    progress.pack(fill="x", pady=(0, 8))
+    ttk.Label(progress, text="本次进度", style="CardTitle.TLabel").pack(anchor="w")
+    app.target_summary = ttk.Label(progress, style="Hint.TLabel")
     app.target_summary.pack(fill="x", pady=16)
     app.parameter_summary = tk.StringVar()
-    app.summary_label = ttk.Label(panel, textvariable=app.parameter_summary, style="Hint.TLabel")
+    app.summary_label = ttk.Label(progress, textvariable=app.parameter_summary, style="Hint.TLabel")
     app.summary_label.pack(anchor="w")
     app.log_panel = ttk.Frame(panel, style="Card.TFrame")
     app.log_toggle = ttk.Button(panel, text="展开运行日志", command=app.toggle_logs)
@@ -97,7 +134,7 @@ def build_workspace(app, locations):
         "settings": app.preferences,
     }
     footer = ttk.Frame(root, padding=(22, 10), style="Card.TFrame")
-    footer.grid(row=1, column=0, sticky="ew")
+    footer.grid(row=2, column=0, sticky="ew")
     footer.columnconfigure(0, weight=1)
     app.status_label = ttk.Label(
         footer, textvariable=app.status, foreground=ACCENT, font=(FONT, 12, "bold")

@@ -6,25 +6,29 @@ from tkinter import ttk
 
 from bd2_fishing.app.fishing_collection import CONDITIONS
 from bd2_fishing.ui.collection_widgets import FishPhotos, ViewButtons, clear_children, show_facts
+from bd2_fishing.ui.fish_tile import FishTile
 from bd2_fishing.ui.scrolling import ScrollablePage
 
 
 class TargetsPage(ttk.Frame):
     def __init__(self, parent, app):
-        super().__init__(parent, style="Card.TFrame", padding=18)
+        super().__init__(parent, padding=22)
         self.app = app
         self.service = app.services.fish_catalogue_service()
         self.photos = FishPhotos(self.service, self)
-        header = ttk.Frame(self, style="Card.TFrame")
+        header = ttk.Frame(self)
         header.pack(fill="x", pady=(0, 14))
-        ttk.Label(header, text="钓鱼目标", style="Section.TLabel").pack(side="left")
+        ttk.Label(header, text="钓鱼目标", style="Heading.TLabel").pack(side="left")
         self.edit = ttk.Button(
-            header, text="选择鱼与尺寸要求", command=lambda: app.catalogue.begin_pick()
+            header,
+            text="添加目标",
+            style="Start.TButton",
+            command=lambda: app.catalogue.begin_pick(origin="targets"),
         )
         self.edit.pack(side="right")
-        self.scroll = ScrollablePage(self)
+        self.scroll = ScrollablePage(self, padding=0)
         self.scroll.pack(fill="both", expand=True)
-        self.summary = ttk.Label(self, style="Hint.TLabel")
+        self.summary = ttk.Label(self, style="PageHint.TLabel")
         self.summary.pack(fill="x", pady=10)
 
     def remove(self, identity):
@@ -50,7 +54,7 @@ class TargetsPage(ttk.Frame):
         self.edit.configure(state="disabled" if active else "normal")
         for identity, condition in selected.items():
             fish = self.service.by_id[identity]
-            row = ttk.Frame(self.scroll.body, padding=10, style="Card.TFrame")
+            row = ttk.Frame(self.scroll.body, padding=16, style="Sheet.TFrame")
             row.pack(fill="x", pady=4)
             ttk.Label(row, image=self.photos.get(identity, (85, 58)) or "").pack(
                 side="left", padx=(0, 12)
@@ -93,28 +97,28 @@ class CatchesPage(ttk.Frame):
     CATEGORIES = {"全部": "all", "首次": "first", "彩色": "color", "最大": "max", "最小": "min"}
 
     def __init__(self, parent, app):
-        super().__init__(parent, style="Card.TFrame", padding=18)
+        super().__init__(parent, padding=22)
         self.app = app
         self.service = app.services.fish_catalogue_service()
         self.photos = FishPhotos(self.service, self)
         self.category, self.view, self.expanded = "first", "list", None
         self.limit = 80
-        toolbar = ttk.Frame(self, style="Card.TFrame")
+        toolbar = ttk.Frame(self)
         toolbar.pack(fill="x", pady=(0, 12))
-        ttk.Label(toolbar, text="鱼获记录", style="Section.TLabel").pack(side="left")
+        ttk.Label(toolbar, text="鱼获记录", style="Heading.TLabel").pack(side="left")
         self.views = ViewButtons(toolbar, self.change_view)
         self.views.pack(side="right")
-        tabs = ttk.Frame(self, style="Card.TFrame")
+        tabs = ttk.Frame(self)
         tabs.pack(fill="x", pady=(0, 10))
         self.tabs = {}
         for text, key in self.CATEGORIES.items():
             button = ttk.Button(tabs, text=text, command=lambda k=key: self.change_category(k))
             button.pack(side="left", padx=(0, 8))
             self.tabs[key] = button
-        self.scroll = ScrollablePage(self)
+        self.scroll = ScrollablePage(self, padding=0)
         self.scroll.pack(fill="both", expand=True)
         self.more = ttk.Button(self, text="加载更早记录", command=self.load_more)
-        self.notice = ttk.Label(self, style="Hint.TLabel")
+        self.notice = ttk.Label(self, style="PageHint.TLabel")
         self.notice.pack(fill="x", pady=(10, 0))
 
     def change_category(self, category):
@@ -171,18 +175,22 @@ class CatchesPage(ttk.Frame):
         return label
 
     def _render_catch(self, item, index, columns):
-        card = ttk.Frame(self.scroll.body, padding=8, style="Card.TFrame")
+        card = ttk.Frame(self.scroll.body, padding=0, style="Card.TFrame")
         card.grid(row=index // columns, column=index % columns, sticky="nsew", padx=4, pady=4)
-        photo = self.photos.get(item["fish_id"], (110, 75)) if item["fish_id"] else None
-        if photo is None:
-            photo = self.app.collection_photo(item, (110, 75))
-        ttk.Button(
+
+        def picture(size):
+            photo = self.photos.get(item["fish_id"], size) if item["fish_id"] else None
+            return photo if photo is not None else self.app.collection_photo(item, size)
+
+        FishTile(
             card,
-            image=photo or "",
-            text=self._label(item),
-            compound="top" if self.view == "grid" else "left",
-            style="TButton" if self.view == "grid" else "FishList.TButton",
+            photo=picture,
+            name=item["name"],
+            subtitle=self._label(item).split("\n", 1)[1],
+            view=self.view,
             command=lambda i=item["id"]: self.toggle(i),
+            selected=self.expanded == item["id"],
+            colorful=item["rarity"] == "legendary",
         ).pack(fill="x")
         if self.expanded == item["id"]:
             self._show_details(card, item, columns)

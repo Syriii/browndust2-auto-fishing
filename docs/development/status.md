@@ -2,6 +2,14 @@
 
 [文档目录](../README.md) · [更新记录](../../CHANGELOG.md) · [验证计划](validation-plan.md)
 
+## 0.4.1 桌面视觉对齐（2026-09-14）
+
+按第四版原型调整实际 Tk 界面的字体、标题、图标导航、圆角分区和鱼卡；筛选标签、行内详情和设置表单统一排版。目标页原地选鱼，保存／取消返回待办。图卡支持键盘操作、刷新后焦点和鼠标移出取消，图片缓存有界。
+
+626 项回归、Ruff、128 模块架构、设置与图鉴冒烟、真实历史图片展示，以及最小窗口和模拟 125%／150% 缩放截图通过。模拟缩放不代替跨显示器 DPI 实测。
+
+本地 EXE 已归位 `dist/BD2_AutoFishing/BD2_AutoFishing.exe`，临时版本目录已移除。1307 项文件、128 个内嵌源码模块、84 张鱼图、更新恢复、实际 EXE 图鉴与两次正常启动／退出检查通过，487 个原有用户文件保留。GitHub 发布另行核验，上一正式版记录见下节；外层 deployment 未覆盖。详见[0.4.1 验收](cases/2026-09-14-release-0.4.1.md)。
+
 ## 0.4.0 已正式发布（2026-09-14）
 
 [v0.4.0 Release](https://github.com/Syriii/browndust2-auto-fishing/releases/tag/v0.4.0) 的 Windows ZIP 与 SHA-256 已上传；[发布构建](https://github.com/Syriii/browndust2-auto-fishing/actions/runs/34834271318) 全部成功。最终源码 626 项本地回归和 GitHub CI 通过，图鉴、设置、目标、鱼获及相关文档已集成。

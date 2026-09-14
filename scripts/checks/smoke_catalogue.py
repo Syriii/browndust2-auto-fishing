@@ -53,8 +53,21 @@ def main():
             ]
             assert "稀有度" in facts and "钓场" in facts and "时段" in facts
             assert "别名" not in facts
-            panel.choose(first)
-            assert panel.selected is None
+            if args.visible:
+                tile = panel.tiles[first]
+                tile.focus_force()
+                tile.event_generate("<Return>")
+                pump()
+                assert panel.selected is None
+                assert root.focus_get() is panel.tiles[first]
+                # 鼠标按下后移出卡片松开，不应选中。
+                tile = panel.tiles[first]
+                tile.event_generate("<Button-1>", x=10, y=10)
+                tile.event_generate("<ButtonRelease-1>", x=-5, y=-5)
+                assert panel.selected is None
+            else:
+                panel.choose(first)
+                assert panel.selected is None
             panel.query.set("布蘭")
             panel.render(reset=True)
             assert len(panel.browser.body.winfo_children()) == 1
@@ -82,6 +95,13 @@ def main():
             if args.visible:
                 assert app.targets_page.scroll.canvas.winfo_viewable()
                 assert app.targets_page.scroll.body.winfo_children()[0].winfo_viewable()
+            app.targets_page.edit.invoke()
+            pump()
+            assert app.current_page == "target-picker"
+            assert app.nav_buttons["targets"].instate(["pressed"])
+            panel.cancel()
+            assert app.current_page == "targets"
+            assert app.collection.selected()[first] == "both"
             app.targets_page.remove(first)
             assert app.collection.journal.targets() == []
             for page in ("run", "catalogue", "catches", "settings", "targets"):
