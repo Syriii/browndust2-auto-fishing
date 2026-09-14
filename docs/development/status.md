@@ -2,7 +2,7 @@
 
 [文档目录](../README.md) · [更新记录](../../CHANGELOG.md) · [验证计划](validation-plan.md)
 
-源码版本为 **0.3.9**，已完成本机候选包验证，包含最新黄条实体分组和绿色范围分离修复。2026-09-14 联网核对的既有正式 Release 为 v0.3.1；正在按 PR → CI → main → Release 流程发布 v0.3.9，最终交付见[本版验收记录](cases/2026-09-14-release-0.3.9.md)。逐轮测试、旧候选和迁移记录见[阶段档案](../history/development-2026-09.md)；以下历史小节中的“未打包”是当时状态，以最新验收记录为准。
+源码、本机 dist 交付及最新正式 Release 均为 **0.3.9**，包含最新黄条实体分组和绿色范围分离修复。[v0.3.9 Release](https://github.com/Syriii/browndust2-auto-fishing/releases/tag/v0.3.9) 的 Windows ZIP 与 SHA-256 已上传，发布构建通过。完整交付与验证边界见[本版验收记录](cases/2026-09-14-release-0.3.9.md)。外层 deployment 未更新。逐轮测试、旧候选和迁移记录见[阶段档案](../history/development-2026-09.md)；以下历史小节中的“未打包”是当时状态，以最新验收记录为准。
 
 ## 0.3.9 发布验证（2026-09-14）
 
