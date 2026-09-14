@@ -23,7 +23,7 @@ class ScrollablePage(ttk.Frame):
         self.canvas.grid(row=0, column=0, sticky="nsew")
         self.scrollbar = ttk.Scrollbar(self, command=self.canvas.yview)
         self.scrollbar.grid(row=0, column=1, sticky="ns")
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        self.canvas.configure(yscrollcommand=self._scrolled)
         self.body = ttk.Frame(
             self.canvas, padding=padding, style="Card.TFrame" if surface else "TFrame"
         )
@@ -32,6 +32,15 @@ class ScrollablePage(ttk.Frame):
         self.canvas.bind("<Configure>", self._layout)
         self.body.bind("<Configure>", self._layout)
         self.winfo_toplevel().bind("<MouseWheel>", self._wheel, add="+")
+
+    def _scrolled(self, first, last):
+        self.scrollbar.set(first, last)
+        self.canvas.event_generate("<<ViewportChanged>>", when="tail")
+
+    def refresh(self):
+        """重建内容后先完成几何计算，再刷新范围；请求高度变化不一定触发 Configure。"""
+        self.update_idletasks()
+        self._layout()
 
     def _layout(self, event=None):
         width = self.canvas.winfo_width()

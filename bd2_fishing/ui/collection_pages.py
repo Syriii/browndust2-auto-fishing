@@ -158,7 +158,7 @@ class CatchesPage(ttk.Frame):
         else:
             self.more.pack_forget()
         self.notice.configure(text=f"已显示 {min(len(rows), self.limit)} 条")
-        self.scroll.update_idletasks()
+        self.scroll.refresh()
         self.scroll.canvas.yview_moveto(0 if reset else position)
 
     @staticmethod

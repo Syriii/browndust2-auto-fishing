@@ -54,7 +54,6 @@ def _recover_pending(root):
 
 def _desktop(preview, *, catalogue=False):
     from bd2_fishing.app.desktop import DesktopServices
-    from bd2_fishing.app.session import run_once
     from bd2_fishing.app.startup import initialize_desktop
     from bd2_fishing.infrastructure.windows.window import enable_dpi_awareness
 
@@ -68,6 +67,13 @@ def _desktop(preview, *, catalogue=False):
 
     services.startup_messages = result["messages"]
     try:
-        launch(run_once, preview=preview, services=services, show_catalogue=catalogue)
+        launch(_run_task, preview=preview, services=services, show_catalogue=catalogue)
     finally:
         logging.shutdown()
+
+
+def _run_task(*args, **kwargs):
+    """游戏识别依赖在任务线程内加载，浏览界面不初始化它们。"""
+    from bd2_fishing.app.session import run_once
+
+    return run_once(*args, **kwargs)
