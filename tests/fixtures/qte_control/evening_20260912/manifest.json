@@ -1,0 +1,74 @@
+[
+  {
+    "file": "bubble_countdown_1.png",
+    "source": ".local\\maintenance\\runtime-review-20260912-evening\\seaweed\\sequence_-1.05.png",
+    "sha256": "c71772dd1e0108cc4c70c4020b30e28aeadf83328a31b46e0e3c3f2814fdb7f7",
+    "round": "9e5212d5-369"
+  },
+  {
+    "file": "bubble_countdown_0.png",
+    "source": ".local\\maintenance\\runtime-review-20260912-evening\\seaweed\\sequence_-0.36.png",
+    "sha256": "8f247adcec1f7e28cd809633f15490cb00393f309c13d43d6af39be65f055133",
+    "round": "9e5212d5-369"
+  },
+  {
+    "file": "seaweed_burst.png",
+    "source": ".local\\maintenance\\runtime-review-20260912-evening\\images\\M13-1.png",
+    "sha256": "a9adfa6c2f741bf26aafb5d71671ba75146dc1b9f77b9a8d276beb79c4200094",
+    "round": "9e5212d5-369"
+  },
+  {
+    "file": "bubble_gone.png",
+    "source": ".local\\maintenance\\runtime-review-20260912-evening\\seaweed\\sequence_+0.30.png",
+    "sha256": "63f4f0eaea52fb484b597970ef51749a14f3104c9fde742a6b1196ee040942e1",
+    "round": "9e5212d5-369"
+  },
+  {
+    "file": "M13-1.png",
+    "source": ".local\\maintenance\\runtime-review-20260912-evening\\images\\M13-1.png",
+    "sha256": "a9adfa6c2f741bf26aafb5d71671ba75146dc1b9f77b9a8d276beb79c4200094",
+    "note": "Nearby retained observation; see original timing metadata, not necessarily exact input frame."
+  },
+  {
+    "file": "M14-1.png",
+    "source": ".local\\maintenance\\runtime-review-20260912-evening\\images\\M14-1.png",
+    "sha256": "a5a471a3a09a17cdb6c861c0235d0966e102b2cb428f287703c5fb7dbb5e2e50",
+    "note": "Nearby retained observation; see original timing metadata, not necessarily exact input frame."
+  },
+  {
+    "file": "M15-1.png",
+    "source": ".local\\maintenance\\runtime-review-20260912-evening\\images\\M15-1.png",
+    "sha256": "2e83b1f615e0e264823580a807119be256d9d943ff2c8d9b25065b172e6aa5d8",
+    "note": "Nearby retained observation; see original timing metadata, not necessarily exact input frame."
+  },
+  {
+    "file": "M16-1.png",
+    "source": ".local\\maintenance\\runtime-review-20260912-evening\\images\\M16-1.png",
+    "sha256": "4d905b68c338c6bd63be93514483cef5e42bfe98e09d6f76dc677dbd6e6511e2",
+    "note": "Nearby retained observation; see original timing metadata, not necessarily exact input frame."
+  },
+  {
+    "file": "M17-1.png",
+    "source": ".local\\maintenance\\runtime-review-20260912-evening\\images\\M17-1.png",
+    "sha256": "8f9928d824c79bfeb2e97afc491c76f230ef83c6be0bd913b6011ccf592c5e23",
+    "note": "Nearby retained observation; see original timing metadata, not necessarily exact input frame."
+  },
+  {
+    "file": "M18-1.png",
+    "source": ".local\\maintenance\\runtime-review-20260912-evening\\images\\M18-1.png",
+    "sha256": "5d97b0e1ed373057da7d021a86354c112faba4cb5e812f9e0f395ed82406357e",
+    "note": "Nearby retained observation; see original timing metadata, not necessarily exact input frame."
+  },
+  {
+    "file": "shells_over_bubble.png",
+    "source": ".local/maintenance/runtime-review-20260912-evening/seaweed/sequence_-3.23.png",
+    "sha256": "8b9b76ef737ece947e12100481b30e015d0cf2ffead3de15fb4ea3efa3a4c6ef",
+    "round": "9e5212d5-369",
+    "qte_roi": [
+      117,
+      136,
+      86,
+      330
+    ]
+  }
+]

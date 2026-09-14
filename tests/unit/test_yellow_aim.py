@@ -101,6 +101,8 @@ class YellowAimTests(TestCase):
         self.assertEqual(visible_yellow_span(mask, 114), (100, 130))
         self.assertEqual(visible_yellow_span(mask, 94), (100, 110))
         mask[:, 109:122] = 0
+        self.assertEqual(visible_yellow_span(mask, 114), (100, 130))
+        mask[:, 105:124] = 0
         self.assertNotEqual(visible_yellow_span(mask, 114), (100, 130))
 
     def test_resolution_change_invalidates_trajectory(self):
@@ -127,7 +129,7 @@ class YellowAimTests(TestCase):
             self.assertLessEqual(abs(controller._press_qte.call_args.kwargs["cursor_x"] - 114.5), 6)
             self.assertIn("yellow_aim", controller._press_qte.call_args.kwargs)
 
-    def test_real_motion_replay_defers_m10_m15_but_not_unstable_m03(self):
+    def test_real_motion_replay_never_uses_dilation_outside_target(self):
         # 独立观察器的前序帧用于轨迹边界回放；不是连续控制帧或新命中结果。
         for record in json.loads((FIXTURES / "motion.json").read_text("utf-8")):
             controller = strategy()
@@ -148,8 +150,5 @@ class YellowAimTests(TestCase):
                 "bd2_fishing.game.fishing.qte.time.monotonic", return_value=record["decision_time"]
             ):
                 controller._track_targets(hsv, cursor, read_mechanism_regions(hsv))
-            if record["id"] == "M03":
-                controller._press_qte.assert_called_once()
-            else:
-                controller._press_qte.assert_not_called()
-                self.assertEqual(controller._yellow_aim_decision.reason, "prefer_center")
+            controller._press_qte.assert_not_called()
+            self.assertIsNone(controller._yellow_supported)

@@ -60,6 +60,7 @@ class LoggingPolicyTests(unittest.TestCase):
 
     def test_main_round_id_matches_cast_bite_and_settlement_and_resets_on_stop(self):
         bot = object.__new__(fishing_task.FishingBot)
+        bot.selected_location_name = fishing_task.DEFAULT_LOCATION
         bot.region = geometry.Rect(0, 0, 875, 492)
         bot.config = self.config()
         bot.ocr_context = Mock()

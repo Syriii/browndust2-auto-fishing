@@ -12,7 +12,7 @@ from bd2_fishing.perception.tracing import ocr_log_context
 from bd2_fishing.runtime.geometry import Rect
 
 REFERENCE_SIZE = (945, 532)
-ISLAND_NAMES = tuple(location.value for location in FishingLocation) + ("天空岛",)
+ISLAND_NAMES = tuple(location.value for location in FishingLocation)
 
 
 @dataclass(frozen=True)
@@ -127,13 +127,28 @@ def _selected_island(items, markers):
     return next(iter(names)) if len(names) == 1 else None
 
 
+def dock_checks(items):
+    """独立区域交叉确认；白天白色码头标题可能被背景淹没。"""
+    return {
+        label: _find(items, label, bounds) is not None
+        for label, bounds in (
+            ("开始钓鱼", (810, 475, 925, 528)),
+            ("我的信息", (670, 45, 760, 85)),
+            ("码头", (90, 5, 260, 55)),
+            ("船只管理", (815, 185, 920, 225)),
+            ("图鉴进度", (670, 155, 770, 190)),
+        )
+    }
+
+
 def _dock_reading(items):
-    """入口按钮必须与码头标题和信息栏同时出现。"""
+    """必须有开始按钮、信息栏，及标题或两项码头专属信息。"""
     start = _find(items, "开始钓鱼", (810, 475, 925, 528))
+    checks = dock_checks(items)
     if (
         start
-        and _find(items, "码头", (90, 5, 260, 55))
-        and _find(items, "我的信息", (670, 45, 760, 85))
+        and checks["我的信息"]
+        and (checks["码头"] or (checks["船只管理"] and checks["图鉴进度"]))
     ):
         level = next(
             (

@@ -1,0 +1,23 @@
+[
+  {
+    "file": "level_up_night_20260913.png",
+    "source_zip": "event_1789278392337307000_5d99e7b3.zip",
+    "source_frame": "failure_resume_latest.png",
+    "round_id": "22f3e0a0-073",
+    "sha256": "c6cd48e1e7265214e5e10567123c52900f37d42d6f6ff34c7b9778b6db8c828b"
+  },
+  {
+    "file": "level_up_night_holdout_20260913.png",
+    "source_zip": "event_1789278392337307000_5d99e7b3.zip",
+    "source_frame": "resume_latest.png",
+    "round_id": "22f3e0a0-073",
+    "sha256": "315ca6d4eed94d3ce311d418a150172fcabc6b05cd27ab42bc4e4b9674730461"
+  },
+  {
+    "file": "level_up_day_holdout_20260913.png",
+    "source_zip": "event_1789278392337307000_5d99e7b3.zip",
+    "source_frame": "panel_before_level_up.png",
+    "round_id": "22f3e0a0-073",
+    "sha256": "bd0021ce66e0f28e64cb18a0e833546ff9da111ed6e0057bff712cf6834403c0"
+  }
+]

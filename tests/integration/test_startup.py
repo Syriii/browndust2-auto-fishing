@@ -35,6 +35,27 @@ def load(name):
 
 
 class SceneTests(unittest.TestCase):
+    def test_new_upgrade_original_and_scaled_frames_are_level_up(self):
+        original = load("level_up_user_20260912.png")
+        for width, height in ((1192, 666), (945, 532), (875, 492)):
+            with self.subTest(size=(width, height)):
+                frame = cv2.resize(original, (width, height), interpolation=cv2.INTER_AREA)
+                reading = FishingSceneReader(config(), Rect(0, 0, width, height)).inspect(frame)
+                self.assertEqual((reading.state, reading.panel_kind), ("panel", "level_up"))
+
+    def test_upgrade_title_labels_and_close_hint_are_independent_requirements(self):
+        frame = cv2.resize(load("level_up_user_20260912.png"), (945, 532))
+        reader = FishingSceneReader(config(), Rect(0, 0, 945, 532))
+        for bounds in ((415, 78, 530, 115), (340, 116, 419, 205), (378, 468, 567, 516)):
+            with self.subTest(bounds=bounds):
+                altered = frame.copy()
+                left, top, right, bottom = bounds
+                altered[top:bottom, left:right] = 0
+                reading = reader.inspect(altered)
+                self.assertNotEqual(reading.panel_kind, "level_up")
+                if top == 468:
+                    self.assertNotEqual(reading.state, "panel")
+
     def test_user_waiting_and_before_cast_are_different_regardless_of_character(self):
         for name, expected in (
             ("waiting_bite_user_20260911.png", "waiting"),
@@ -136,6 +157,39 @@ class StartupTests(unittest.TestCase):
         inputs.press.assert_called_once_with("space")
         self.input.click.assert_not_called()
 
+    def test_real_pending_bite_retries_once_then_hands_off_confirmed_qte(self):
+        self.frames = [load("hook_pending_20260912.png"), load("qte_scene_night_01.png")]
+        with patch.object(startup, "game_input") as inputs:
+            inputs.press.side_effect = self.advance
+            state = startup.confirm_hook_entry(self.observer.config, self.observer.window)
+        self.assertEqual(state, "qte")
+        inputs.press.assert_called_once_with("space")
+        self.assertGreaterEqual(self.clock, 0.8)
+        self.observer.wait_for_evidence()
+        metadata, files = self.evidence()
+        self.assertIn("hook_retry_at", metadata["startup"])
+        self.assertIn("hook_retry_before.png", files)
+
+    def test_persistent_hook_cannot_trigger_an_unbounded_press_loop(self):
+        self.frames = [load("hook_pending_20260912.png")]
+        with patch.object(startup, "game_input") as inputs:
+            with self.assertRaisesRegex(recovery.RoundObservationError, "页面转换未确认"):
+                startup.confirm_hook_entry(self.observer.config, self.observer.window)
+        inputs.press.assert_called_once_with("space")
+        self.assertGreaterEqual(self.clock, 3)
+
+    def test_qte_handoff_never_represses_or_ocr_reads_active_qte(self):
+        self.frames = [load("qte_scene_night_01.png")]
+        with (
+            patch.object(startup, "game_input") as inputs,
+            patch.object(startup, "HookReader") as hook,
+        ):
+            state = startup.confirm_hook_entry(self.observer.config, self.observer.window)
+        self.assertEqual(state, "qte")
+        inputs.press.assert_not_called()
+        hook.return_value.inspect.assert_not_called()
+        self.assertEqual(self.clock, 0)
+
     def test_existing_waiting_timeout_or_unknown_never_blindly_recasts(self):
         for name in ("idle_no_arrows_holdout_20260910.png", "loading_945.png"):
             self.frames = [load(name)]
@@ -204,6 +258,23 @@ class StartupTests(unittest.TestCase):
         self.assertNotIn("result", metadata)
         self.assertIn("panel_before_level_up.png", names)
 
+    def test_new_upgrade_closes_even_when_reward_was_already_closed(self):
+        self.observer.evidence_metadata["closed_panel_kinds"] = ["result"]
+        self.observer.evidence_metadata["panel_close_attempted"] = True
+        self.frames = [
+            cv2.resize(
+                load("level_up_user_20260912.png"), (945, 532), interpolation=cv2.INTER_AREA
+            ),
+            self.frames[0],
+        ]
+        self.assertEqual(self.run_entry(), "idle")
+        self.input.click.assert_called_once()
+        metadata, names = self.evidence()
+        self.assertEqual(metadata["closed_panel_kinds"], ["result", "level_up"])
+        self.assertTrue(metadata["resume_confirmed"])
+        self.assertEqual(metadata["panel_close_history"][-1]["kind"], "level_up")
+        self.assertIn("panel_before_level_up.png", names)
+
     def test_unknown_is_observed_without_click_and_evidence_preserved(self):
         self.frames = [load("loading_945.png")]
         with self.assertRaisesRegex(recovery.RoundObservationError, "未确认当前页面"):
@@ -259,6 +330,9 @@ class EntryRoutingTests(unittest.TestCase):
         self.entry = stack.enter_context(
             patch.object(startup, "prepare_start", return_value="idle")
         )
+        self.hook_entry = stack.enter_context(
+            patch.object(startup, "confirm_hook_entry", return_value="qte")
+        )
         self.ready = stack.enter_context(patch.object(settlement, "confirm_ready_for_next_cast"))
         stack.enter_context(
             patch.object(settlement, "CatchObserver", return_value=Mock(evidence_metadata={}))
@@ -294,6 +368,7 @@ class EntryRoutingTests(unittest.TestCase):
             with self.assertRaises(control.RunStopped):
                 self.bot.run()
         resume.assert_called_once()
+        self.hook_entry.assert_called_once_with(self.bot.config, self.bot.region)
         self.cast.assert_not_called()
         self.bot.wait_for_bite.assert_not_called()
         self.bot.should_change_location.assert_not_called()
@@ -314,10 +389,40 @@ class EntryRoutingTests(unittest.TestCase):
         # 唯一等待是启动配置的等待，不插入轮间 4 秒耽误咬钩。
         sleep.assert_called_once_with(self.bot.begin_fish_wait_time)
 
+    def test_qte_recovery_handoff_skips_second_cast_and_round_delay(self):
+        self.play.side_effect = ["qte", control.RunStopped("done")]
+        with patch.object(control, "sleep") as sleep:
+            with self.assertRaises(control.RunStopped):
+                self.bot.run()
+        self.cast.assert_called_once()
+        self.bot.wait_for_bite.assert_called_once()
+        sleep.assert_called_once_with(self.bot.begin_fish_wait_time)
+
+    def test_waiting_timeout_recovers_then_waits_for_bite_instead_of_stopping(self):
+        self.entry.return_value = "waiting"
+        with (
+            patch.object(
+                startup,
+                "resume_waiting_for_bite",
+                side_effect=[recovery.RoundObservationError("15 seconds"), "hooked"],
+            ) as resume,
+            patch.object(self.bot, "_recover_entry", return_value="waiting") as recover,
+        ):
+            with self.assertRaises(control.RunStopped):
+                self.bot.run()
+        self.assertEqual(resume.call_count, 2)
+        recover.assert_called_once()
+        self.cast.assert_not_called()
+        self.play.assert_called_once()
+
     def test_first_cast_requires_fresh_idle_after_startup(self):
         self.ready.side_effect = recovery.RoundObservationError("changed")
-        with self.assertRaises(recovery.RoundObservationError):
-            self.bot.run()
+        with patch.object(
+            self.bot, "_recover_entry", side_effect=control.RunStopped("manual")
+        ) as recover:
+            with self.assertRaises(control.RunStopped):
+                self.bot.run()
+        recover.assert_called_once()
         self.cast.assert_not_called()
         self.bot.should_change_location.assert_not_called()
 

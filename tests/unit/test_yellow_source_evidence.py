@@ -62,13 +62,15 @@ class YellowSourceTests(TestCase):
                 controller._track_targets(hsv, cursor, regions)
             controller._press_qte.assert_not_called()
 
-    def test_clear_real_targets_and_clone_case_are_not_rejected_as_obscured(self):
+    def test_real_targets_do_not_press_from_outside_or_fully_obscured_yellow(self):
         for name in ("M03", "M07", "M10", "M15"):
             controller = strategy()
             hsv = read_frame(controller, name)
             cursor = controller._find_cursor_x(hsv)
             controller._track_targets(hsv, cursor, read_mechanism_regions(hsv))
-            controller._press_qte.assert_called_once()
+            # 色块存在不代表当前光标已进入；旧实现靠膨胀外溢授权这些帧。
+            controller._press_qte.assert_not_called()
+            self.assertIsNone(controller._yellow_supported)
 
     def test_sparse_real_failures_no_longer_authorize_yellow_or_spurious_blue(self):
         for cls in (FrostStraitQTEStrategy, AbyssMawQTEStrategy):

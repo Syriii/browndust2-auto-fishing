@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 
 from bd2_fishing.game.fishing.cast_feedback import CastPositionBlocked
+from bd2_fishing.game.fishing.recovery import FishingStalled, RoundObservationError
 from bd2_fishing.runtime import control as run_control
 from tests.support import ROOT
 
@@ -37,6 +38,8 @@ class BiteWaitTests(unittest.TestCase):
             _sleep_loop=lambda: self.advance(0.25),
         )
         self.namespace = {
+            "RoundObservationError": RoundObservationError,
+            "FishingStalled": FishingStalled,
             "time": SimpleNamespace(monotonic=lambda: self.now),
             "BITE_TIMEOUT_SECONDS": 15,
             "log": Mock(),
@@ -167,9 +170,9 @@ class BiteWaitTests(unittest.TestCase):
         self.press.assert_called_once_with("space")
         clear.assert_not_called()
 
-    def test_persistent_blocked_position_stops_after_one_recovery(self):
+    def test_persistent_blocked_position_returns_to_page_recovery(self):
         self.backpack.side_effect = CastPositionBlocked("当前位置无法抛竿")
-        with self.assertRaisesRegex(run_control.RunStopped, "自动移动并重抛后仍无法抛竿"):
+        with self.assertRaisesRegex(RoundObservationError, "自动移动并重抛后仍无法抛竿"):
             self.wait()
         self.recover.assert_called_once()
         self.assertEqual(self.backpack.call_count, 2)

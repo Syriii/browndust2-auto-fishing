@@ -49,6 +49,18 @@ BD2_AutoFishing/
 
 原有证据分类的份数/容量轮转继续在后台写入器生效，全局保留策略是额外上限。正在写入的日志不由待机清理删除；主日志已有 5 MiB × 4 份滚动机制。`screenshots/keep/` 中的证据不计入自动清理范围，应自行管理空间。
 
+当前实现只保护小写目录名 `keep`；请不要创建为 `Keep` 或 `KEEP`，它们可能参与清理。此大小写缺陷已列入[待修问题 R3](../development/code-review-2026-09-14.md)。
+
 更新缓存按完整事务保留最多 7 天，并受 4 GiB 总量约束；未完成更新的缓存不清理，以保留恢复能力。配置、校准结果与源码 `.local` 的历史维护证据不参与此自动清理。
 
 SHA-256 用于发现文件损坏和内容不一致；它不替代发布者数字签名。本地更新包应从官方 Release 下载。
+
+## 更新检查限流（0.3.6 起）
+
+检查版本通过 GitHub 官方 `/releases/latest` 跳转，不再依赖匿名 REST API 配额，也不需要用户配置令牌。下载地址固定到确认过的官方版本；更新时仍验证 SHA-256 和包内清单。
+
+成功查询在 `cache/release-check.json` 保留一小时，重新打开程序可复用。手动“检查更新”可刷新超过一分钟的成功缓存。GitHub 返回 403/429 时，遵守 Retry-After 或限流重置时间，至少等待一分钟；无相关头部默认冷却一小时。连接失败或服务暂不可用冷却五分钟。冷却跨重启生效，不会用旧成功结果冒充本次检查成功。
+
+更新失败不影响钓鱼或日志写入；存储清理与更新各自报告结果。窗口显示可重试时间，并保留 Release 页面及本地 ZIP 更新入口。本机测试版领先官方正式版时，提示“未发现比当前版本更新的正式版本”，不会自动降级。
+
+官方行为参考：[Release 链接](https://docs.github.com/en/repositories/releasing-projects-on-github/linking-to-releases)、[API 限流](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api)。网络或 GitHub 网站本身不可达时仍可能检查失败，冷却不会绕过服务端限制。

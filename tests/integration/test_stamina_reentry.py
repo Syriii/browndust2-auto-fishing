@@ -31,7 +31,7 @@ class StaminaImageTests(TestCase):
         cls.engine = build_ocr_engine(cls.config)
 
     def test_exact_error_and_holdout_allow_only_close_stage(self):
-        worker = reentry.StaminaReentry(
+        worker = reentry.FishingReentry(
             self.config, Rect(0, 0, 945, 532), self.engine, "亚特兰蒂斯", {}, {}
         )
         for name in ("stamina_150402.png", "stamina_150402_holdout.png"):
@@ -53,7 +53,7 @@ class StaminaImageTests(TestCase):
     def test_user_return_dialog_matches_reentry_confirmation_only(self):
         frame = cv2.imread(str(FIXTURES / "controls/return_to_dock_user_holdout.png"))
         height, width = frame.shape[:2]
-        worker = reentry.StaminaReentry(
+        worker = reentry.FishingReentry(
             self.config, Rect(0, 0, width, height), self.engine, "亚特兰蒂斯", {}, {}
         )
         self.assertEqual(worker.fishing.inspect(frame).panel_kind, "return_to_dock")
@@ -64,10 +64,38 @@ class StaminaImageTests(TestCase):
         self.assertIsNone(worker.read_stage(frame, "error"))
         self.assertIsNone(worker.read_stage(frame, "closed"))
 
+    def test_general_entry_reads_real_dock_map_and_island_but_not_loading(self):
+        for name, expected in [
+            ("01_loading.png", None),
+            ("02_dock.png", ("dock",)),
+            ("controls/dock_day_retry_20260912.png", ("dock",)),
+            ("07_atlantis_fish_unlocks.png", ("map",)),
+            ("controls/island_navigation_controls.png", ("island",)),
+        ]:
+            frame = cv2.imread(str(FIXTURES / name))
+            if frame.shape[:2] == (564, 947):
+                frame = frame[31:563, 1:946]  # 附件的标题栏与边框，客户区为 945×532。
+            height, width = frame.shape[:2]
+            worker = reentry.FishingReentry(
+                self.config, Rect(0, 0, width, height), self.engine, "亚特兰蒂斯", {}, {}
+            )
+            self.assertEqual(worker.read_stage(frame, "entry"), expected, name)
 
-class StaminaReentryTests(TestCase):
+    def test_day_dock_is_accepted_after_return_and_records_evidence(self):
+        frame = cv2.imread(str(FIXTURES / "controls/dock_day_retry_20260912.png"))
+        worker = reentry.FishingReentry(
+            self.config, Rect(0, 0, 945, 532), self.engine, "亚特兰蒂斯", {}, {}
+        )
+        self.assertEqual(worker.read_stage(frame, "dock"), ("dock",))
+        evidence = worker.details["last_reading"]
+        self.assertEqual(evidence["page"], "dock")
+        self.assertTrue(evidence["dock_checks"]["船只管理"])
+        self.assertTrue(evidence["dock_checks"]["开始钓鱼"])
+
+
+class FishingReentryTests(TestCase):
     def setUp(self):
-        self.worker = reentry.StaminaReentry(
+        self.worker = reentry.FishingReentry(
             settings.read_ini(str(ROOT / "bd2_fishing/resources/default.ini")),
             Rect(1920, 400, 2865, 932),
             Mock(),
@@ -105,6 +133,33 @@ class StaminaReentryTests(TestCase):
         self.prepare_voyage.assert_called_once_with(
             self.worker.config, self.worker.region, self.worker.engine, self.worker.origin
         )
+
+    def test_general_stuck_island_escapes_and_reenters(self):
+        self.worker.wait = Mock(side_effect=[("island",), (523, 315), ("dock",)])
+        self.worker.run_from_current()
+        self.assertEqual(self.game_input.mock_calls, [call.press("esc"), call.click(2443, 715)])
+        self.prepare_voyage.assert_called_once()
+
+    def test_general_reentry_resumes_return_dialog_dock_and_map(self):
+        for entry in [("return", 523, 315), ("dock",), ("map",)]:
+            with self.subTest(entry=entry):
+                self.game_input.reset_mock()
+                self.prepare_voyage.reset_mock()
+                self.worker.wait = Mock(side_effect=[entry, ("dock",)])
+                self.worker.run_from_current()
+                self.game_input.press.assert_not_called()
+                self.assertEqual(self.game_input.click.call_count, int(entry[0] == "return"))
+                self.prepare_voyage.assert_called_once()
+
+    def test_active_timer_even_without_pointer_cannot_authorize_escape(self):
+        self.worker.fishing = Mock(
+            inspect=Mock(
+                return_value=SceneReading("unrecognized", qte_signals={"qte_active": True})
+            )
+        )
+        self.worker.voyage = Mock(inspect=Mock(return_value=VoyageReading(page="island")))
+        self.assertIsNone(self.worker.read_stage(Mock(), "entry"))
+        self.worker.voyage.inspect.assert_not_called()
 
     def test_close_must_disappear_before_escape(self):
         self.worker.wait = Mock(side_effect=[(472, 292), reentry.NavigationFailed("still error")])
@@ -173,9 +228,9 @@ class StaminaReentryTests(TestCase):
             self.assertEqual(result is not None, code == "150402")
 
     def test_no_origin_or_ocr_prevents_any_action(self):
-        for origin, engine in ((None, Mock()), ("天空岛", Mock()), ("亚特兰蒂斯", None)):
+        for origin, engine in ((None, Mock()), ("未知钓场", Mock()), ("亚特兰蒂斯", None)):
             with self.assertRaises(reentry.NavigationFailed):
-                reentry.StaminaReentry(Mock(), self.worker.region, engine, origin, {}, {})
+                reentry.FishingReentry(Mock(), self.worker.region, engine, origin, {}, {})
         self.assertEqual(self.game_input.mock_calls, [])
 
     def test_round_recovery_dispatches_only_stamina_error(self):
@@ -192,7 +247,8 @@ class StaminaReentryTests(TestCase):
             enter.assert_called_once_with(observer)
         self.assertEqual(details["next_state"], "idle")
         observer.evidence_metadata["resume_check"]["panel_kind"] = "return_to_dock"
+        observer.inspect_current_page.side_effect = ["blocked_dialog", control.RunStopped("manual")]
         with patch.object(reentry, "reenter_after_stamina_error") as enter:
-            with self.assertRaises(recovery.RoundObservationError):
+            with self.assertRaises(control.RunStopped):
                 recovery._wait_for_recovery(strategy, observer, {"samples": []})
             enter.assert_not_called()

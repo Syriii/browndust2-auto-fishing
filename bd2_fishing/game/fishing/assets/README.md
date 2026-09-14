@@ -89,3 +89,22 @@ BGR `[391:513,803:909]` 裁剪，参考客户区 945×532。
 - `stamina_error_confirm.png`：(458,282,489,301)，确认字形。
 
 沿用两图同时 0.88、±10 像素搜索和三种小尺度，只作阻挡弹窗分类。实际关闭还必须两帧 OCR 准确认出 `error:150402`（置信度至少 0.85），其他错误码不能触发此恢复。模板不加入实时 QTE 循环。
+
+## 白天升级页字形变体（2026-09-12）
+
+来源 `tests/fixtures/catch_result/level_up_user_20260912.png`，原图与 SHA-256 见该目录 README。整帧 INTER_AREA 规范化到 945×532，转灰度后裁剪：
+
+- `level_up_title_day.png`：(426,87,518,108)，升级标题。
+- `level_up_labels_day.png`：(350,123,409,195)，固定属性名称。
+
+与旧标题/属性模板并列匹配，继续要求标题、属性各 >=0.88 且底部关闭字形 >=0.85。不使用会变化的等级和属性数值，不降低全局阈值；仅在结算/页面恢复识别运行，不加入 QTE 实时采样。
+# 贝壳实体模板补充（2026-09-12）
+
+`shell_body_0.png` 与 `shell_body_1.png` 来自真实双贝壳画面 `tests/fixtures/qte_control/evening_20260912/shells_over_bubble.png` 的 `[117:136,116:151]` 与 `[117:136,183:218]` 裁切。仅用于 QTE 局部遮挡识别，不用于消除按钮或光标替代。两张独立时间帧及四种缩放验证通过，普通蓝黄/泡泡/破裂残影为负例。
+# 2026-09-13 夜间升级提示
+
+`level_up_title_night.png`、`level_up_labels_night.png` 来自 `tests/fixtures/catch_result/level_up_night_20260913.png`，原始客户区 945×532；裁剪分别为 `(426,87,518,108)` 与 `(350,123,409,195)`。属性模板只在初始化时拆成三行固定文字进行匹配，不比较行间海面背景。独立晚间、白天帧用于回归，来源和哈希见该 fixture 目录 `level_up_20260913.json`。
+
+## 150302 叠层提示补充
+
+`exhausted_notice_text.png` 来自 `tests/fixtures/catch_result/notice_150302_20260913.png`，灰度裁剪 `(400,246,545,264)`；与原确认字样模板共同筛选上层提示。完整错误码仍需动作前 OCR 核对，不能凭模板分数自动确认相似数字。独立时刻、缩放和已有页面反例见 `test_exhausted_notice.py`。

@@ -78,7 +78,7 @@ class IslandTravelTests(unittest.TestCase):
 
     def test_unsupported_origin_never_leaves(self):
         with patch.object(travel, "prepare_voyage") as navigate:
-            for origin in (None, "天空岛"):
+            for origin in (None, "未知钓场"):
                 with self.assertRaises(travel.LocationChangeFailed):
                     travel.change_location(self.config, self.region, self.context, origin)
             navigate.assert_not_called()

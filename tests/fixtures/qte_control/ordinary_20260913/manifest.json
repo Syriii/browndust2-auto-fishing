@@ -1,0 +1,29 @@
+{
+  "source_zip": "qte_1789285586016417500_53be653b.zip",
+  "source_frame": {
+    "file": "frame_04.png",
+    "captured_at_monotonic": 201396.859,
+    "relative_to_press_ms": null,
+    "relative_to_feedback_ms": -108.99999999674037
+  },
+  "round_id": "22f3e0a0-283",
+  "evidence_region": [
+    310,
+    872,
+    688,
+    1027
+  ],
+  "control_region": [
+    328,
+    968,
+    640,
+    1010
+  ],
+  "qte_crop_percent": [
+    50,
+    97,
+    22,
+    100
+  ],
+  "sha256": "4931e1964d098e94787697ea3a56224fd2abbe501b3f5ff2b24e121834f8bedf"
+}

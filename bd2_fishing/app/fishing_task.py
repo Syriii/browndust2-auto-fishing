@@ -16,6 +16,7 @@ from bd2_fishing.game.fishing import cast_feedback as cast_feedback
 from bd2_fishing.game.fishing import qte as strategy
 from bd2_fishing.game.fishing.hook import BITE_PIXEL_THRESHOLD, BITE_TIMEOUT_SECONDS
 from bd2_fishing.game.fishing.hook_diagnostics import HookDiagnostics
+from bd2_fishing.game.fishing.recovery import FishingStalled, RoundObservationError, recover_round
 from bd2_fishing.game.inventory import actions as inventory_actions
 from bd2_fishing.game.islands import reading as island_reading
 from bd2_fishing.game.islands import travel as island_travel
@@ -44,6 +45,8 @@ QTE_STRATEGIES_MAP: dict[FishingLocation, Type[strategy.BaseQTEStrategy]] = {
     FishingLocation.FROST_STRAIT: strategy.FrostStraitQTEStrategy,
     FishingLocation.ABYSS_MAW: strategy.AbyssMawQTEStrategy,
     FishingLocation.ATLANTIS: strategy.FrostStraitQTEStrategy,
+    # 暂用现有通用黄蓝条及机制处理；天空岛专属机制仍待真实样本验证。
+    FishingLocation.SKY_ISLAND: strategy.FrostStraitQTEStrategy,
 }
 
 
@@ -194,14 +197,14 @@ class FishingBot:
                     sct, "cast_position_blocked", recovery_attempts=position_recovery_attempts
                 )
                 if position_recovery_attempts >= 1:
-                    reason = "自动移动并重抛后仍无法抛竿；请手动调整至船边后重新开始"
+                    reason = "自动移动并重抛后仍无法抛竿，重新确认页面后再尝试"
                     log.warning(
                         "%s；本轮位置恢复次数=%d",
                         reason,
                         position_recovery_attempts,
                         extra={"user_message": reason},
                     )
-                    raise run_control.RunStopped(reason)
+                    raise FishingStalled(reason)
                 position_recovery_attempts += 1
                 run_control.set_status("调整抛竿位置")
                 log.warning("无法在当前位置抛竿，正在调整位置并重试。")
@@ -313,6 +316,8 @@ class FishingBot:
             ) as sct,
         ):
             qte_strategy = self.choose_strategy(sct)
+            if self.selected_location_name == FishingLocation.SKY_ISLAND:
+                log.warning("天空岛暂用通用钓鱼策略，尚未实测；异常截图将用于后续优化。")
             log.debug("使用策略: %s", type(qte_strategy).__name__)
             run_control.sleep(self.begin_fish_wait_time)
             from bd2_fishing.game.fishing.startup import prepare_start
@@ -326,15 +331,27 @@ class FishingBot:
                 with fishing_round():
                     log.info("第 %d 轮 · 开始钓鱼", completed_rounds + 1)
                     resumed_waiting = entry == "waiting"
-                    if resumed_waiting:
-                        from bd2_fishing.game.fishing.startup import resume_waiting_for_bite
+                    try:
+                        if resumed_waiting:
+                            from bd2_fishing.game.fishing.startup import resume_waiting_for_bite
 
-                        entry = resume_waiting_for_bite(self.config, self.region)
-                    resume_qte = entry == "qte"
-                    if entry == "idle":
-                        self._prepare_cast(sct)
-                        fishing_actions.cast_rod()
-                        resume_qte = self.wait_for_bite(sct) == "qte"
+                            entry = resume_waiting_for_bite(self.config, self.region)
+                        resume_qte = entry == "qte"
+                        if entry == "idle":
+                            self._prepare_cast(sct)
+                            fishing_actions.cast_rod()
+                            entry = self.wait_for_bite(sct)
+                            resume_qte = entry == "qte"
+                        if entry == "hooked":
+                            from bd2_fishing.game.fishing.startup import confirm_hook_entry
+
+                            entry = confirm_hook_entry(self.config, self.region)
+                            if entry == "idle":
+                                continue
+                            resume_qte = entry == "qte"
+                    except RoundObservationError as exc:
+                        entry = self._recover_entry(qte_strategy, exc)
+                        continue
                     qte_strategy.catch_observer = None
                     if qte_strategy.feedback_enabled:
                         try:
@@ -357,13 +374,13 @@ class FishingBot:
                     from bd2_fishing.game.fishing.settlement import run_observed_qte
 
                     next_entry = run_observed_qte(qte_strategy, sct)
-                    entry = "waiting" if next_entry == "waiting" else "idle"
+                    entry = next_entry if next_entry in {"waiting", "qte"} else "idle"
                     completed_rounds += 1
                     run_control.set_status("等待下一轮")
                     catch_observer = getattr(qte_strategy, "catch_observer", None)
                     if catch_observer is None:
                         log.info("本轮 QTE 流程已退出，等待下一轮；捕获结果尚未核实")
-                    if entry != "waiting":
+                    if entry == "idle":
                         run_control.sleep(self.round_end_wait_time)
 
     def _prepare_cast(self, sct):
@@ -382,6 +399,23 @@ class FishingBot:
             self._record_incident(sct, "location_change_failed")
             raise
         confirm_ready_for_next_cast(self.config, self.region)
+
+    def _recover_entry(self, strategy, error):
+        """等待咬钩/抛竿前的识别超时也进入恢复，不退出整个任务。"""
+        from bd2_fishing.game.fishing.settlement import CatchObserver
+
+        observer = CatchObserver(self.ocr_context.engine, self.config, self.region)
+        observer.current_location = self.selected_location_name
+        try:
+            if recover_round(strategy, observer, error):
+                return observer.evidence_metadata["round_recovery"].get("next_state", "idle")
+            raise error
+        finally:
+            try:
+                observer.finalize("entry_recovery")
+                observer.wait_for_evidence()
+            except Exception:
+                log.exception("页面接续证据收尾失败，保留恢复结果")
 
     def _recover_bite_timeout(self):
         """普通等待超时也按页面分流，未知状态不再移动或重抛。"""

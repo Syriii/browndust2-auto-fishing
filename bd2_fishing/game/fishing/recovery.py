@@ -3,6 +3,7 @@
 import time
 import traceback
 
+from bd2_fishing.game.fishing.notices import confirm_exhausted_notice
 from bd2_fishing.infrastructure.settings import bounded_float
 from bd2_fishing.infrastructure.windows import input as game_input
 from bd2_fishing.runtime import control
@@ -15,8 +16,12 @@ class RoundObservationError(TimeoutError):
     """本轮未能确认页面或结果，可在释放输入后重新检查是否具备续钓条件。"""
 
 
-def check_unconfirmed_limit(strategy, observer):
-    """同一轮只累计一次，避免正常结算失败后进入恢复时重复消耗额度。"""
+class FishingStalled(RoundObservationError):
+    """长时间等不到咬钩或调整位置仍失败，尝试退出重进当前钓场。"""
+
+
+def record_unconfirmed_round(strategy, observer):
+    """只记录未确认次数；能否续钓由当前页面决定，不按鱼获统计中止任务。"""
     if observer.evidence_metadata.get("unconfirmed_counted") is not True:
         strategy._unconfirmed_rounds = (
             0
@@ -24,11 +29,7 @@ def check_unconfirmed_limit(strategy, observer):
             else getattr(strategy, "_unconfirmed_rounds", 0) + 1
         )
         observer.evidence_metadata["unconfirmed_counted"] = True
-    limit = strategy._feedback_config.getint("recovery", "max_unconfirmed_rounds", fallback=2)
-    if not 0 <= limit <= 5:
-        raise ValueError("未确认续钓上限必须为 0–5")
-    if strategy._unconfirmed_rounds > limit:
-        raise RuntimeError("连续未确认轮次达到续钓上限，已停止，请检查证据")
+    observer.evidence_metadata["consecutive_unconfirmed_rounds"] = strategy._unconfirmed_rounds
 
 
 def _panel_kind(observer):
@@ -44,35 +45,71 @@ def _closed_panels(observer):
 
 def _can_close_panel(observer):
     kind = _panel_kind(observer)
-    return kind in {"result", "level_up"} and kind not in _closed_panels(observer)
+    if kind in {"level_up", "exhausted_notice"} and kind in _closed_panels(observer):
+        return time.monotonic() >= observer.evidence_metadata.get(f"{kind}_retry_at", float("inf"))
+    return kind in {"result", "level_up", "exhausted_notice"} and kind not in _closed_panels(
+        observer
+    )
 
 
 def _close_new_panel(strategy, observer):
-    """每种已知结算弹窗只关闭一次；移动后须复核仍是同一种弹窗。"""
+    """鱼获只关闭一次；升级页和已知上层提示按冷却重试，点击前复核。"""
     if not _can_close_panel(observer):
         return False
     kind = _panel_kind(observer)
-    game_input.moveTo(*strategy.region.center)
+    point = strategy.region.center
+    if kind == "level_up":
+        area = observer.window
+        point = (area.left + round(area.width * 0.5), area.top + round(area.height * 0.925))
+    elif kind == "exhausted_notice":
+        area = observer.window
+        point = (
+            area.left + round(area.width * 472 / 945),
+            area.top + round(area.height * 292 / 532),
+        )
+    game_input.moveTo(*point)
     control.sleep(0.2)
     if observer.inspect_current_page() != "panel" or _panel_kind(observer) != kind:
         raise RoundObservationError("关闭前未再次确认面板，未发送点击")
+    if kind == "exhausted_notice":
+        if not confirm_exhausted_notice(observer):
+            raise RoundObservationError("体力提示的完整错误码未确认，未发送点击")
+        # OCR 后再次通过窗口保护并核对上层提示，避免在过期页面落点。
+        if observer.inspect_current_page() != "panel" or _panel_kind(observer) != kind:
+            raise RoundObservationError("体力提示在核对期间变化，未发送点击")
     closed = list(_closed_panels(observer))
-    closed.append(kind)
+    if kind not in closed:
+        closed.append(kind)
     observer.evidence_metadata["closed_panel_kinds"] = closed
     observer.evidence_metadata["panel_close_attempted"] = True
     attempt = dict(
         kind=kind,
         attempted_at_monotonic=time.monotonic(),
         status="attempting",
+        point=list(point),
         inspection=dict(observer.evidence_metadata.get("resume_check", {})),
     )
-    observer.evidence_metadata.setdefault("panel_close_history", []).append(attempt)
+    history = observer.evidence_metadata.setdefault("panel_close_history", [])
+    history.append(attempt)
+    del history[:-16]
     frame = observer.evidence_frames.get("resume_latest.png")
     if frame is not None:
-        observer.evidence_frames[f"panel_before_{kind}.png"] = frame
-    if kind == "level_up":
-        log.info("钓鱼等级提升，正在关闭升级提示并继续。")
-    game_input.click()
+        observer.evidence_frames.setdefault(f"panel_before_{kind}.png", frame)
+        observer.evidence_frames[f"panel_latest_{kind}.png"] = frame
+    if kind in {"level_up", "exhausted_notice"}:
+        metadata = observer.evidence_metadata
+        count = metadata.get(f"{kind}_close_attempts", 0) + 1
+        metadata[f"{kind}_close_attempts"] = count
+        # 两次短间隔补点后改为慢速观察；长期无响应也不耗尽永久关闭权限。
+        metadata[f"{kind}_retry_at"] = time.monotonic() + (2 if count < 3 else 30)
+        log.info(
+            "钓鱼等级提升，正在关闭升级提示并继续。"
+            if kind == "level_up"
+            else "游戏提示体力耗尽，正在关闭提示并重新检查鱼获和钓场页面。"
+        )
+        game_input.click(*point)
+    else:
+        game_input.click()
     attempt["status"] = "sent"
     return True
 
@@ -103,8 +140,11 @@ def recover_round(strategy, observer, error):
     log.debug("本轮待恢复异常", exc_info=(type(error), error, error.__traceback__))
     control.set_status("本轮异常，等待页面恢复")
     try:
-        check_unconfirmed_limit(strategy, observer)
-        _wait_for_recovery(strategy, observer, details)
+        record_unconfirmed_round(strategy, observer)
+        if isinstance(error, FishingStalled) and _try_reentry(observer, details):
+            details["next_state"] = "idle"
+        else:
+            _wait_for_recovery(strategy, observer, details)
     except control.RunStopped:
         details["status"] = "interrupted"
         raise
@@ -118,41 +158,85 @@ def recover_round(strategy, observer, error):
     details["status"] = "resumed"
     log.info(
         "页面已恢复，本轮问题已记录，%s。",
-        "继续等待咬钩，不重复抛竿" if details.get("next_state") == "waiting" else "继续下一条鱼",
+        {"waiting": "继续等待咬钩，不重复抛竿", "qte": "接续当前 QTE"}.get(
+            details.get("next_state"), "继续下一条鱼"
+        ),
     )
     return True
 
 
+def _try_reentry(observer, details, *, stamina=False):
+    from bd2_fishing.game.navigation.reentry import reenter_after_stamina_error, reenter_fishing
+    from bd2_fishing.game.navigation.voyage import NavigationFailed
+
+    attempt = dict(started_at=time.monotonic(), mode="150402" if stamina else "general")
+    attempts = details.setdefault("reentry_attempts", [])
+    attempts.append(attempt)
+    del attempts[:-10]
+    try:
+        (reenter_after_stamina_error if stamina else reenter_fishing)(observer)
+    except (NavigationFailed, RoundObservationError) as exc:
+        attempt.update(status="pending", error=str(exc))
+        reentry = observer.evidence_metadata.get("stamina_reentry", {})
+        if reentry.get("actions") or reentry.get("entry_page") in {"dock", "map", "return"}:
+            details["reentry_pending"] = True
+        log.warning("退出重进尚未完成，继续观察当前页面后再接续：%s", exc)
+        return False
+    else:
+        attempt["status"] = "resumed"
+        details["reentry_pending"] = False
+        return True
+    finally:
+        details["next_reentry_at"] = time.monotonic() + 30
+
+
 def _wait_for_recovery(strategy, observer, details):
-    budget = bounded_float(strategy._feedback_config, "recovery", "page_wait_seconds", 10, 0, 60)
+    budget = max(
+        1.0, bounded_float(strategy._feedback_config, "recovery", "page_wait_seconds", 10, 0, 60)
+    )
     deadline = time.monotonic() + budget
-    waiting_since = None
-    # 按类型处理新弹窗；同一类型持续出现时只观察，不连续点击。
-    for _ in range(301):
+    ready_since, previous_page = None, None
+    # 按类型处理弹窗；升级页及已知提示按冷却重试，鱼获不重复点击。
+    while True:
         control.checkpoint()
         page = observer.inspect_current_page()
         stamp = time.monotonic()
         details["samples"].append(dict(state=page, captured_at_monotonic=stamp))
+        # 长期恢复仅保留最近采样；总观察次数单独统计，不无限增加证据体积。
+        details["observations"] = details.get("observations", 0) + 1
+        del details["samples"][:-300]
         if page == "blocked_dialog" and _panel_kind(observer) == "stamina_error":
-            from bd2_fishing.game.navigation.reentry import reenter_after_stamina_error
-
-            reenter_after_stamina_error(observer)
-            details["next_state"] = "idle"
-            return
-        if page == "waiting":
-            if waiting_since is not None and stamp - waiting_since >= 0.19:
-                details["next_state"] = "waiting"
+            if stamp >= details.get("next_reentry_at", 0):
+                if _try_reentry(observer, details, stamina=True):
+                    details["next_state"] = "idle"
+                    return
+        if page == "qte" or (page == "waiting" and not details.get("reentry_pending")):
+            ready_since = stamp if page != previous_page else ready_since
+            delay = 0.049 if page == "qte" else 0.19
+            if ready_since is not None and stamp - ready_since >= delay:
+                details["next_state"] = page
                 return
-            waiting_since = stamp if waiting_since is None else waiting_since
         else:
-            waiting_since = None
-        if page == "panel" and _can_close_panel(observer):
-            close_confirmed_panel(strategy, observer)
-            return
-        if page == "idle":
-            observer.wait_until_idle()
-            return
+            ready_since = None
+        previous_page = page
+        try:
+            if page == "panel" and _can_close_panel(observer):
+                close_confirmed_panel(strategy, observer)
+                if not details.get("reentry_pending"):
+                    return
+            if page == "idle" and not details.get("reentry_pending"):
+                observer.wait_until_idle()
+                return
+        except RoundObservationError as exc:
+            # 转场或已发送的关闭尚未生效，继续观察；补点仍需重新识别并满足冷却。
+            details["last_transition_error"] = str(exc)
         if stamp >= deadline:
-            break
+            if stamp >= details.get("next_reentry_at", 0):
+                if _try_reentry(observer, details):
+                    details["next_state"] = "idle"
+                    return
+            details["pending_windows"] = details.get("pending_windows", 0) + 1
+            log.warning("页面暂未恢复，任务仍在等待；识别到可继续的页面后自动接续。")
+            control.set_status("等待页面恢复，任务未停止")
+            deadline = stamp + max(10.0, budget)
         control.sleep(min(0.2, max(0, deadline - stamp)))
-    raise RoundObservationError("恢复等待结束，尚未确认结算面板或钓鱼待机控件")

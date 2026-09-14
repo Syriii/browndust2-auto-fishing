@@ -17,6 +17,7 @@ class FishingLocation(StrEnum):
     FROST_STRAIT = "寒霜海峡"
     ABYSS_MAW = "深渊巨口"
     ATLANTIS = "亚特兰蒂斯"
+    SKY_ISLAND = "天空岛"
 
 
 DEFAULT_LOCATION: Final[FishingLocation] = FishingLocation.YANBO_LAKE
@@ -28,4 +29,5 @@ LOCATION_MATCH_ALIASES: Final[dict[FishingLocation, tuple[str, ...]]] = {
     FishingLocation.FROST_STRAIT: ("寒霜海峡", "寒霜海", "寒霜"),
     FishingLocation.ABYSS_MAW: ("深渊巨口", "深渊", "巨口"),
     FishingLocation.ATLANTIS: ("亚特兰蒂斯", "亚特兰蒂", "特兰蒂斯"),
+    FishingLocation.SKY_ISLAND: ("天空岛", "天空島"),
 }

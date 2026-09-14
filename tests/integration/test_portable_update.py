@@ -222,15 +222,7 @@ class PortableUpdateTests(unittest.TestCase):
         self.assertTrue((path / "backup.zip").exists())
 
     def test_official_release_asset_selection_and_version_comparison(self):
-        base = github.RELEASES_URL + "/download/v0.10.0/"
-        response = dict(
-            tag_name="v0.10.0",
-            assets=[
-                dict(name=n, browser_download_url=base + n)
-                for n in (github.ASSET_NAME, github.ASSET_NAME + ".sha256")
-            ],
-        )
-        with patch.object(github, "fetch", return_value=json.dumps(response).encode()):
+        with patch.object(github, "resolve_latest_tag", return_value="v0.10.0"):
             self.assertEqual(github.latest_release("0.2.0")["version"], "0.10.0")
             self.assertIsNone(github.latest_release("0.10.0"))
 

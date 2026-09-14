@@ -7,6 +7,10 @@ from bd2_fishing.game.fishing.templates import best_score, load_pattern
 
 class FishingDialogReader:
     REGIONS = {
+        "exhausted_notice": {
+            "exhausted_notice_text": (400, 246, 545, 264),
+            "stamina_error_confirm": (458, 282, 489, 301),
+        },
         "stamina_error": {
             "stamina_error_text": (390, 246, 556, 264),
             "stamina_error_confirm": (458, 282, 489, 301),
