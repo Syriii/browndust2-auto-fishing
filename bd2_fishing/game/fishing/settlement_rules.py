@@ -6,6 +6,8 @@ import logging
 import re
 from dataclasses import dataclass
 
+from bd2_fishing.game.fishing.catch_marks import parse_size_marks
+
 log = logging.getLogger(__name__)
 
 
@@ -16,6 +18,10 @@ class CatchResult:
     reward: str = ""
     size_cm: float | None = None
     remaining_cm: float | None = None
+    size_kind: str = "unknown"
+    new_record: bool = False
+    stars: int | None = None
+    border_color: str = "unknown"
 
 
 def distance_value(text):
@@ -39,7 +45,15 @@ def classify_settlement(panel_open, reward_texts, timer_values, distance_texts):
     sizes = [distance_value(t) for t in reliable]
     sizes = [value for value in sizes if value is not None and value > 0]
     if panel_open and rewards and sizes:
-        return CatchResult("caught", "结算关闭提示与鱼奖励数量、尺寸同时出现", rewards[0], sizes[0])
+        marks = parse_size_marks(reward_texts)
+        return CatchResult(
+            "caught",
+            "结算关闭提示与鱼奖励数量、尺寸同时出现",
+            rewards[0],
+            sizes[0],
+            size_kind=marks.kind,
+            new_record=marks.new_record,
+        )
     if panel_open:
         return CatchResult("unknown", "结算面板已出现，但奖励文字未完整识别")
     if rewards and sizes:

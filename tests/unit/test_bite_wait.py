@@ -33,6 +33,7 @@ class BiteWaitTests(unittest.TestCase):
             selected_location_name="深渊巨口",
             config=None,
             ocr_context=None,
+            collection=None,
             auto_clear_backpack=True,
             hook_yellow_range=SimpleNamespace(lower=None, upper=None),
             _sleep_loop=lambda: self.advance(0.25),
@@ -101,7 +102,15 @@ class BiteWaitTests(unittest.TestCase):
 
     def wait(self):
         capture = Mock(grab=Mock(return_value=np.zeros((2, 2, 3), dtype=np.uint8)))
-        self.namespace["wait_for_bite"](self.bot, capture)
+        return self.namespace["wait_for_bite"](self.bot, capture)
+
+    def test_target_cleanup_returns_for_time_and_goal_recheck_before_cast(self):
+        self.bot.collection = SimpleNamespace(targeted=True)
+        self.backpack.return_value = True
+        self.assertEqual(self.wait(), "idle")
+        self.assertIsNone(self.cast_at)
+        self.press.assert_not_called()
+        self.timeout_recover.assert_not_called()
 
     def test_recovery_gets_full_wait_and_rechecks_backpack_after_cast(self):
         checked_at = []

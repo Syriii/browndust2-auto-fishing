@@ -1,0 +1,3844 @@
+{
+  "schema_version": 1,
+  "revision": "2026-09-14",
+  "scope": "reference_catalogue_not_catch_history",
+  "source_policy": "union_of_possible_mechanisms; observed_pixels_authorize_actions",
+  "rarity_note": "1/2/3为图鉴绿色/蓝色/彩色贝壳稀有度，不是本次鱼获的随机星级；最大最小尺寸单独记录。",
+  "fish": [
+    {
+      "id": "fish_01_01",
+      "island_id": "YANBO_LAKE",
+      "name_zh": "鲤鱼",
+      "name_tw": "鯉魚",
+      "aliases": [
+        "鯉魚",
+        "鲤鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 85,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/8488ccdd6505e0157c475b98d8a4e5f3.JPG",
+        "sha256": "96647bf36a802c80d1bbca6fc00d6ba650673f35525bf41d109d7228435e9cb7",
+        "source": "bahamut",
+        "position": 1,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_01_01.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          25.0,
+          75.0
+        ],
+        "raw": "25cm~75cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_01_02",
+      "island_id": "YANBO_LAKE",
+      "name_zh": "食人鱼",
+      "name_tw": "食人魚",
+      "aliases": [
+        "食人魚",
+        "食人鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 70,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/9c31f7d1dad3fa25525f65b2afb91665.JPG",
+        "sha256": "36d289bf470c1c444e69b9c928dd15ffd5b2e260c7271cdacd764c3eed279e47",
+        "source": "bahamut",
+        "position": 2,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_01_02.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          10.0,
+          30.0
+        ],
+        "raw": "10cm~30cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_01_03",
+      "island_id": "YANBO_LAKE",
+      "name_zh": "平颌鱲",
+      "name_tw": "平頷鱲",
+      "aliases": [
+        "平頷鱲",
+        "平颌鱲"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 55,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/6c8fd7832b4897c2eabe82c2f98329f8.JPG",
+        "sha256": "ad62e18f00620d2a8e407f0169868681d0f5fb838a95ecb65cb6c47f54bdbcad",
+        "source": "bahamut",
+        "position": 3,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_01_03.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          7.5,
+          22.5
+        ],
+        "raw": "7.5cm~22.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_01_04",
+      "island_id": "YANBO_LAKE",
+      "name_zh": "鲶鱼",
+      "name_tw": "鯰魚",
+      "aliases": [
+        "鯰魚",
+        "鲶鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 70,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/707c086a075c2f847f5b30944279681f.JPG",
+        "sha256": "8eaa8ab00b131a5dca411a39cf81b6e7de536948efede086002a21c90d41ed65",
+        "source": "bahamut",
+        "position": 4,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_01_04.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          25.0,
+          75.0
+        ],
+        "raw": "25cm~75cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_01_05",
+      "island_id": "YANBO_LAKE",
+      "name_zh": "小梭鱼",
+      "name_tw": "小梭魚",
+      "aliases": [
+        "小梭魚",
+        "小梭鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "day",
+      "initial_distance_cm": 160,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/6d7345baa2253e675ec8742e4fbdfd22.JPG",
+        "sha256": "336cee578fc647d1544629009f0f43a8e22443e4636fb7771ff56aea4deb0b0d",
+        "source": "bahamut",
+        "position": 5,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_01_05.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          25.0,
+          75.0
+        ],
+        "raw": "25cm~75cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_01_06",
+      "island_id": "YANBO_LAKE",
+      "name_zh": "龙睛金鱼",
+      "name_tw": "龍睛金魚",
+      "aliases": [
+        "龍晴金魚",
+        "龍睛金魚",
+        "龙晴金鱼",
+        "龙睛金鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 55,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/1e847b1c99b6d5d386faa96964615c4b.JPG",
+        "sha256": "2675f6aca6f860873baaa645fb1370399a2a4c306be8f23680f67bc49d50d2c1",
+        "source": "bahamut",
+        "position": 6,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_01_06.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          7.5,
+          22.5
+        ],
+        "raw": "7.5cm~22.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": [
+        "论坛表格名称与原图不同；保留表格写法为别名，展示名称依据原图修正。"
+      ]
+    },
+    {
+      "id": "fish_01_07",
+      "island_id": "YANBO_LAKE",
+      "name_zh": "瓜仁太阳鱼",
+      "name_tw": "瓜仁太陽魚",
+      "aliases": [
+        "瓜仁太阳鱼",
+        "瓜仁太陽魚"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "night",
+      "initial_distance_cm": 160,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/18ee0c1532f62d89b336a40fe7ed30d2.JPG",
+        "sha256": "e90ef44c5da18b19d3bc0b385468bde09bcfc7bed2cd815e5dff677d4813f251",
+        "source": "bahamut",
+        "position": 7,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_01_07.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          10.0,
+          30.0
+        ],
+        "raw": "10cm~30cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_01_08",
+      "island_id": "YANBO_LAKE",
+      "name_zh": "大口黑鲈",
+      "name_tw": "大口黑鱸",
+      "aliases": [
+        "大口黑鱸",
+        "大口黑鲈"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "day",
+      "initial_distance_cm": 190,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/b9577bf4de2c2dfa9839818740ee2e75.JPG",
+        "sha256": "7107ed67934f4c02fb1d10c45172d65779f9652bc74b38c848f0b4a8ea5c578a",
+        "source": "bahamut",
+        "position": 8,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_01_08.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          25.0,
+          75.0
+        ],
+        "raw": "25cm~75cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_01_09",
+      "island_id": "YANBO_LAKE",
+      "name_zh": "虹鳟",
+      "name_tw": "虹鱒",
+      "aliases": [
+        "虹鱒",
+        "虹鳟"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 85,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/18dd5c2caa4909ba1084237d42fd0948.JPG",
+        "sha256": "967818c9bd6f9483f16bfddfb6a2dddfd56ec5a60ddf7bb45ccf842feb3e1a98",
+        "source": "bahamut",
+        "position": 9,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_01_09.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          25.0,
+          75.0
+        ],
+        "raw": "25cm~75cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_01_10",
+      "island_id": "YANBO_LAKE",
+      "name_zh": "黑鱼",
+      "name_tw": "蛇頭魚",
+      "aliases": [
+        "蛇头鱼",
+        "蛇頭魚",
+        "黑鱼"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "night",
+      "initial_distance_cm": 220,
+      "possible_mechanisms": [
+        "speed"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "speed"
+        ],
+        "gamekee": [
+          "speed"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/e2f8e613a5bf05cbf30c3d6e2422b921.JPG",
+        "sha256": "54c18b01170e21a972a2168cb0d4e1d003cc1ee90c74158d9eeaadfb514cb91f",
+        "source": "bahamut",
+        "position": 10,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_01_10.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          37.5,
+          112.5
+        ],
+        "raw": "37.5cm~112.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_01_11",
+      "island_id": "YANBO_LAKE",
+      "name_zh": "鲟鱼",
+      "name_tw": "鱘魚",
+      "aliases": [
+        "鱘魚",
+        "鲟鱼"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "night",
+      "initial_distance_cm": 250,
+      "possible_mechanisms": [
+        "blue_lock"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "blue_lock"
+        ],
+        "gamekee": [
+          "blue_lock"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/24dab39da40997f703441bae852752df.JPG",
+        "sha256": "793c86fb5780cef12ceb1cfdeae426b358651847498b012fcaa9a8469bb9133a",
+        "source": "bahamut",
+        "position": 11,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_01_11.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          150.0,
+          450.0
+        ],
+        "raw": "150cm~450cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_01_12",
+      "island_id": "YANBO_LAKE",
+      "name_zh": "龙鱼",
+      "name_tw": "龍魚",
+      "aliases": [
+        "龍魚",
+        "龙鱼"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "day",
+      "initial_distance_cm": 220,
+      "possible_mechanisms": [
+        "bite"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "bite"
+        ],
+        "gamekee": [
+          "bite"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/fa3802b81c9dfc92e5bb3b694a10ba3d.JPG",
+        "sha256": "383908d18ce5ffee64fb7fa0ef38eedc0cc996b8b2437baa8cda2c3d601ae963",
+        "source": "bahamut",
+        "position": 12,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_01_12.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          37.5,
+          112.5
+        ],
+        "raw": "37.5cm~112.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_01_13",
+      "island_id": "YANBO_LAKE",
+      "name_zh": "内萨",
+      "name_tw": "內薩",
+      "aliases": [
+        "內薩",
+        "内萨"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "legendary",
+      "rarity_rank": 3,
+      "availability": "day",
+      "initial_distance_cm": 400,
+      "possible_mechanisms": [
+        "bite",
+        "blue_lock",
+        "speed"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "speed",
+          "bite",
+          "blue_lock"
+        ],
+        "gamekee": [
+          "speed",
+          "bite",
+          "blue_lock"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/47dd55281ddf5c0a1020696867913988.JPG",
+        "sha256": "c3fa00cec1ed41f976e1f2c383cb4fa0b5f2ddbd5a3f91406b1e7aaf911cee1f",
+        "source": "bahamut",
+        "position": 13,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_01_13.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          150.0,
+          170.0
+        ],
+        "raw": "150cm~170cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_01_14",
+      "island_id": "YANBO_LAKE",
+      "name_zh": "巨骨舌鱼",
+      "name_tw": "巨骨舌魚",
+      "aliases": [
+        "巨骨舌魚",
+        "巨骨舌鱼",
+        "巨骨蛇魚",
+        "巨骨蛇鱼"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "legendary",
+      "rarity_rank": 3,
+      "availability": "night",
+      "initial_distance_cm": 460,
+      "possible_mechanisms": [
+        "bite",
+        "blue_lock"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "bite",
+          "blue_lock"
+        ],
+        "gamekee": [
+          "bite",
+          "blue_lock"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/baa4578abb475b45c2ab775ebfa8d916.JPG",
+        "sha256": "731baf858f0e994950de99f2923749a38665e81f33216b806d1040581bbd6cd7",
+        "source": "bahamut",
+        "position": 14,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_01_14.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          125.0,
+          375.0
+        ],
+        "raw": "125cm~375cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": [
+        "论坛表格名称与原图不同；保留表格写法为别名，展示名称依据原图修正。"
+      ]
+    },
+    {
+      "id": "fish_02_01",
+      "island_id": "SHALLOW_SHORE",
+      "name_zh": "鲈鱼",
+      "name_tw": "鱸魚",
+      "aliases": [
+        "鱸魚",
+        "鲈鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 250,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/4971596bb669f95872e9ccb12028b9ed.JPG",
+        "sha256": "136341d5878427b8b22bf7d416724f3d6d921436383695dc7134df155a51c467",
+        "source": "bahamut",
+        "position": 1,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_02_01.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          25.0,
+          75.0
+        ],
+        "raw": "25cm~75cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_02_02",
+      "island_id": "SHALLOW_SHORE",
+      "name_zh": "海马",
+      "name_tw": "海馬",
+      "aliases": [
+        "海馬",
+        "海马"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 220,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/2f62a7f50ddd4ac59941fc9ddb3f28ac.JPG",
+        "sha256": "2fee1a5b39edf00ceed407ac3e6fdf71d590f35d9183ab8e3bf0cdfa5d79ce56",
+        "source": "bahamut",
+        "position": 2,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_02_02.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          5.0,
+          15.0
+        ],
+        "raw": "5cm~15cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_02_03",
+      "island_id": "SHALLOW_SHORE",
+      "name_zh": "小丑鱼",
+      "name_tw": "小丑魚",
+      "aliases": [
+        "小丑魚",
+        "小丑鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 220,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/dfff35510f16b016fc38ff642c2cab29.JPG",
+        "sha256": "66574df39c7de56c7556aaa173097ee88e410102d0e138470ac13f097c8aaacf",
+        "source": "bahamut",
+        "position": 3,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_02_03.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          7.5,
+          22.5
+        ],
+        "raw": "7.5cm~22.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_02_04",
+      "island_id": "SHALLOW_SHORE",
+      "name_zh": "蓝刺尾鱼",
+      "name_tw": "藍刺尾魚",
+      "aliases": [
+        "蓝刺尾鱼",
+        "藍刺尾魚"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 250,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/621d3b971cb04c3451d4fa82d0917f2f.JPG",
+        "sha256": "dfc2a2af0366339d380f232159590dddf5d4163a614ab3cb96d5fe4a02d9ba6b",
+        "source": "bahamut",
+        "position": 4,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_02_04.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          12.5,
+          37.5
+        ],
+        "raw": "12.5cm~37.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_02_05",
+      "island_id": "SHALLOW_SHORE",
+      "name_zh": "青甘鱼",
+      "name_tw": "青甘魚",
+      "aliases": [
+        "青甘魚",
+        "青甘鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 400,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/c5ee02d73a7a1fd1359343941ba4499f.JPG",
+        "sha256": "678c06d1b72f5583c2e40bf5434b050faeb1b75c56033890041385c2d857c934",
+        "source": "bahamut",
+        "position": 5,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_02_05.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          62.5,
+          187.5
+        ],
+        "raw": "62.5cm~187.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_02_06",
+      "island_id": "SHALLOW_SHORE",
+      "name_zh": "叶形海龙",
+      "name_tw": "葉形海龍",
+      "aliases": [
+        "叶形海龙",
+        "葉形海龍"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "day",
+      "initial_distance_cm": 460,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/9e95f769e5feb8de72a0cd879ea9f9a2.JPG",
+        "sha256": "6894d4f397a26d47c6533b31cb6e4ae658f0a648db07542f03dbce1c6004c191",
+        "source": "bahamut",
+        "position": 6,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_02_06.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          12.5,
+          37.5
+        ],
+        "raw": "12.5cm~37.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_02_07",
+      "island_id": "SHALLOW_SHORE",
+      "name_zh": "条石鲷",
+      "name_tw": "條石鯛",
+      "aliases": [
+        "条石雕",
+        "条石鲷",
+        "條石雕",
+        "條石鯛"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "night",
+      "initial_distance_cm": 460,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/e0b6f04fc39ab2803d26fd796d7640e0.JPG",
+        "sha256": "c2ea0935d1f0c24b8b9523591d2524159aa8a5521368277a9c2c377a4b574c06",
+        "source": "bahamut",
+        "position": 7,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_02_07.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          20.0,
+          60.0
+        ],
+        "raw": "20cm~60cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": [
+        "论坛表格名称与原图不同；保留表格写法为别名，展示名称依据原图修正。"
+      ]
+    },
+    {
+      "id": "fish_02_08",
+      "island_id": "SHALLOW_SHORE",
+      "name_zh": "气球鱼",
+      "name_tw": "氣球魚",
+      "aliases": [
+        "气球鱼",
+        "氣球魚"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 400,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/d254e0201a8fadf7cfdd81d5ef478716.JPG",
+        "sha256": "543281e43ec726481a30960014a98f9f824b8730887972488eb951d305fa091f",
+        "source": "bahamut",
+        "position": 8,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_02_08.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          20.0,
+          60.0
+        ],
+        "raw": "20cm~60cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_02_09",
+      "island_id": "SHALLOW_SHORE",
+      "name_zh": "锤头双髻鲨",
+      "name_tw": "錘頭雙髻鯊",
+      "aliases": [
+        "錘頭雙髻鯊",
+        "锤头双髻鲨"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "night",
+      "initial_distance_cm": 520,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/1ff77ada7736219fa2f6329a732875c3.JPG",
+        "sha256": "dab6d678085a8e4248f2356272eb339191fc3ca5fd708444d6bd1899739c781f",
+        "source": "bahamut",
+        "position": 9,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_02_09.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          150.0,
+          450.0
+        ],
+        "raw": "150cm~450cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_02_10",
+      "island_id": "SHALLOW_SHORE",
+      "name_zh": "海龟",
+      "name_tw": "海龜",
+      "aliases": [
+        "海龜",
+        "海龟"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "day",
+      "initial_distance_cm": 580,
+      "possible_mechanisms": [
+        "shell"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "shell"
+        ],
+        "gamekee": [
+          "shell"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/d524d2ef00cf34035427b6cfd196a80c.JPG",
+        "sha256": "202cddebf8b783f0bbd9c3adcfda1ec4a7bc03aa35e71b032918a6a691415124",
+        "source": "bahamut",
+        "position": 10,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_02_10.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          75.0,
+          225.0
+        ],
+        "raw": "75cm~225cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_02_11",
+      "island_id": "SHALLOW_SHORE",
+      "name_zh": "波纹唇鱼",
+      "name_tw": "拿破崙魚",
+      "aliases": [
+        "拿破仑鱼",
+        "拿破崙魚",
+        "波纹唇鱼"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "day",
+      "initial_distance_cm": 580,
+      "possible_mechanisms": [
+        "ink"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "ink"
+        ],
+        "gamekee": [
+          "ink"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/64e77de9eb003c7abc835ea6cadb3b3b.JPG",
+        "sha256": "a1dfae41652cee66a3163c1e1eb863fd5410bb1ade04be051ef009aaaed6e93b",
+        "source": "bahamut",
+        "position": 11,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_02_11.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          50.0,
+          150.0
+        ],
+        "raw": "50cm~150cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_02_12",
+      "island_id": "SHALLOW_SHORE",
+      "name_zh": "腔棘鱼",
+      "name_tw": "腔棘魚",
+      "aliases": [
+        "腔棘魚",
+        "腔棘鱼"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "night",
+      "initial_distance_cm": 640,
+      "possible_mechanisms": [
+        "blue_lock"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "blue_lock"
+        ],
+        "gamekee": [
+          "blue_lock"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/12d371439cde45669eebde5c7f32f2a3.JPG",
+        "sha256": "99143a76d4a79b34970ee631dec6473fe54c08da31a14bdba18a0b603723f042",
+        "source": "bahamut",
+        "position": 12,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_02_12.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          75.0,
+          225.0
+        ],
+        "raw": "75cm~225cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_02_13",
+      "island_id": "SHALLOW_SHORE",
+      "name_zh": "奥雷娅",
+      "name_tw": "奧芮雅",
+      "aliases": [
+        "奥芮雅",
+        "奥雷娅",
+        "奧芮雅"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "legendary",
+      "rarity_rank": 3,
+      "availability": "day",
+      "initial_distance_cm": 820,
+      "possible_mechanisms": [
+        "ink",
+        "shell"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "ink",
+          "shell"
+        ],
+        "gamekee": [
+          "ink",
+          "shell"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/74742018275ace42fbbe5ed50e0445d7.JPG",
+        "sha256": "dbbbe4e793f69557b806a8f419ed2e2470ca8606da13eac996ce40d219838a3d",
+        "source": "bahamut",
+        "position": 13,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_02_13.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          150.0,
+          170.0
+        ],
+        "raw": "150cm~170cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_02_14",
+      "island_id": "SHALLOW_SHORE",
+      "name_zh": "蟹妈妈幼崽",
+      "name_tw": "幼年螃蟹媽媽",
+      "aliases": [
+        "幼年螃蟹妈妈",
+        "幼年螃蟹媽媽",
+        "蟹妈妈幼崽"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "legendary",
+      "rarity_rank": 3,
+      "availability": "night",
+      "initial_distance_cm": 940,
+      "possible_mechanisms": [
+        "blue_lock",
+        "ink"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "ink",
+          "blue_lock"
+        ],
+        "gamekee": [
+          "ink",
+          "blue_lock"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/04544ee234da457102846e1bebdb7933.JPG",
+        "sha256": "ce5b620045e3acc3eab90fb7174d1f175d43f40cdf43704a4f45f8a1d842a1dc",
+        "source": "bahamut",
+        "position": 14,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_02_14.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          150.0,
+          450.0
+        ],
+        "raw": "150cm~450cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_03_01",
+      "island_id": "FROST_STRAIT",
+      "name_zh": "毛鳞鱼",
+      "name_tw": "毛鱗魚",
+      "aliases": [
+        "毛鱗魚",
+        "毛鳞鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 580,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/8bd7aecce0df86c32604a1203e21d93d.JPG",
+        "sha256": "17d00193a14c2e914f641238edccf0c76d0926d5d13b8d7f59e0c0e1ccc241d2",
+        "source": "bahamut",
+        "position": 1,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_03_01.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          7.5,
+          22.5
+        ],
+        "raw": "7.5cm~22.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_03_02",
+      "island_id": "FROST_STRAIT",
+      "name_zh": "鲱鱼",
+      "name_tw": "鯡魚",
+      "aliases": [
+        "鯡魚",
+        "鲱鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 640,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/afab4920447e8293873bcd3e98565a52.JPG",
+        "sha256": "652014d67e5f84bd3420379df76631fb05bd1994650628ae4d5d2660b4603210",
+        "source": "bahamut",
+        "position": 2,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_03_02.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          20.0,
+          60.0
+        ],
+        "raw": "20cm~60cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_03_03",
+      "island_id": "FROST_STRAIT",
+      "name_zh": "大头鳕",
+      "name_tw": "大頭鱈",
+      "aliases": [
+        "大头鳕",
+        "大頭鱈"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "day",
+      "initial_distance_cm": 820,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/e45efe93d6302435e35dfe2a50296267.JPG",
+        "sha256": "1da8b81bebd9e5a5959443a1eb4ec4bf36676b1171a6e694437074c78e366849",
+        "source": "bahamut",
+        "position": 3,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_03_03.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          37.5,
+          112.5
+        ],
+        "raw": "37.5cm~112.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": [
+        "巴哈昼表列出、夜表缺失；只按所读表登记，夜间是否出现待核实。"
+      ]
+    },
+    {
+      "id": "fish_03_04",
+      "island_id": "FROST_STRAIT",
+      "name_zh": "花鱼",
+      "name_tw": "花魚",
+      "aliases": [
+        "花魚",
+        "花鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 820,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/506a006be817e182b094bdf098d124f0.JPG",
+        "sha256": "20c692d54c387b8af8cbf99558050432eb29394b5eadbdbaaa6e3a5a40912d75",
+        "source": "bahamut",
+        "position": 4,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_03_04.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          20.0,
+          60.0
+        ],
+        "raw": "20cm~60cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_03_05",
+      "island_id": "FROST_STRAIT",
+      "name_zh": "多棘海盘车",
+      "name_tw": "多棘海盤車",
+      "aliases": [
+        "多棘海盘车",
+        "多棘海盤車"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 580,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/798fc0efd36923b5b415f2be67f28f89.JPG",
+        "sha256": "aa38e074c876a770dec74dabe63db0788b93ecd9ce6631a7b3216b4dd532d9b1",
+        "source": "bahamut",
+        "position": 5,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_03_05.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          15.0,
+          45.0
+        ],
+        "raw": "15cm~45cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_03_06",
+      "island_id": "FROST_STRAIT",
+      "name_zh": "鲑鱼",
+      "name_tw": "鮭魚",
+      "aliases": [
+        "鮭魚",
+        "鲑鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "day",
+      "initial_distance_cm": 940,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/3c6410a2d8b03fe57472f2b4311a5877.JPG",
+        "sha256": "30ef1a7bd790e126e9f9847b0123366b93016fc86cdb82c6bd293c26f95bc2d1",
+        "source": "bahamut",
+        "position": 6,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_03_06.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          37.5,
+          112.5
+        ],
+        "raw": "37.5cm~112.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_03_07",
+      "island_id": "FROST_STRAIT",
+      "name_zh": "黄线狭鳕",
+      "name_tw": "黃線狹鱈",
+      "aliases": [
+        "黃線狹鱈",
+        "黄线狭鳕"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 640,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/aa0e506603d4855413d8e184c9258e31.JPG",
+        "sha256": "77f8e8c117c469b24b9c205ec7ec0f20160f4eb63d12df5113b96406d3c041c5",
+        "source": "bahamut",
+        "position": 7,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_03_07.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          37.5,
+          112.5
+        ],
+        "raw": "37.5cm~112.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_03_08",
+      "island_id": "FROST_STRAIT",
+      "name_zh": "狼鳗",
+      "name_tw": "狼鰻",
+      "aliases": [
+        "狼鰻",
+        "狼鳗"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "night",
+      "initial_distance_cm": 940,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/eb3f835181329de0753b4a35011e69f7.JPG",
+        "sha256": "33fb3524257403e2129fb99180efc39a5da96d6157d061a12de722f1e1d6cdb3",
+        "source": "bahamut",
+        "position": 8,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_03_08.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          37.5,
+          112.5
+        ],
+        "raw": "37.5cm~112.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_03_09",
+      "island_id": "FROST_STRAIT",
+      "name_zh": "花羔红点鲑",
+      "name_tw": "花羔紅點鮭",
+      "aliases": [
+        "花羔紅點鮭",
+        "花羔红点鲑"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 1060,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/719b903e09d319bfc3de056c3f642020.JPG",
+        "sha256": "d5d5b2558a6c832c37bcfc4c5f280eda519a4215f22104f08d108d9681ae9002",
+        "source": "bahamut",
+        "position": 9,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_03_09.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          12.5,
+          37.5
+        ],
+        "raw": "12.5cm~37.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_03_10",
+      "island_id": "FROST_STRAIT",
+      "name_zh": "七鳃鳗",
+      "name_tw": "七星鰻",
+      "aliases": [
+        "七星鰻",
+        "七星鳗",
+        "七鳃鳗"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "night",
+      "initial_distance_cm": 1180,
+      "possible_mechanisms": [
+        "freeze"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "freeze"
+        ],
+        "gamekee": [
+          "freeze"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/6b0045a77966ca62fcf6b34aa9510be3.JPG",
+        "sha256": "ddd9442c82c653a0e41eef62f7f664433dcae84f63606fbd889d5b00c097de01",
+        "source": "bahamut",
+        "position": 10,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_03_10.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          25.0,
+          75.0
+        ],
+        "raw": "25cm~75cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_03_11",
+      "island_id": "FROST_STRAIT",
+      "name_zh": "裸海蝶",
+      "name_tw": "裸海蝶",
+      "aliases": [
+        "裸海蝶"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "day",
+      "initial_distance_cm": 1180,
+      "possible_mechanisms": [
+        "invisible"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "invisible"
+        ],
+        "gamekee": [
+          "invisible"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/a2cf7991f5771f5969af15297030b3cd.JPG",
+        "sha256": "bbb17af3062bc29f1132de84d295f9d0fa37da4552c4432da8ffea66d422721a",
+        "source": "bahamut",
+        "position": 11,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_03_11.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          0.5,
+          1.5
+        ],
+        "raw": "0.5cm~1.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_03_12",
+      "island_id": "FROST_STRAIT",
+      "name_zh": "石蟹",
+      "name_tw": "帝王蟹",
+      "aliases": [
+        "帝王蟹",
+        "石蟹"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "night",
+      "initial_distance_cm": 1500,
+      "possible_mechanisms": [
+        "shell"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "shell"
+        ],
+        "gamekee": [
+          "shell"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/793dcecc6cef85230b830396bcb29773.JPG",
+        "sha256": "610cdc2ab4a3d70c3893c5e2d3ac43ac56bfab533022d46801aca1657b30a52a",
+        "source": "bahamut",
+        "position": 12,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_03_12.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          75.0,
+          225.0
+        ],
+        "raw": "75cm~225cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_03_13",
+      "island_id": "FROST_STRAIT",
+      "name_zh": "弗罗斯特",
+      "name_tw": "弗洛斯特",
+      "aliases": [
+        "弗洛斯特",
+        "弗罗斯特"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "legendary",
+      "rarity_rank": 3,
+      "availability": "day",
+      "initial_distance_cm": 1740,
+      "possible_mechanisms": [
+        "blue_lock",
+        "freeze",
+        "shell"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "shell",
+          "blue_lock",
+          "freeze"
+        ],
+        "gamekee": [
+          "shell",
+          "blue_lock",
+          "freeze"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/5f31e8df5c140fc8e755ef65c0def281.JPG",
+        "sha256": "6f34e3ceca2839d6fa089e73882183b974387f3b175be7a0f9641ce52e716e18",
+        "source": "bahamut",
+        "position": 13,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_03_13.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          150.0,
+          170.0
+        ],
+        "raw": "150cm~170cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": [
+        "GameKee 表格为1740，旧段落曾写1720；初始距离仅作参考。"
+      ]
+    },
+    {
+      "id": "fish_03_14",
+      "island_id": "FROST_STRAIT",
+      "name_zh": "格陵兰睡鲨",
+      "name_tw": "格陵蘭鯊",
+      "aliases": [
+        "格陵兰睡鲨",
+        "格陵兰鲨",
+        "格陵蘭鯊"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "legendary",
+      "rarity_rank": 3,
+      "availability": "night",
+      "initial_distance_cm": 1980,
+      "possible_mechanisms": [
+        "invisible",
+        "shell"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "invisible",
+          "shell"
+        ],
+        "gamekee": [
+          "invisible",
+          "shell"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202512/forum/76207/6bc852ac73e42a229d9526d64967f808.JPG",
+        "sha256": "da9a34705d9e05140d93c38d5141d96b8b7e8fedc605a89bb071268b7a7ee89b",
+        "source": "bahamut",
+        "position": 14,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_03_14.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          200.0,
+          600.0
+        ],
+        "raw": "200cm~600cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_04_01",
+      "island_id": "ABYSS_MAW",
+      "name_zh": "鳀鱼",
+      "name_tw": "鯷魚",
+      "aliases": [
+        "鯷魚",
+        "鳀鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 1740,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/1b872f471b96e1ac14e20d90e112abce.JPG",
+        "sha256": "2d11b5f3e45290023f7764a35534e8520cebab076fa87886a9b704290b42394e",
+        "source": "bahamut",
+        "position": 1,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_04_01.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          1.5,
+          4.5
+        ],
+        "raw": "1.5cm~4.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_04_02",
+      "island_id": "ABYSS_MAW",
+      "name_zh": "翻车鱼",
+      "name_tw": "翻車魚",
+      "aliases": [
+        "翻車魚",
+        "翻车鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 1980,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/4df368e5ca8855b1a8a07894b721b804.JPG",
+        "sha256": "ac1cb39462e88988564f4f5efab0fd54119395bfc6eba07ce02e61ec64901961",
+        "source": "bahamut",
+        "position": 2,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_04_02.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          75.0,
+          225.0
+        ],
+        "raw": "75cm~225cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_04_03",
+      "island_id": "ABYSS_MAW",
+      "name_zh": "海刺水母",
+      "name_tw": "海刺水母",
+      "aliases": [
+        "海刺水母"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 1740,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/29422f69999a821456f2254fe4a14e8e.JPG",
+        "sha256": "822df9d8b1788be46ee3eb37b16681a5f158a00d0c0fc19d65d0a37b3fb41ea1",
+        "source": "bahamut",
+        "position": 3,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_04_03.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          100.0,
+          300.0
+        ],
+        "raw": "100cm~300cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_04_04",
+      "island_id": "ABYSS_MAW",
+      "name_zh": "太平洋黑鲔",
+      "name_tw": "太平洋黑鮪",
+      "aliases": [
+        "太平洋黑鮪",
+        "太平洋黑鲔"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "night",
+      "initial_distance_cm": 1980,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/ebec77c68438e574ea158954207cb23d.JPG",
+        "sha256": "b1e14abe49df385574036936e0d1064a54033b7dccf7a13bf150eae82440ed29",
+        "source": "bahamut",
+        "position": 4,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_04_04.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          125.0,
+          375.0
+        ],
+        "raw": "125cm~375cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_04_05",
+      "island_id": "ABYSS_MAW",
+      "name_zh": "鬼头刀",
+      "name_tw": "鬼頭刀",
+      "aliases": [
+        "鬼头刀",
+        "鬼頭刀"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "day",
+      "initial_distance_cm": 1980,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/92dac822aa3058eb12442a51b489bd3a.JPG",
+        "sha256": "bdfc9f2632b9a86e61bd918a13f31af07566a55d9dccd61c45902cad13f35816",
+        "source": "bahamut",
+        "position": 5,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_04_05.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          50.0,
+          150.0
+        ],
+        "raw": "50cm~150cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_04_06",
+      "island_id": "ABYSS_MAW",
+      "name_zh": "鲭鱼",
+      "name_tw": "鯖魚",
+      "aliases": [
+        "鯖魚",
+        "鲭鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 1740,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/301ab8e849ff09a3bb71bd2db5d29f52.JPG",
+        "sha256": "6f08b7e117a2a48878334f6ffccbdfc951a52ccf6cc78923cb21a8be0971d08d",
+        "source": "bahamut",
+        "position": 6,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_04_06.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          15.0,
+          45.0
+        ],
+        "raw": "15cm~45cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_04_07",
+      "island_id": "ABYSS_MAW",
+      "name_zh": "旗鱼",
+      "name_tw": "旗魚",
+      "aliases": [
+        "旗魚",
+        "旗鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "night",
+      "initial_distance_cm": 1980,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/f157807b4d9b3128f491994b8289337e.JPG",
+        "sha256": "e54eb693f05dab166d9c52b9fc827bc2e7a409a44ea76ec12bc613b81f428a5f",
+        "source": "bahamut",
+        "position": 7,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_04_07.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          175.0,
+          525.0
+        ],
+        "raw": "175cm~525cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_04_08",
+      "island_id": "ABYSS_MAW",
+      "name_zh": "水滴鱼",
+      "name_tw": "水滴魚",
+      "aliases": [
+        "水滴魚",
+        "水滴鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 1740,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/eaf2a0efbcf23ec9b764c26b8101a760.JPG",
+        "sha256": "f73155e9b461d56d4b35720026aae4b772de60956c887f7276f42a7045413ed7",
+        "source": "bahamut",
+        "position": 8,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_04_08.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          15.0,
+          45.0
+        ],
+        "raw": "15cm~45cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_04_09",
+      "island_id": "ABYSS_MAW",
+      "name_zh": "大白鲨",
+      "name_tw": "大白鯊",
+      "aliases": [
+        "大白鯊",
+        "大白鲨"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "day",
+      "initial_distance_cm": 3080,
+      "possible_mechanisms": [
+        "green_hold"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "green_hold"
+        ],
+        "gamekee": [
+          "green_hold"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/83aac895011dcb9bca7a3260f967af4e.JPG",
+        "sha256": "b7653e09755234846f20ccd5d6ae82616c754ef09cae3e5e16687a0637e6d151",
+        "source": "bahamut",
+        "position": 9,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_04_09.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          175.0,
+          525.0
+        ],
+        "raw": "175cm~525cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_04_10",
+      "island_id": "ABYSS_MAW",
+      "name_zh": "黄安康鱼",
+      "name_tw": "深海鮟鱇",
+      "aliases": [
+        "深海鮟鱇",
+        "黄安康鱼"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "night",
+      "initial_distance_cm": 2220,
+      "possible_mechanisms": [
+        "yellow_hide"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "yellow_hide"
+        ],
+        "gamekee": [
+          "yellow_hide"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/a19cf0c0df36f23a53bd0a3f310cfb77.JPG",
+        "sha256": "23970d9fefeffc98ad3018153534d95955011e46dd20ad04ebe9bf192c2c6fe7",
+        "source": "bahamut",
+        "position": 10,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_04_10.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          25.0,
+          75.0
+        ],
+        "raw": "25cm~75cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_04_11",
+      "island_id": "ABYSS_MAW",
+      "name_zh": "桶眼鱼",
+      "name_tw": "桶眼魚",
+      "aliases": [
+        "桶眼魚",
+        "桶眼鱼"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "night",
+      "initial_distance_cm": 2600,
+      "possible_mechanisms": [
+        "bubble"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "bubble"
+        ],
+        "gamekee": [
+          "bubble"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/4e4124e99c72eaae6dcfdf365f76cb2e.JPG",
+        "sha256": "9668d6c1154dc88ff82276a1515994229f033a05b734a1588e6c373cba7e736c",
+        "source": "bahamut",
+        "position": 11,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_04_11.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          7.5,
+          22.5
+        ],
+        "raw": "7.5cm~22.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_04_12",
+      "island_id": "ABYSS_MAW",
+      "name_zh": "无鳍豚",
+      "name_tw": "江豚",
+      "aliases": [
+        "无鳍豚",
+        "江豚"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "day",
+      "initial_distance_cm": 3080,
+      "possible_mechanisms": [
+        "wall"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "wall"
+        ],
+        "gamekee": [
+          "wall"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/1382a670417f54c89dce44569debdf8c.JPG",
+        "sha256": "e273f274fb5d23b0ae9321d7f76e9a05d856bbfffd054bf3edf0ecc6f47e868d",
+        "source": "bahamut",
+        "position": 12,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_04_12.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          75.0,
+          225.0
+        ],
+        "raw": "75cm~225cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_04_13",
+      "island_id": "ABYSS_MAW",
+      "name_zh": "布拉德",
+      "name_tw": "布拉德",
+      "aliases": [
+        "布拉德"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "legendary",
+      "rarity_rank": 3,
+      "availability": "night",
+      "initial_distance_cm": 3560,
+      "possible_mechanisms": [
+        "bubble",
+        "clones",
+        "wall",
+        "yellow_hide"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "wall",
+          "clones",
+          "bubble",
+          "yellow_hide"
+        ],
+        "gamekee": [
+          "wall",
+          "clones",
+          "yellow_hide"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/0f499ff1a470675fa0a693a30b06ddfe.JPG",
+        "sha256": "8bb370f07bcad469fd73aa0675a07db604c5efcea58aaa37856372694bda573c",
+        "source": "bahamut",
+        "position": 13,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_04_13.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          150.0,
+          170.0
+        ],
+        "raw": "150cm~170cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": [
+        "泡泡仅巴哈表格列出；按用户要求采用机制并集。"
+      ]
+    },
+    {
+      "id": "fish_04_14",
+      "island_id": "ABYSS_MAW",
+      "name_zh": "鲸鲨",
+      "name_tw": "鯨鯊",
+      "aliases": [
+        "鯨鯊",
+        "鲸鲨"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "legendary",
+      "rarity_rank": 3,
+      "availability": "day",
+      "initial_distance_cm": 3900,
+      "possible_mechanisms": [
+        "bubble",
+        "green_hold"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "bubble",
+          "green_hold"
+        ],
+        "gamekee": [
+          "bubble",
+          "green_hold"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/40ac0e26ab50287254db3aa9b85ef03c.JPG",
+        "sha256": "7cc524f63134708c0f69a103a86ba08a6737ca62a75a4aec7301323ed53804f3",
+        "source": "bahamut",
+        "position": 14,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_04_14.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          300.0,
+          900.0
+        ],
+        "raw": "300cm~900cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_05_01",
+      "island_id": "ATLANTIS",
+      "name_zh": "斗鱼",
+      "name_tw": "鬥魚",
+      "aliases": [
+        "斗鱼",
+        "鬥魚"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": true,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 1740,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/ce502be3631c1927b27337db2c25016f.JPG",
+        "sha256": "37087e8660754c1aee626b40ffdb3fd345f58189056cc0d6cba3f1fbf632112a",
+        "source": "bahamut",
+        "position": 1,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_01.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          2.5,
+          7.5
+        ],
+        "raw": "2.5cm~7.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": [],
+      "client_name_evidence": {
+        "fixture": "tests/fixtures/catch_result/marks_20260914/max_green.png",
+        "reviewed_on": "2026-09-14",
+        "method": "成功页中文鱼名、鱼身外观与同岛攻略原图核对；旧资料名称保留供查询"
+      }
+    },
+    {
+      "id": "fish_05_02",
+      "island_id": "ATLANTIS",
+      "name_zh": "鹦鹉螺",
+      "name_tw": "鸚鵡螺",
+      "aliases": [
+        "鸚鵡螺",
+        "鹦鹉螺"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 1980,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/7c6fd3ee67908859a976f31b3bc5241a.JPG",
+        "sha256": "7e515cd9b39a61f78488d17e66c5d07680064d6c3cce264e682dcb73a4cd2ecd",
+        "source": "bahamut",
+        "position": 2,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_02.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          12.5,
+          37.5
+        ],
+        "raw": "12.5cm~37.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_05_03",
+      "island_id": "ATLANTIS",
+      "name_zh": "海蛞蝓",
+      "name_tw": "海蛞蝓",
+      "aliases": [
+        "海蛞蝓"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 1740,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/bafc74fca05743cb6fb13a2ed93c0633.JPG",
+        "sha256": "8841cccf01a21746463d9b4dfb96ddebcf0f7a477aeb425126026ef779042dc7",
+        "source": "bahamut",
+        "position": 3,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_03.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          1.5,
+          4.5
+        ],
+        "raw": "1.5cm~4.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_05_04",
+      "island_id": "ATLANTIS",
+      "name_zh": "天使鱼",
+      "name_tw": "天使魚",
+      "aliases": [
+        "天使魚",
+        "天使鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "day",
+      "initial_distance_cm": 1980,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/7113650c106391773d541bea151f08b2.JPG",
+        "sha256": "31e9130697da6ab2f1927f6d56abfdb2ed2eb5c9606fd042a2035c5e7fc889a7",
+        "source": "bahamut",
+        "position": 4,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_04.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          7.5,
+          22.5
+        ],
+        "raw": "7.5cm~22.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_05_05",
+      "island_id": "ATLANTIS",
+      "name_zh": "罗汉鱼",
+      "name_tw": "花羅漢",
+      "aliases": [
+        "罗汉鱼",
+        "花罗汉",
+        "花羅漢"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": true,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "night",
+      "initial_distance_cm": 1980,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/46c58248ff8a614dc54b4263b7677ba0.JPG",
+        "sha256": "68d30d0ba5fcfb6fec9ff4bcc079ec5161f366e9e720607fd707eb7d64b29478",
+        "source": "bahamut",
+        "position": 5,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_05.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          15.0,
+          45.0
+        ],
+        "raw": "15cm~45cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": [],
+      "client_name_evidence": {
+        "fixture": "tests/fixtures/catch_result/marks_20260914/max_luohan.png",
+        "reviewed_on": "2026-09-14",
+        "method": "成功页中文鱼名、鱼身外观与同岛攻略原图核对；旧资料名称保留供查询"
+      }
+    },
+    {
+      "id": "fish_05_06",
+      "island_id": "ATLANTIS",
+      "name_zh": "银鲳",
+      "name_tw": "銀鯧",
+      "aliases": [
+        "銀鯧",
+        "银鲳"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 1740,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/b7dfb387d594906d2b8117b2581bac3f.JPG",
+        "sha256": "d2c47b866447b2ef511023c376c9747c4010f2cc50524efe6912a3becd9ebb9f",
+        "source": "bahamut",
+        "position": 6,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_06.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          7.5,
+          22.5
+        ],
+        "raw": "7.5cm~22.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_05_07",
+      "island_id": "ATLANTIS",
+      "name_zh": "蝴蝶鱼",
+      "name_tw": "蝶魚",
+      "aliases": [
+        "蝴蝶鱼",
+        "蝶魚",
+        "蝶鱼",
+        "鰈魚",
+        "鲽鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": true,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 1980,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/18997183df910defff128f04a4e429f7.JPG",
+        "sha256": "3a6d2940d1694cbe9daf87b347f6aade25a373a6d1765b368059d7fae886afc0",
+        "source": "bahamut",
+        "position": 7,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_07.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          10.0,
+          30.0
+        ],
+        "raw": "10cm~30cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": [],
+      "client_name_evidence": {
+        "fixture": "tests/fixtures/catch_result/marks_20260914/max_other_green.png",
+        "reviewed_on": "2026-09-14",
+        "method": "成功页中文鱼名、鱼身外观与同岛攻略原图核对；旧资料名称保留供查询"
+      }
+    },
+    {
+      "id": "fish_05_08",
+      "island_id": "ATLANTIS",
+      "name_zh": "七彩麒麟鱼",
+      "name_tw": "七彩麒麟魚",
+      "aliases": [
+        "七彩麒麟魚",
+        "七彩麒麟鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "day",
+      "initial_distance_cm": 1740,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/c068ce829421eeec24f05dc44f39366d.JPG",
+        "sha256": "4283afea4a2ce692b2f8bdc4f649b486333dfbb8bd4a965f57f5c2bab1198e46",
+        "source": "bahamut",
+        "position": 8,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_08.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          2.5,
+          7.5
+        ],
+        "raw": "2.5cm~7.5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_05_09",
+      "island_id": "ATLANTIS",
+      "name_zh": "锯鲨",
+      "name_tw": "鋸鯊",
+      "aliases": [
+        "鋸鯊",
+        "锯鲨"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "day",
+      "initial_distance_cm": 3600,
+      "possible_mechanisms": [
+        "bite"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "bite"
+        ],
+        "gamekee": [
+          "bite"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/68aa9d6781a6ac0ec2d34a9ed41a5f15.JPG",
+        "sha256": "425703b526744688d2f68f48b30b51476ab7e7598bca980994e753293b7e50e1",
+        "source": "bahamut",
+        "position": 9,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_09.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          75.0,
+          225.0
+        ],
+        "raw": "75cm~225cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_05_10",
+      "island_id": "ATLANTIS",
+      "name_zh": "狮子鱼",
+      "name_tw": "獅子魚",
+      "aliases": [
+        "狮子鱼",
+        "獅子魚"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "day",
+      "initial_distance_cm": 3500,
+      "possible_mechanisms": [
+        "poison"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "poison"
+        ],
+        "gamekee": [
+          "poison"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/514c850dacfa3c24401661d5ee15c06b.JPG",
+        "sha256": "a85917f4e27c3addb3681c465e872a7f188d2cb9e736b9e2b9e540349016bd13",
+        "source": "bahamut",
+        "position": 10,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_10.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          15.0,
+          45.0
+        ],
+        "raw": "15cm~45cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_05_11",
+      "island_id": "ATLANTIS",
+      "name_zh": "魔鬼鱼",
+      "name_tw": "鬼蝠魟",
+      "aliases": [
+        "鬼蝠魟",
+        "鬼蝠鲼",
+        "魔鬼鱼"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": true,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "night",
+      "initial_distance_cm": 3700,
+      "possible_mechanisms": [
+        "clones"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "clones"
+        ],
+        "gamekee": [
+          "clones"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/768fa4562699ccb4c860ef228ca293d3.JPG",
+        "sha256": "2d837ea63f4589f81d9010318709a07b08002bc53749f38bb2e2c611f1c39d4d",
+        "source": "bahamut",
+        "position": 11,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_11.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          200.0,
+          600.0
+        ],
+        "raw": "200cm~600cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": [],
+      "client_name_evidence": {
+        "fixture": "tests/fixtures/catch_result/marks_20260914/max_blue.png",
+        "reviewed_on": "2026-09-14",
+        "method": "成功页中文鱼名、鱼身外观与同岛攻略原图核对；旧资料名称保留供查询"
+      }
+    },
+    {
+      "id": "fish_05_12",
+      "island_id": "ATLANTIS",
+      "name_zh": "丝带鳗",
+      "name_tw": "彩帶鰻",
+      "aliases": [
+        "丝带鳗",
+        "彩带鳗",
+        "彩帶鰻"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "night",
+      "initial_distance_cm": 3600,
+      "possible_mechanisms": [
+        "yellow_hide"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "yellow_hide"
+        ],
+        "gamekee": [
+          "yellow_hide"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/7c90bf9e0355285a0388914fac49eec9.JPG",
+        "sha256": "d59cc5b1a854496b5344424c3f0d828adfb0b27f0c1628303959d0e1a9317ed1",
+        "source": "bahamut",
+        "position": 12,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_12.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          50.0,
+          150.0
+        ],
+        "raw": "50cm~150cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_05_13",
+      "island_id": "ATLANTIS",
+      "name_zh": "独角鲸",
+      "name_tw": "大獨角鯨",
+      "aliases": [
+        "大独角鲸",
+        "大獨角鯨",
+        "独角鲸"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "legendary",
+      "rarity_rank": 3,
+      "availability": "both",
+      "initial_distance_cm": 5000,
+      "possible_mechanisms": [
+        "green_hold",
+        "poison"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "poison",
+          "green_hold"
+        ],
+        "gamekee": [
+          "poison",
+          "green_hold"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/d013e517725187086e9d162a1b751def.JPG",
+        "sha256": "2b558f38ef4bda422b7f6c9d5552557cb54ff19f979578e7bf26cba93e22406b",
+        "source": "bahamut",
+        "position": 13,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_13.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          500.0,
+          1000.0
+        ],
+        "raw": "500cm~1000cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_05_14",
+      "island_id": "ATLANTIS",
+      "name_zh": "罗泽亚",
+      "name_tw": "羅澤亞",
+      "aliases": [
+        "罗泽亚",
+        "羅澤亞"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "legendary",
+      "rarity_rank": 3,
+      "availability": "day",
+      "initial_distance_cm": 4200,
+      "possible_mechanisms": [
+        "bubble",
+        "shell",
+        "slow"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "shell",
+          "bubble",
+          "slow"
+        ],
+        "gamekee": [
+          "shell",
+          "bubble",
+          "slow"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/ef39305ea28a99466f15a00c2567cd87.JPG",
+        "sha256": "07bdc31b9c7853eca2ae29d70f90ca232b6dfe86bc2e5722920699e49f88669a",
+        "source": "bahamut",
+        "position": 14,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_14.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          150.0,
+          170.0
+        ],
+        "raw": "150cm~170cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_05_15",
+      "island_id": "ATLANTIS",
+      "name_zh": "艾里斯",
+      "name_tw": "艾里斯",
+      "aliases": [
+        "艾里斯"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "legendary",
+      "rarity_rank": 3,
+      "availability": "night",
+      "initial_distance_cm": 4850,
+      "possible_mechanisms": [
+        "bubble",
+        "clones",
+        "slow"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "clones",
+          "bubble",
+          "slow"
+        ],
+        "gamekee": [
+          "clones",
+          "bubble",
+          "slow"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202602/forum/76207/ecd116bcd5eef0f6615bd5a6ffffe2bc.JPG",
+        "sha256": "eb4e36b9866f590115072de83848a6727906023c4adf68c6f2f352c9f0fac595",
+        "source": "bahamut",
+        "position": 15,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_05_15.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          150.0,
+          170.0
+        ],
+        "raw": "150cm~170cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_06_01",
+      "island_id": "SKY_ISLAND",
+      "name_zh": "棉云鲫鱼",
+      "name_tw": "棉雲鯽魚",
+      "aliases": [
+        "棉云鲫鱼",
+        "棉雲鯽魚",
+        "綿雲鯽魚",
+        "绵云鲫鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "day",
+      "initial_distance_cm": 2840,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202609/forum/76207/fed202130929aaab01776b22d29b7ca7.JPG",
+        "sha256": "1c3444a2953b5075e63cc7ca67ededc579c02486460d086ec27a7c82f6009ff0",
+        "source": "bahamut",
+        "position": 1,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_06_01.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          15.0,
+          25.0
+        ],
+        "raw": "15cm~25cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": [
+        "论坛表格名称与原图不同；保留表格写法为别名，展示名称依据原图修正。"
+      ]
+    },
+    {
+      "id": "fish_06_02",
+      "island_id": "SKY_ISLAND",
+      "name_zh": "云雾章鱼",
+      "name_tw": "雲霧章魚",
+      "aliases": [
+        "云雾章鱼",
+        "雲霧章魚"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 2720,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202609/forum/76207/9bb066f7deb05ee77367b4557f70ab75.JPG",
+        "sha256": "af8c1f60b76378f56a9d78b563a756fec60cc411d00a559835962a296cd9c375",
+        "source": "bahamut",
+        "position": 2,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_06_02.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          10.0,
+          20.0
+        ],
+        "raw": "10cm~20cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_06_03",
+      "island_id": "SKY_ISLAND",
+      "name_zh": "飞鱼",
+      "name_tw": "飛魚",
+      "aliases": [
+        "飛魚",
+        "飞鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 2960,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202609/forum/76207/682afdf59df5a24d9e68d3b4fb6e6881.JPG",
+        "sha256": "e4057eb755e4b7d917c53287041b93957e04bed70002eca4dd2a6dca233d9bb4",
+        "source": "bahamut",
+        "position": 3,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_06_03.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          30.0,
+          50.0
+        ],
+        "raw": "30cm~50cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_06_04",
+      "island_id": "SKY_ISLAND",
+      "name_zh": "霓虹脂鲤",
+      "name_tw": "霓虹脂鯉",
+      "aliases": [
+        "霓虹脂鯉",
+        "霓虹脂鲤"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 2600,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202609/forum/76207/a04661ec6aa595635537fbe8d804f942.JPG",
+        "sha256": "70d740187817c44cc8911edc2af8e9bbf5c9e7c8c3c45231f3ca404cd66077ef",
+        "source": "bahamut",
+        "position": 4,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_06_04.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          3.0,
+          5.0
+        ],
+        "raw": "3cm~5cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_06_05",
+      "island_id": "SKY_ISLAND",
+      "name_zh": "星尘沙丁鱼",
+      "name_tw": "星塵沙丁魚",
+      "aliases": [
+        "星塵沙丁魚",
+        "星尘沙丁鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "night",
+      "initial_distance_cm": 3080,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202609/forum/76207/72297a4a89ad95b3de7327c843a8d031.JPG",
+        "sha256": "eff2562ee703ebd5c3a64affcf1bcc951f5fd678a8d18f94f52ef4de32ac3126",
+        "source": "bahamut",
+        "position": 5,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_06_05.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          15.0,
+          25.0
+        ],
+        "raw": "15cm~25cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_06_06",
+      "island_id": "SKY_ISLAND",
+      "name_zh": "天空脆鱼",
+      "name_tw": "天空脆魚",
+      "aliases": [
+        "天空脆魚",
+        "天空脆鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "day",
+      "initial_distance_cm": 3320,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202609/forum/76207/30d0fb5073bafb211823a7749c4187dd.JPG",
+        "sha256": "88147929e6b08d6384b67a5a749a06fac3bc601dc9b089fc3a3a9aaa8ed2b563",
+        "source": "bahamut",
+        "position": 6,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_06_06.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          200.0,
+          300.0
+        ],
+        "raw": "200cm~300cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": [
+        "表格的“脆”与原图字形不同，准确名称待简体客户端核对。"
+      ]
+    },
+    {
+      "id": "fish_06_07",
+      "island_id": "SKY_ISLAND",
+      "name_zh": "天空角鱼",
+      "name_tw": "天空角魚",
+      "aliases": [
+        "天空角魚",
+        "天空角鱼"
+      ],
+      "name_status": "converted_reference",
+      "client_name_verified": false,
+      "rarity": "common",
+      "rarity_rank": 1,
+      "availability": "both",
+      "initial_distance_cm": 2960,
+      "possible_mechanisms": [],
+      "mechanism_claims": {
+        "bahamut": []
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202609/forum/76207/6a5b9e4575e920791ec28d4f90d62807.JPG",
+        "sha256": "99d55697398f1a8dbff0e5d9b38e82922559115a1e7a1a984b02935cb29da730",
+        "source": "bahamut",
+        "position": 7,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_06_07.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          27.0,
+          40.0
+        ],
+        "raw": "27cm~40cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_06_08",
+      "island_id": "SKY_ISLAND",
+      "name_zh": "银河水母",
+      "name_tw": "銀河水母",
+      "aliases": [
+        "銀河水母",
+        "银河水母"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "night",
+      "initial_distance_cm": 4800,
+      "possible_mechanisms": [
+        "clones"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "clones"
+        ],
+        "gamekee": [
+          "clones"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202609/forum/76207/f714e2ccb83263d455822d0282c489fa.JPG",
+        "sha256": "3b7c12de66fbb4ae260a2c83ddb8d4405e225004a4411c293039e2b3f0ab8125",
+        "source": "bahamut",
+        "position": 8,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_06_08.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          100.0,
+          300.0
+        ],
+        "raw": "100cm~300cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_06_09",
+      "island_id": "SKY_ISLAND",
+      "name_zh": "雷鳗鱼",
+      "name_tw": "雷鳴鰻魚",
+      "aliases": [
+        "雷鳗鱼",
+        "雷鳴鰻魚",
+        "雷鸣鳗鱼"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "both",
+      "initial_distance_cm": 4600,
+      "possible_mechanisms": [
+        "slow"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "slow"
+        ],
+        "gamekee": [
+          "slow"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202609/forum/76207/669175fef4dad0a0a2fbec55a1b57d37.JPG",
+        "sha256": "229081c96d34576264630ad1ea1cf9decf7bde1cd99e6f77128141b2c4c62f14",
+        "source": "bahamut",
+        "position": 9,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_06_09.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          60.0,
+          120.0
+        ],
+        "raw": "60cm~120cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_06_10",
+      "island_id": "SKY_ISLAND",
+      "name_zh": "云旗鱼",
+      "name_tw": "雲朵旗魚",
+      "aliases": [
+        "云旗鱼",
+        "云朵旗鱼",
+        "雲朵旗魚"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "both",
+      "initial_distance_cm": 5000,
+      "possible_mechanisms": [
+        "blue_lock"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "blue_lock"
+        ],
+        "gamekee": [
+          "blue_lock"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202609/forum/76207/7effd14950bd1261edecf119a9a8681e.JPG",
+        "sha256": "5b9fa6f64827f61b4e3e104dc118682891187e1fbacffe3f2f3efe7620aead88",
+        "source": "bahamut",
+        "position": 10,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_06_10.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          170.0,
+          250.0
+        ],
+        "raw": "170cm~250cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_06_11",
+      "island_id": "SKY_ISLAND",
+      "name_zh": "银色天空海豚",
+      "name_tw": "銀光天空海豚",
+      "aliases": [
+        "銀光天空海豚",
+        "银光天空海豚",
+        "银色天空海豚"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "rare",
+      "rarity_rank": 2,
+      "availability": "both",
+      "initial_distance_cm": 5200,
+      "possible_mechanisms": [
+        "yellow_hide"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "yellow_hide"
+        ],
+        "gamekee": [
+          "yellow_hide"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202609/forum/76207/6f28ba06ff7f2a00298a9ff6d2ddee44.JPG",
+        "sha256": "47cd39c065cc81b2105f2b2ccbf5f7f8e39c86d162f27452d197dfc6d1e091c2",
+        "source": "bahamut",
+        "position": 11,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_06_11.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          150.0,
+          400.0
+        ],
+        "raw": "150cm~400cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_06_12",
+      "island_id": "SKY_ISLAND",
+      "name_zh": "弗拉维亚",
+      "name_tw": "芙拉薇亞",
+      "aliases": [
+        "弗拉维亚",
+        "芙拉薇亚",
+        "芙拉薇亞"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "legendary",
+      "rarity_rank": 3,
+      "availability": "day",
+      "initial_distance_cm": 6100,
+      "possible_mechanisms": [
+        "bite",
+        "ink",
+        "speed"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "speed",
+          "bite",
+          "ink"
+        ],
+        "gamekee": [
+          "speed",
+          "bite",
+          "ink"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202609/forum/76207/0925cdfdec7f751f5a1ac116f380100d.JPG",
+        "sha256": "ce5c267b93497fd765aeddad0c9acd9cf2547b4931f3076a4bd551968e425828",
+        "source": "bahamut",
+        "position": 12,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_06_12.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          150.0,
+          170.0
+        ],
+        "raw": "150cm~170cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    },
+    {
+      "id": "fish_06_13",
+      "island_id": "SKY_ISLAND",
+      "name_zh": "布兰什",
+      "name_tw": "布蘭琪",
+      "aliases": [
+        "布兰什",
+        "布兰琪",
+        "布蘭琪"
+      ],
+      "name_status": "gamekee_reference",
+      "client_name_verified": false,
+      "rarity": "legendary",
+      "rarity_rank": 3,
+      "availability": "night",
+      "initial_distance_cm": 6200,
+      "possible_mechanisms": [
+        "clones",
+        "green_hold",
+        "poison"
+      ],
+      "mechanism_claims": {
+        "bahamut": [
+          "clones",
+          "poison",
+          "green_hold"
+        ],
+        "gamekee": [
+          "clones",
+          "poison",
+          "green_hold"
+        ]
+      },
+      "image": {
+        "url": "https://truth.bahamut.com.tw/s01/202609/forum/76207/8ab9b906192f05c6a4ac5b6d3230ee73.JPG",
+        "sha256": "5130498f26993032ef65f82455cd6e40b70fdd089ed810145b694f4724d942d5",
+        "source": "bahamut",
+        "position": 13,
+        "mapping_status": "reference_crosscheck",
+        "runtime_asset": "assets/fish_images/fish_06_13.jpg"
+      },
+      "size_reference": {
+        "range_cm": [
+          150.0,
+          170.0
+        ],
+        "raw": "150cm~170cm",
+        "status": "ocr_unverified",
+        "source": "bahamut_image"
+      },
+      "sources": [
+        "bahamut",
+        "gamekee"
+      ],
+      "notes": []
+    }
+  ]
+}

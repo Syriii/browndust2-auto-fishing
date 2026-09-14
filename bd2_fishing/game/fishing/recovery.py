@@ -71,6 +71,15 @@ def _close_new_panel(strategy, observer):
     control.sleep(0.2)
     if observer.inspect_current_page() != "panel" or _panel_kind(observer) != kind:
         raise RoundObservationError("关闭前未再次确认面板，未发送点击")
+    if (
+        kind == "result"
+        and observer.evidence_metadata.get("personal_recording")
+        and observer.result.status != "caught"
+    ):
+        # 奖励可能在首次结算观察之后才出现；恢复关闭前也必须尝试确认并保存。
+        observer.finish()
+        if observer.inspect_current_page() != "panel" or _panel_kind(observer) != kind:
+            raise RoundObservationError("记录鱼获期间页面已变化，未发送点击")
     if kind == "exhausted_notice":
         if not confirm_exhausted_notice(observer):
             raise RoundObservationError("体力提示的完整错误码未确认，未发送点击")

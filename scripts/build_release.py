@@ -174,6 +174,8 @@ def build_pyinstaller_command(*, include_nvidia: bool, model_files: list[Path]) 
         "rapidocr",
         "--collect-binaries",
         "onnxruntime",
+        "--hidden-import",
+        "bd2_fishing.game.fishing.catalogue",
     ]
 
     # 排除程序未使用的大型 GUI/数据分析包，控制发布包体积。
@@ -248,7 +250,6 @@ def remove_unused_pillow_plugins(package_dir: Path) -> list[Path]:
         "_webp*.pyd",  # WebP 解码器
         "_imagingft*.pyd",  # FreeType 字体渲染
         "_imagingcms*.pyd",  # ICC 色彩管理
-        "_imagingtk*.pyd",  # Tkinter 集成
     )
     removed_paths: list[Path] = []
     for pattern in plugin_patterns:

@@ -52,13 +52,6 @@ class YellowGeometryTests(TestCase):
                     cursor = controller._find_cursor_x(hsv)
                     regions = read_mechanism_regions(hsv)
                     controller._track_targets(hsv, cursor, regions)
-                    if cls is AbyssMawQTEStrategy and item["file"] in {"Y05.png", "Y39.png"}:
-                        # 样本来自亚特兰蒂斯；巨口策略额外读到挡板时，禁止跨板修孔。
-                        self.assertIsNotNone(
-                            controller._qte_trace.observe.call_args.kwargs["blocker"]
-                        )
-                        controller._press_qte.assert_not_called()
-                        continue
                     controller._press_qte.assert_called_once()
                     span = controller._yellow_geometry_reading.span
                     self.assertLessEqual(span[0], cursor)

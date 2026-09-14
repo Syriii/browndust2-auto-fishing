@@ -18,7 +18,13 @@ log = get_logger(__name__)
 
 
 def _run_fishing_session(
-    config=None, *, location=None, interactive=True, capture_factory=None, navigation_mode=None
+    config=None,
+    *,
+    location=None,
+    interactive=True,
+    capture_factory=None,
+    navigation_mode=None,
+    collection=None,
 ) -> None:
     """每次启动重新定位窗口、读取配置并建立 OCR 上下文。"""
     if navigation_mode not in (None, "travel", "refresh"):
@@ -44,6 +50,8 @@ def _run_fishing_session(
         log.warning("初始化现场截图不可用，继续初始化并保留后续有效帧", exc_info=True)
 
     ocr_context = ocr_setup.build_ocr_context(config, region)
+    if collection is not None and (not ocr_context.enabled or ocr_context.engine is None):
+        raise run_control.RunStopped("鱼获记录需要文字识别，OCR 未就绪，请检查设置后重试")
     run_control.checkpoint()
     if navigation_mode == "refresh":
         from bd2_fishing.game.islands.travel import change_location
@@ -70,6 +78,7 @@ def _run_fishing_session(
         location=location,
         interactive=interactive,
         capture_factory=capture_factory,
+        collection=collection,
     )
     try:
         bot.run()
@@ -80,7 +89,13 @@ def _run_fishing_session(
 
 
 def _run_once(
-    config=None, *, location=None, interactive=True, capture_factory=None, navigation_mode=None
+    config=None,
+    *,
+    location=None,
+    interactive=True,
+    capture_factory=None,
+    navigation_mode=None,
+    collection=None,
 ) -> None:
     # 每次启动使用新线程，须在该线程初始化截图依赖的 COM 环境。
     window.enable_dpi_awareness()
@@ -101,13 +116,20 @@ def _run_once(
                 interactive=interactive,
                 capture_factory=capture_factory,
                 navigation_mode=navigation_mode,
+                collection=collection,
             )
     finally:
         ctypes.windll.ole32.CoUninitialize()
 
 
 def run_once(
-    config=None, *, location=None, interactive=True, capture_factory=None, navigation_mode=None
+    config=None,
+    *,
+    location=None,
+    interactive=True,
+    capture_factory=None,
+    navigation_mode=None,
+    collection=None,
 ) -> None:
     limit = config.getint("diagnostics", "failure_max_events", fallback=100) if config else 100
     with incidents.recording_session(
@@ -120,6 +142,7 @@ def run_once(
                 interactive=interactive,
                 capture_factory=capture_factory,
                 navigation_mode=navigation_mode,
+                collection=collection,
             )
         except run_control.RunStopped as exc:
             if str(exc):

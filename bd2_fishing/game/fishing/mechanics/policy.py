@@ -25,7 +25,7 @@ class MechanismDecision:
 
 
 class TargetPolicy:
-    """黄区优先、蓝区连续确认与同次入区去重，两套地点策略共用。"""
+    """所有钓场共用黄区优先、蓝区连续确认与同次入区去重。"""
 
     def __init__(self):
         self.trigger = TargetEntryTrigger()

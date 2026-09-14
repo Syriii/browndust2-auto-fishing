@@ -13,6 +13,7 @@ import cv2
 import numpy as np
 
 from bd2_fishing.game.fishing import feedback
+from bd2_fishing.game.fishing.qte import BaseQTEStrategy
 from bd2_fishing.game.fishing.scene_evidence import SceneRecorder
 from bd2_fishing.infrastructure import settings
 from bd2_fishing.runtime.control import RunStopped
@@ -61,10 +62,15 @@ class SceneEvidenceTests(unittest.TestCase):
         with ZipFile(path) as archive:
             metadata = json.loads(archive.read("metadata.json"))
             self.assertEqual(metadata["attempts"], [])
+            self.assertEqual(metadata["mechanism_catalogue_revision"], "2026-09-14")
+            self.assertEqual(metadata["mechanism_identity"], "unconfirmed")
             self.assertEqual(metadata["feedback"][0]["result"], "critical")
             self.assertIn("multiple_pointer_candidates", metadata["candidates"][0]["candidates"])
             self.assertEqual(metadata["frames"][0]["captured_at_monotonic"], 1)
             self.assertEqual(metadata["frames"][-1]["captured_at_monotonic"], 1.3)
+            review = metadata["frames"][1]["features"]["mechanism_review"]
+            self.assertIn("clones", review["possible_mechanisms"])
+            self.assertEqual(review["identity"], "unconfirmed")
             restored = cv2.imdecode(
                 np.frombuffer(archive.read(metadata["frames"][1]["file"]), np.uint8), 1
             )
@@ -106,9 +112,79 @@ class SceneEvidenceTests(unittest.TestCase):
         self.assertEqual((red["state"], purple["state"]), ("unknown", "disappeared"))
         self.assertEqual(purple["attempts_in_observed_interval"], [3])
         self.assertEqual(purple["result"], "unknown")
+
+    def test_freeze_counter_has_its_own_evidence_without_input(self):
+        recorder = self.recorder()
+        frame = self.frame()
+        source = Path(__file__).parents[1] / "fixtures/qte_control/freeze_20260914/ice.png"
+        frame[117:136, 86:330] = cv2.resize(cv2.imread(str(source)), (244, 19))
+        recorder.observe(frame, 1)
+        recorder.observe(frame, 1.1)
+        recorder.close([], "finished")
+        self.assertTrue(recorder.done.wait(3))
+        (path,) = Path(self.temp.name).glob("candidates/*.zip")
+        with ZipFile(path) as archive:
+            metadata = json.loads(archive.read("metadata.json"))
+            self.assertFalse(metadata["attempts"])
+            self.assertIn("freeze_counter_3", metadata["candidates"][0]["candidates"])
+            features = metadata["frames"][0]["features"]
+            self.assertEqual(features["freeze_counter"]["count"], 3)
+            self.assertFalse(features["freeze_counter"]["confirmed"])
+            self.assertIn("freeze", features["mechanism_review"]["possible_mechanisms"])
         self.assertTrue(
             any(record["captured_at_monotonic"] == 1.1 for record in metadata["frames"])
         )
+
+    def test_real_wall_appearance_is_recorded_without_press_and_disappearance_is_not_success(self):
+        recorder = self.recorder()
+        normal = self.frame()
+        wall = normal.copy()
+        source = Path(__file__).parents[1] / "fixtures/qte_control/guide_20260914/wall.png"
+        # 攻略条体缩放合入已有计时器，验证取证链；不伪装为游戏连续碰撞样本。
+        wall[117:136, 86:330] = cv2.resize(cv2.imread(str(source)), (244, 19))
+        for frame, stamp in ((normal, 1), (wall, 1.1), (wall, 1.2), (normal, 1.3), (normal, 1.4)):
+            recorder.observe(frame, stamp)
+        recorder.close([], "finished")
+        self.assertTrue(recorder.done.wait(3))
+        (path,) = Path(self.temp.name).glob("candidates/*.zip")
+        with ZipFile(path) as archive:
+            metadata = json.loads(archive.read("metadata.json"))
+            self.assertFalse(metadata["attempts"])
+            event = next(
+                item for item in metadata["candidates"] if "wall_candidate" in item["candidates"]
+            )
+            self.assertEqual(event["features"]["wall_rects"], [[76, 0, 5, 19]])
+            self.assertIn("wall", event["features"]["mechanism_review"]["possible_mechanisms"])
+            self.assertEqual(metadata["wall_detector"], recorder.signals.walls.parameters())
+            instance = next(
+                item
+                for item in metadata["appearance_lifecycle"]["instances"]
+                if item["kind"] == "wall_candidate"
+            )
+            self.assertEqual(instance["state"], "disappeared")
+            self.assertEqual(instance["result"], "unknown")
+            self.assertIn(event["evidence_file"], archive.namelist())
+
+    def test_wall_colour_without_active_qte_is_not_a_confirmed_scene(self):
+        recorder = self.recorder()
+        frame = np.zeros((155, 378, 3), np.uint8)
+        source = Path(__file__).parents[1] / "fixtures/qte_control/guide_20260914/wall.png"
+        frame[117:136, 86:330] = cv2.resize(cv2.imread(str(source)), (244, 19))
+        cues, features = recorder.signals.inspect(frame)
+        self.assertFalse(cues)
+        self.assertFalse(features["wall_rects"])
+        self.assertFalse(features["qte_active"])
+
+    def test_control_and_observer_keep_same_custom_wall_calibration(self):
+        for configured_width in (4, 12):
+            with self.subTest(configured_width=configured_width):
+                self.config.set("roi", "blocker_shape_min_width", str(configured_width))
+                controller = BaseQTEStrategy(self.config, self.window)
+                observer = self.recorder().signals
+                self.assertEqual(
+                    controller._blocker_detector.parameters(), observer.walls.parameters()
+                )
+                self.assertEqual(observer.walls.min_width, 3 if configured_width == 4 else 10)
 
     def test_same_timestamp_does_not_confirm_an_event(self):
         recorder = self.recorder()
@@ -129,6 +205,9 @@ class SceneEvidenceTests(unittest.TestCase):
         with ZipFile(path) as archive:
             metadata = json.loads(archive.read("metadata.json"))
             self.assertFalse(metadata["candidates"])
+            review = metadata["frames"][0]["features"]["mechanism_review"]
+            self.assertTrue(review["no_signature"])
+            self.assertEqual(review["identity"], "unconfirmed")
             restored = cv2.imdecode(np.frombuffer(archive.read("frame_000.png"), np.uint8), 1)
             np.testing.assert_array_equal(restored, expected)
 

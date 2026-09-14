@@ -108,3 +108,12 @@ BGR `[391:513,803:909]` 裁剪，参考客户区 945×532。
 ## 150302 叠层提示补充
 
 `exhausted_notice_text.png` 来自 `tests/fixtures/catch_result/notice_150302_20260913.png`，灰度裁剪 `(400,246,545,264)`；与原确认字样模板共同筛选上层提示。完整错误码仍需动作前 OCR 核对，不能凭模板分数自动确认相似数字。独立时刻、缩放和已有页面反例见 `test_exhausted_notice.py`。
+## 鱼种参考数据
+
+`freeze_digit_1/2/3.png` 为 GameKee 冰晶数字的红色描边模板，**仅用于后台观察**；裁剪、HSV 处理、源图与模板哈希见 `tests/fixtures/qte_control/freeze_20260914/manifest.json`。独立正例目前只有巴哈的计数 3；不得把同源模板匹配结果作为自动破冰已验证的依据。
+
+`fish_catalogue.json` 是六岛鱼种事实的唯一数据源，来源、更新规则和语言状态见 `docs/reference/fishing/`。图片 URL 和哈希仅作引用，不自动联网加载或充当识别模板；作者个人捕获记录不入库。修改后重新生成参考表并运行目录回归。图鉴资料不能直接授权 QTE 输入。
+
+## 离线鱼种图鉴
+
+`fish_images/` 保存 84 张社区原始鱼种卡片 JPG，文件名为稳定鱼种 ID。来源 URL、SHA-256 和包内路径登记于 `fish_catalogue.json`；取自已核对的巴哈姆特图鉴，资料来源详见 `docs/reference/fishing/sources.md`。浏览界面仅渲染原图上半部鱼图区域，隐藏作者尺寸／个人纪录，以简体参考名另绘文字；不把原图数据导入用户捕获进度。

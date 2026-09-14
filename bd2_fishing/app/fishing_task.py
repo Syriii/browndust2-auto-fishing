@@ -45,7 +45,7 @@ QTE_STRATEGIES_MAP: dict[FishingLocation, Type[strategy.BaseQTEStrategy]] = {
     FishingLocation.FROST_STRAIT: strategy.FrostStraitQTEStrategy,
     FishingLocation.ABYSS_MAW: strategy.AbyssMawQTEStrategy,
     FishingLocation.ATLANTIS: strategy.FrostStraitQTEStrategy,
-    # 暂用现有通用黄蓝条及机制处理；天空岛专属机制仍待真实样本验证。
+    # 所有钓场共用机制处理；此映射只选择已有黄条面积阈值。
     FishingLocation.SKY_ISLAND: strategy.FrostStraitQTEStrategy,
 }
 
@@ -62,8 +62,10 @@ class FishingBot:
         location=None,
         interactive=True,
         capture_factory=None,
+        collection=None,
     ) -> None:
         self.capture_factory = capture_factory
+        self.collection = collection
         self.config = config
         self.manual_location = location
         self.interactive = interactive
@@ -221,6 +223,8 @@ class FishingBot:
                     log.warning("背包已满，自动清理已关闭；请手动整理后重新开始。")
                     raise run_control.RunStopped("背包已满，自动清理已关闭；请手动整理后重新开始")
                 inventory_actions.clear_backpack(self.region, self.config, sct, self.ocr_context)
+                if self.collection is not None and self.collection.targeted:
+                    return "idle"  # 清包后重新核对目标与时段，再由主循环抛竿。
                 fishing_actions.cast_rod()
                 run_control.set_status("等待上钩")
                 wait_start_time = time.monotonic()
@@ -338,9 +342,15 @@ class FishingBot:
                             entry = resume_waiting_for_bite(self.config, self.region)
                         resume_qte = entry == "qte"
                         if entry == "idle":
+                            previous_location = self.selected_location_name
                             self._prepare_cast(sct)
+                            if self.selected_location_name != previous_location:
+                                self.manual_location = self.selected_location_name
+                                qte_strategy = self.choose_strategy(sct)
                             fishing_actions.cast_rod()
                             entry = self.wait_for_bite(sct)
+                            if entry == "idle":
+                                continue
                             resume_qte = entry == "qte"
                         if entry == "hooked":
                             from bd2_fishing.game.fishing.startup import confirm_hook_entry
@@ -353,7 +363,7 @@ class FishingBot:
                         entry = self._recover_entry(qte_strategy, exc)
                         continue
                     qte_strategy.catch_observer = None
-                    if qte_strategy.feedback_enabled:
+                    if qte_strategy.feedback_enabled or self.collection is not None:
                         try:
                             from bd2_fishing.game.fishing.settlement import CatchObserver
 
@@ -363,6 +373,11 @@ class FishingBot:
                             qte_strategy.catch_observer.current_location = (
                                 self.selected_location_name
                             )
+                            if self.collection is not None:
+                                qte_strategy.catch_observer.on_confirm = self.collection.confirm
+                                qte_strategy.catch_observer.evidence_metadata[
+                                    "personal_recording"
+                                ] = True
                             if resume_qte:
                                 qte_strategy.catch_observer.evidence_metadata["resumed_qte"] = True
                             if resumed_waiting:
@@ -370,12 +385,16 @@ class FishingBot:
                                     True
                                 )
                         except Exception:
+                            if self.collection is not None:
+                                raise run_control.RunStopped("鱼获记录初始化失败，请检查日志后重试")
                             log.exception("整条鱼结算观察初始化失败；继续原钓鱼流程")
                     from bd2_fishing.game.fishing.settlement import run_observed_qte
 
                     next_entry = run_observed_qte(qte_strategy, sct)
                     entry = next_entry if next_entry in {"waiting", "qte"} else "idle"
                     completed_rounds += 1
+                    if self.collection is not None and self.collection.completed:
+                        raise run_control.RunStopped("所有目标已完成，鱼获已保存")
                     run_control.set_status("等待下一轮")
                     catch_observer = getattr(qte_strategy, "catch_observer", None)
                     if catch_observer is None:
@@ -388,6 +407,12 @@ class FishingBot:
         from bd2_fishing.game.fishing.settlement import confirm_ready_for_next_cast
 
         confirm_ready_for_next_cast(self.config, self.region)
+
+        if self.collection is not None and self.collection.targeted:
+            from bd2_fishing.app.target_routing import prepare_target_cast
+
+            prepare_target_cast(self, sct)
+            return
 
         if not self.should_change_location(sct):
             return
@@ -406,6 +431,9 @@ class FishingBot:
 
         observer = CatchObserver(self.ocr_context.engine, self.config, self.region)
         observer.current_location = self.selected_location_name
+        if self.collection is not None:
+            observer.on_confirm = self.collection.confirm
+            observer.evidence_metadata["personal_recording"] = True
         try:
             if recover_round(strategy, observer, error):
                 return observer.evidence_metadata["round_recovery"].get("next_state", "idle")
@@ -428,5 +456,7 @@ class FishingBot:
         if entry in {"hooked", "qte"}:
             return entry
         confirm_ready_for_next_cast(self.config, self.region)
+        if self.collection is not None and self.collection.targeted:
+            return "idle"
         fishing_actions.cast_rod()
         return False

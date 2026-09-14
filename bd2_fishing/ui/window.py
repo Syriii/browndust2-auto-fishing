@@ -5,14 +5,15 @@ from __future__ import annotations
 import logging
 import tkinter as tk
 from collections import deque
-from tkinter import messagebox, ttk
+from tkinter import messagebox
+
+from PIL import ImageTk
 
 from bd2_fishing.app.desktop import DesktopServices, FishingLocation
 from bd2_fishing.runtime import control as run_control
 from bd2_fishing.ui.logs import UILogHandler
-from bd2_fishing.ui.preferences import PreferencesPage
-from bd2_fishing.ui.theme import ACCENT, FONT, apply_icon, apply_theme, center_window
 from bd2_fishing.ui.updates import UpdatePanel
+from bd2_fishing.ui.workspace import build_workspace
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +22,12 @@ class FishingApp:
     def __init__(self, root, target, *, preview=False, services=None):
         self.root, self.target, self.preview = root, target, preview
         self.services = services or DesktopServices(read_only=preview)
+        self.collection = self.services.fishing_collection_service()
+        self.task_mode = tk.StringVar(value="自由钓鱼")
+        self._collection_revision = -1
+        self._collection_active = False
+        self._evidence_photos = {}
+        self.current_page = "run"
         self.config_path = self.services.config_path
         config = self.services.load_settings()
         self.snapshot = config
@@ -33,6 +40,7 @@ class FishingApp:
         self.settings_visible = False
         self.handler = UILogHandler()
         self.controller = self.services.create_task(self._run, preview=preview)
+        self.root.bind("<Destroy>", self._destroyed, add="+")
         self.status = tk.StringVar(value="待机")
         self.detail = tk.StringVar(value="点击开始，自动聚焦游戏后运行。")
         self.issue = tk.StringVar(value="暂无警告或错误")
@@ -59,147 +67,66 @@ class FishingApp:
         self._poll_id = self.root.after(50, self._poll)
 
     def _build(self, locations):
-        root = self.root
-        root.title("BD2 自动钓鱼" + (" · 界面验证" if self.preview else ""))
-        scale = root.winfo_fpixels("1i") / 96
-        root.geometry(f"{round(1040 * scale)}x{round(720 * scale)}")
-        root.minsize(round(960 * scale), round(640 * scale))
-        apply_theme(root)
-        self.brand_icon = apply_icon(root)
-        outer = ttk.Frame(root, padding=18)
-        outer.pack(fill="both", expand=True)
-        run = ttk.Frame(outer)
-        run.pack(fill="both", expand=True)
-        run.rowconfigure(0, weight=1)
-        run.columnconfigure(1, weight=1)
-        left = ttk.Frame(run, style="Card.TFrame", padding=18)
-        left.grid(row=0, column=0, sticky="ns", padx=(0, 14))
-        left.columnconfigure(0, weight=1)
-        left.rowconfigure(9, weight=1)
-        ttk.Label(left, text="钓鱼任务", style="Section.TLabel").grid(
-            row=0, column=0, sticky="w", pady=(0, 18)
-        )
-        ttk.Label(left, text="当前钓场", style="Hint.TLabel").grid(
-            row=1, column=0, sticky="w", pady=(0, 6)
-        )
-        self.location_box = ttk.Combobox(
-            left, values=locations, textvariable=self.location, state="readonly", width=23
-        )
-        self.location_box.grid(row=2, column=0, sticky="ew", pady=(0, 18))
-        self.clear_check = ttk.Checkbutton(left, text="满包时自动清理", variable=self.auto_clear)
-        self.clear_check.grid(row=3, column=0, sticky="w", pady=(0, 6))
-        self.awake_check = ttk.Checkbutton(left, text="运行时保持唤醒", variable=self.awake)
-        self.awake_check.grid(row=4, column=0, sticky="w")
-        ttk.Separator(left).grid(row=5, column=0, sticky="ew", pady=20)
-        ttk.Label(left, text="本机参数", style="Section.TLabel").grid(
-            row=6, column=0, sticky="w", pady=(0, 8)
-        )
-        self.parameter_summary = tk.StringVar()
-        self.summary_label = ttk.Label(
-            left, textvariable=self.parameter_summary, style="Hint.TLabel", wraplength=230
-        )
-        self.summary_label.grid(row=7, column=0, sticky="w")
-        self.preferences_button = ttk.Button(
-            left, text="设备与时延设置", command=self.toggle_preferences
-        )
-        self.preferences_button.grid(row=8, column=0, sticky="ew", pady=(12, 0))
-        self.action_button = ttk.Button(
-            left, text="▶ 开始钓鱼", style="Start.TButton", command=self.toggle_task
-        )
-        ttk.Label(left, textvariable=self.status, style="Hint.TLabel").grid(
-            row=9, column=0, sticky="sw", pady=(12, 0)
-        )
-        self.action_button.grid(row=10, column=0, sticky="ew", pady=(8, 8))
-        self.deck = ttk.Frame(run, style="Card.TFrame")
-        self.deck.grid(row=0, column=1, sticky="nsew")
-        self.deck.rowconfigure(0, weight=1)
-        self.deck.columnconfigure(0, weight=1)
-        self.run_panel = panel = ttk.Frame(self.deck, style="Card.TFrame", padding=18)
-        panel.grid(row=0, column=0, sticky="nsew")
-        ttk.Label(panel, text="当前状态", style="Hint.TLabel").pack(anchor="w")
-        self.status_label = ttk.Label(
-            panel, textvariable=self.status, foreground=ACCENT, font=(FONT, 18, "bold")
-        )
-        self.status_label.pack(anchor="w", pady=(4, 6))
-        self.detail_label = ttk.Label(
-            panel, textvariable=self.detail, style="Hint.TLabel", wraplength=550
-        )
-        self.detail_label.pack(fill="x")
-        ttk.Separator(panel).pack(fill="x", pady=16)
-        toolbar = ttk.Frame(panel, style="Card.TFrame")
-        toolbar.pack(fill="x", pady=(0, 8))
-        ttk.Label(toolbar, text="运行记录", style="Section.TLabel").pack(side="left")
-        ttk.Checkbutton(toolbar, text="自动滚动", variable=self.follow).pack(side="right")
-        selector = ttk.Combobox(
-            toolbar,
-            textvariable=self.level,
-            values=["运行信息", "警告 / 错误", "详细诊断"],
-            state="readonly",
-            width=12,
-        )
-        selector.pack(side="left", padx=14)
-        selector.bind("<<ComboboxSelected>>", lambda _: self._render())
-        text_frame = ttk.Frame(panel, style="Card.TFrame")
-        text_frame.pack(fill="both", expand=True)
-        self.text = tk.Text(
-            text_frame,
-            bg="#f5f8fa",
-            fg="#344c57",
-            relief="flat",
-            wrap="word",
-            font=(FONT, 9),
-            padx=12,
-            pady=10,
-            state="disabled",
-            height=1,
-            width=1,
-            selectbackground="#c8e6e1",
-            highlightthickness=0,
-            spacing1=2,
-        )
-        scroll = ttk.Scrollbar(text_frame, command=self.text.yview)
-        self.text.configure(yscrollcommand=scroll.set)
-        scroll.pack(side="right", fill="y")
-        self.text.pack(side="left", fill="both", expand=True)
-        self.text.tag_configure("WARNING", foreground="#a2600e")
-        self.text.tag_configure("ERROR", foreground="#b52f38")
-        self.text.tag_configure("DEBUG", foreground="#677b91")
-        self.issue_label = ttk.Label(
-            panel, textvariable=self.issue, wraplength=550, style="Hint.TLabel"
-        )
-        self.issue_label.pack(fill="x", pady=(8, 0))
-        links = ttk.Frame(panel, style="Card.TFrame")
-        links.pack(fill="x", pady=(10, 0))
-        ttk.Button(links, text="日志目录", command=self.open_logs).pack(side="left")
-        ttk.Button(links, text="异常截图", command=self.services.open_screenshot_directory).pack(
-            side="left", padx=8
-        )
-        self.update_button = ttk.Button(
-            links, text="更新与存储", command=lambda: self.updates.open()
-        )
-        self.update_button.pack(side="right")
-        panel.bind("<Configure>", self._resize_details)
-        self.preferences = PreferencesPage(
-            self.deck, self.services, preview=self.preview, on_saved=self._settings_saved
-        )
-        self.preferences.grid(row=0, column=0, sticky="nsew")
-        self.preferences.grid_remove()
-        self.detail_log = self.preferences.detail_log
-        self.trace_check = self.preferences.trace_check
-        self._settings_saved()
-        footer = ttk.Frame(outer)
-        footer.pack(fill="x", pady=(10, 0))
-        ttk.Label(
-            footer, text="失败与异常自动留图 · 运行时请保持游戏前台可见", style="PageHint.TLabel"
-        ).pack(side="left")
-        self.log_notice = tk.StringVar(value="保留 1500 条进展 · 更多诊断见日志文件")
-        ttk.Label(footer, textvariable=self.log_notice, style="PageHint.TLabel").pack(side="right")
-        center_window(root, self.services)
+        build_workspace(self, locations)
+
+    def _destroyed(self, event):
+        if event.widget is self.root and not self.controller.running:
+            self.collection.journal.close()
 
     def _resize_details(self, event):
         width = max(160, event.width - 36)
-        self.detail_label.configure(wraplength=width)
+        if hasattr(self, "detail_label"):
+            self.detail_label.configure(wraplength=width)
         self.issue_label.configure(wraplength=width)
+
+    def save_targets(self, selected):
+        if self.controller.running:
+            return False
+        try:
+            self.collection.save_targets(selected)
+        except Exception as exc:
+            log.exception("目标保存失败")
+            messagebox.showerror(
+                "目标未保存", f"无法写入目标，请检查存储空间后重试。\n{exc}", parent=self.root
+            )
+            return False
+        return True
+
+    def collection_photo(self, item, size):
+        key = item["id"], size
+        if key not in self._evidence_photos:
+            photo = self.collection.picture(item["id"], size)
+            self._evidence_photos[key] = (
+                ImageTk.PhotoImage(photo, master=self.root) if photo else None
+            )
+        return self._evidence_photos[key]
+
+    def show_page(self, page):
+        if self.closing:
+            return
+        for key, widget in self.pages.items():
+            if key == page:
+                widget.grid(row=0, column=0, sticky="nsew")
+            else:
+                widget.grid_remove()
+        self.current_page = page
+        self.settings_visible = page == "settings"
+        for key, button in self.nav_buttons.items():
+            button.state(["pressed"] if key == page else ["!pressed"])
+        if page == "targets":
+            self.targets_page.render()
+        elif page == "catches":
+            self.catches_page.render()
+        elif page == "catalogue":
+            self.catalogue.after_idle(self.catalogue.render)
+
+    def toggle_logs(self):
+        if self.log_panel.winfo_manager():
+            self.log_panel.pack_forget()
+            self.log_toggle.configure(text="展开运行日志")
+        else:
+            self.log_panel.pack(fill="both", expand=True)
+            self.log_toggle.configure(text="收起运行日志")
 
     def _settings_saved(self):
         values = self.services.preference_values()
@@ -226,6 +153,9 @@ class FishingApp:
             self.open_preferences()
             self.preferences.notice.set("请先保存或撤销更改，再开始任务")
             return
+        if self.catalogue.picking:
+            self.detail.set("请先保存或取消正在选择的目标，再开始任务。")
+            return
         try:
             if not self.preview:
                 self.snapshot = self.services.save_settings(
@@ -243,6 +173,9 @@ class FishingApp:
             self.selected_location = (
                 None if self.location.get() == "自动识别" else FishingLocation(self.location.get())
             )
+            self.catalogue.close()
+            self.collection.begin(self.task_mode.get() == "按目标钓鱼")
+            self.show_page("run")
             self.controller.start()
             self.preferences.set_locked(self.controller.running)
         except Exception as exc:
@@ -250,7 +183,12 @@ class FishingApp:
             self.controller.last_error = str(exc)
 
     def _run(self):
-        self.target(self.snapshot, location=self.selected_location, interactive=False)
+        self.target(
+            self.snapshot,
+            location=self.selected_location,
+            interactive=False,
+            collection=self.collection,
+        )
 
     def stop(self):
         self.controller.stop()
@@ -270,6 +208,7 @@ class FishingApp:
         ):
             return
         self.closing = True
+        self.catalogue.close()
         self.updates.close()
         self.preferences.close()
         self.stop()
@@ -296,6 +235,7 @@ class FishingApp:
 
     def _refresh_task_state(self):
         active = self.controller.running
+        self.catalogue_button.configure(state="disabled" if active or self.closing else "normal")
         state = "disabled" if active or self.closing else "normal"
         stopping = active and self.controller.control.stopped.is_set()
         self.action_button.configure(
@@ -311,6 +251,16 @@ class FishingApp:
         for widget in (self.clear_check, self.awake_check):
             widget.configure(state=state)
         self.location_box.configure(state="disabled" if active or self.closing else "readonly")
+        self.mode_box.configure(state="disabled" if active or self.closing else "readonly")
+        revision = self.collection.journal.revision
+        if revision != self._collection_revision or active != self._collection_active:
+            self._collection_revision, self._collection_active = revision, active
+            count = len(self.collection.journal.targets())
+            self.target_summary.configure(text=f"待完成 {count} 项目标要求 · 在目标页选择鱼与尺寸")
+            if self.current_page == "targets":
+                self.targets_page.render()
+            elif self.current_page == "catches":
+                self.catches_page.render()
         return self._refresh_status(active)
 
     def _refresh_status(self, active):
@@ -319,6 +269,7 @@ class FishingApp:
             self.detail.set("等待当前操作退出并释放按键、截图和电源请求…")
             if not active:
                 logging.getLogger().removeHandler(self.handler)
+                self.collection.journal.close()
                 self.root.destroy()
                 return False
         elif active:
@@ -402,17 +353,10 @@ class FishingApp:
         self.services.open_log_directory()
 
     def open_preferences(self):
-        if not self.closing:
-            self.run_panel.grid_remove()
-            self.preferences.grid()
-            self.settings_visible = True
-            self.preferences_button.configure(text="← 返回运行记录")
+        self.show_page("settings")
 
     def open_run(self):
-        self.preferences.grid_remove()
-        self.run_panel.grid()
-        self.settings_visible = False
-        self.preferences_button.configure(text="设备与时延设置")
+        self.show_page("run")
 
     def toggle_preferences(self):
         if self.settings_visible:
@@ -425,7 +369,7 @@ class FishingApp:
         self.controller.last_error = str(exc)
 
 
-def launch(target, *, preview=False, services=None):
+def launch(target, *, preview=False, services=None, show_catalogue=False):
     if preview:
 
         def target(*args, **kwargs):
@@ -435,7 +379,9 @@ def launch(target, *, preview=False, services=None):
 
     root = tk.Tk()
     try:
-        FishingApp(root, target, preview=preview, services=services)
+        app = FishingApp(root, target, preview=preview, services=services)
+        if preview and show_catalogue:
+            app.catalogue.open()
     except Exception as exc:
         log.exception("程序页面初始化失败")
         messagebox.showerror(

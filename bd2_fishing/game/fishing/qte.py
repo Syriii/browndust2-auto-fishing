@@ -1,4 +1,4 @@
-"""不同钓点的 QTE 图像识别与按键决策策略。"""
+"""所有钓场共用的 QTE 图像识别、机制仲裁与按键执行。"""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from dataclasses import asdict
 import cv2
 import numpy as np
 
-from bd2_fishing.game.fishing.mechanics.blockers import BlockerDetector, active_range_for_blocker
+from bd2_fishing.game.fishing.mechanics.blockers import BlockerDetector, active_range_for_blockers
 from bd2_fishing.game.fishing.mechanics.blue_target import read_blue_target
 from bd2_fishing.game.fishing.mechanics.policy import MechanismPolicy
 from bd2_fishing.game.fishing.mechanics.regions import read_mechanism_regions
@@ -91,6 +91,9 @@ class BaseQTEStrategy:
             self.pixel_threshold_scale,
         )
 
+        self.yellow_presence_threshold = 0
+        self.red_range = vision.read_hsv_range(config, "roi", "red")
+        self._blocker_detector = BlockerDetector.from_config(config, self.pixel_threshold_scale)
         self.white_range = vision.read_hsv_range(config, "roi", "white")
         self.yellow_range = vision.read_hsv_range(config, "roi", "yellow")
         self.blue_range = vision.read_hsv_range(config, "roi", "blue")
@@ -211,7 +214,79 @@ class BaseQTEStrategy:
             self._on_control_timeout(sct)
 
     def _track_targets(self, qte_hsv, cursor_x, regions):
-        raise NotImplementedError("子类必须提供地点目标识别")
+        regions = self._with_walls(qte_hsv, regions)
+        ordinary_hsv = regions.ordinary_pixels(qte_hsv)
+        yellow_mask = regions.mask_target(self._yellow_mask(ordinary_hsv))
+        self._record_sparse_yellow()
+        blue_mask = regions.mask_target(self._blue_mask(ordinary_hsv))
+        blocker_rects = regions.wall_rects
+        active_range = active_range_for_blockers(blocker_rects, cursor_x, yellow_mask.shape[1])
+        if active_range is None:
+            self._mechanism_policy.targets.invalidate()
+            self._qte_trace.observe("cursor_inside_blocker")
+            return
+        left_x, right_x = active_range
+        check_x = cursor_x
+        if regions.blocked[check_x] or self._red_obstruction_at_cursor(qte_hsv, check_x):
+            self._mechanism_policy.targets.invalidate()
+            self._qte_trace.observe(
+                "mechanism_obstruction" if regions.blocked[check_x] else "red_obstruction"
+            )
+            return
+        yellow_pixels = cv2.countNonZero(yellow_mask[:, left_x : right_x + 1])
+        blue_target = read_blue_target(
+            blue_mask, cursor_x, blocked=regions.blocked, active_range=(left_x, right_x)
+        )
+        yellow_present = yellow_pixels > self.yellow_presence_threshold
+        target = self._mechanism_policy.targets.observe(
+            yellow_present=yellow_present,
+            yellow_overlap=self._yellow_overlap(
+                yellow_mask, check_x, regions, active_range=(left_x, right_x)
+            )
+            if yellow_present
+            else None,
+            blue=blue_target,
+        )
+        if target is not None:
+            self._press_qte(
+                "yellow_overlap" if target == "yellow" else "blue_fallback",
+                cursor_x=cursor_x,
+                check_x=check_x if target == "yellow" else cursor_x,
+                target=target,
+                active_range=(left_x, right_x),
+                blocker_rects=blocker_rects,
+                yellow_pixels=yellow_pixels,
+                yellow_threshold=self.yellow_presence_threshold,
+                yellow_source_pixels=self._yellow_source_pixels,
+                yellow_source_min_pixels=self.yellow_source_min_pixels,
+                **self._yellow_evidence(target),
+                **self._blue_evidence(target, blue_target),
+            )
+        self._qte_trace.observe(
+            "tracking",
+            blocker=blocker_rects[0] if blocker_rects else None,
+            cursor=cursor_x,
+            yellow=yellow_pixels,
+            active=(left_x, right_x),
+            pressed=target is not None,
+        )
+
+    def _red_obstruction_at_cursor(self, roi_hsv: np.ndarray, cursor_x: int) -> bool:
+        mask = cv2.inRange(roi_hsv, self.red_range.lower, self.red_range.upper)
+        if cv2.countNonZero(mask) <= self.red_obstruction_pixel_threshold:
+            return False
+        # 与目标掩膜使用相同量级的扩张，避免黄/蓝膨胀跨过遮挡边缘。
+        margin = geometry.scale_pixel_length(7, self.pixel_threshold_scale.width_factor, minimum=3)
+        left = max(0, cursor_x - margin - self.press_tolerance_pixels)
+        right = min(mask.shape[1], cursor_x + margin + self.press_tolerance_pixels + 1)
+        return cv2.countNonZero(mask[:, left:right]) > 0
+
+    def _with_walls(self, qte_hsv, regions):
+        if regions.wall_rects is not None:
+            return regions
+        return regions.with_walls(
+            self._blocker_detector.read_all(qte_hsv, self._cursor_mask(qte_hsv))
+        )
 
     def _start_feedback(self):
         if not self.feedback_enabled:
@@ -249,6 +324,7 @@ class BaseQTEStrategy:
     def _mechanism_step(self, qte_hsv, cursor):
         """识别同一控制帧，由纯策略仲裁，再同步执行唯一动作。"""
         regions = read_mechanism_regions(qte_hsv, margin=max(3, self.press_tolerance_pixels + 2))
+        regions = self._with_walls(qte_hsv, regions)
         decision = self._mechanism_policy.observe(regions, cursor, time.monotonic())
         regions = self._mechanism_policy.regions
         self._mechanism_regions = regions
@@ -266,6 +342,7 @@ class BaseQTEStrategy:
                 check_x=cursor,
                 target="bubble",
                 bubble_span=decision.bubble_span,
+                blocker_rects=regions.wall_rects,
             )
             self._cache_mechanism_frame("bubble_press.png")
             self._qte_trace.observe("bubble_press", cursor=cursor, pressed=True)
@@ -319,6 +396,7 @@ class BaseQTEStrategy:
             ("red", bool(regions.red_spans)),
             ("bubble", bool(regions.bubble_spans)),
             ("shell", bool(regions.shell_spans)),
+            ("wall", bool(regions.wall_rects)),
             ("bubble_remnant", bool(regions.bubble_remnant_spans)),
         ):
             if present:
@@ -700,151 +778,12 @@ class BaseQTEStrategy:
 
 
 class FrostStraitQTEStrategy(BaseQTEStrategy):
-    """默认钓鱼点：优先黄色，持续无黄色时回退蓝区，避开红色遮挡。"""
-
-    def __init__(self, config: configparser.ConfigParser, region: Rect) -> None:
-        super().__init__(config, region)
-        self.red_range = vision.read_hsv_range(config, "roi", "red")
-
-    def _track_targets(self, qte_hsv, cursor_x, regions):
-        ordinary_hsv = regions.ordinary_pixels(qte_hsv)
-        yellow_mask = regions.mask_target(self._yellow_mask(ordinary_hsv))
-        self._record_sparse_yellow()
-        yellow_present = bool(cv2.countNonZero(yellow_mask))
-        blue_target = None
-        if not yellow_present:
-            blue_mask = regions.mask_target(self._blue_mask(ordinary_hsv))
-            blue_target = read_blue_target(blue_mask, cursor_x, blocked=regions.blocked)
-        blocked = bool(regions.blocked[cursor_x]) or self._red_obstruction_at_cursor(
-            qte_hsv, cursor_x
-        )
-        if blocked:
-            self._qte_trace.observe(
-                "mechanism_obstruction" if regions.blocked[cursor_x] else "red_obstruction"
-            )
-        target = self._mechanism_policy.targets.observe(
-            yellow_present=yellow_present,
-            yellow_overlap=self._yellow_overlap(yellow_mask, cursor_x, regions)
-            if yellow_present
-            else None,
-            blue=blue_target,
-            blocked=blocked,
-        )
-        if target is not None:
-            self._press_qte(
-                "yellow_overlap" if target == "yellow" else "blue_fallback",
-                cursor_x=cursor_x,
-                check_x=cursor_x,
-                target=target,
-                yellow_source_pixels=self._yellow_source_pixels,
-                yellow_source_min_pixels=self.yellow_source_min_pixels,
-                **self._yellow_evidence(target),
-                **self._blue_evidence(target, blue_target),
-            )
-        self._qte_trace.observe("tracking", cursor=cursor_x, pressed=target is not None)
-
-    def _red_obstruction_at_cursor(self, roi_hsv: np.ndarray, cursor_x: int) -> bool:
-        mask = cv2.inRange(roi_hsv, self.red_range.lower, self.red_range.upper)
-        if cv2.countNonZero(mask) <= self.red_obstruction_pixel_threshold:
-            return False
-        # 与目标掩膜使用相同量级的扩张，避免黄/蓝膨胀跨过遮挡边缘。
-        margin = geometry.scale_pixel_length(7, self.pixel_threshold_scale.width_factor, minimum=3)
-        left = max(0, cursor_x - margin - self.press_tolerance_pixels)
-        right = min(mask.shape[1], cursor_x + margin + self.press_tolerance_pixels + 1)
-        return cv2.countNonZero(mask[:, left:right]) > 0
+    """通用黄条阈值配置；所有机制由公共控制层处理。"""
 
 
 class AbyssMawQTEStrategy(BaseQTEStrategy):
-    """处理深渊巨口的黄蓝条规则，并用挡板限制当前有效判定范围。"""
+    """保留已有黄条面积阈值，机制检测与响应不按钓场分支。"""
 
     def __init__(self, config: configparser.ConfigParser, region: Rect) -> None:
         super().__init__(config, region)
-        self.blocker_one_range = vision.read_hsv_range(config, "roi", "blocker_one")
-        self.blocker_two_range = vision.read_hsv_range(config, "roi", "blocker_two")
-        self.blocker_ranges = [self.blocker_one_range, self.blocker_two_range]
-
-        # 配置值以参考分辨率为基准；宽、高分别按窗口两个方向的倍率缩放。
-        self.blocker_shape_min_width = geometry.scale_pixel_length(
-            config.getint("roi", "blocker_shape_min_width", fallback=4),
-            self.pixel_threshold_scale.width_factor,
-        )
-        self.blocker_shape_max_width = max(
-            self.blocker_shape_min_width + 1,
-            geometry.scale_pixel_length(
-                config.getint("roi", "blocker_shape_max_width", fallback=20),
-                self.pixel_threshold_scale.width_factor,
-            ),
-        )
-        self.blocker_shape_min_height = geometry.scale_pixel_length(
-            config.getint("roi", "blocker_shape_min_height", fallback=18),
-            self.pixel_threshold_scale.height_factor,
-        )
-        self.blocker_shape_max_height = max(
-            self.blocker_shape_min_height + 1,
-            geometry.scale_pixel_length(
-                config.getint("roi", "blocker_shape_max_height", fallback=100),
-                self.pixel_threshold_scale.height_factor,
-            ),
-        )
-
-        self._blocker_detector = BlockerDetector(
-            self.blocker_ranges,
-            min_width=self.blocker_shape_min_width,
-            max_width=self.blocker_shape_max_width,
-            min_height=self.blocker_shape_min_height,
-            max_height=self.blocker_shape_max_height,
-        )
-
-    def _track_targets(self, qte_hsv, cursor_x, regions):
-        ordinary_hsv = regions.ordinary_pixels(qte_hsv)
-        yellow_mask = regions.mask_target(self._yellow_mask(ordinary_hsv))
-        self._record_sparse_yellow()
-        blue_mask = regions.mask_target(self._blue_mask(ordinary_hsv))
-        blocker_rect = self._blocker_detector.read(qte_hsv, self._cursor_mask(qte_hsv))
-        left_x, right_x = active_range_for_blocker(blocker_rect, cursor_x, yellow_mask.shape[1])
-        if not left_x <= cursor_x <= right_x:
-            self._mechanism_policy.targets.invalidate()
-            self._qte_trace.observe("cursor_inside_blocker")
-            return
-        check_x = cursor_x
-        if regions.blocked[check_x]:
-            self._mechanism_policy.targets.invalidate()
-            self._qte_trace.observe("mechanism_obstruction")
-            return
-        yellow_pixels = cv2.countNonZero(yellow_mask[:, left_x : right_x + 1])
-        blue_target = read_blue_target(
-            blue_mask, cursor_x, blocked=regions.blocked, active_range=(left_x, right_x)
-        )
-        yellow_present = yellow_pixels > self.abyss_yellow_pixel_threshold
-        target = self._mechanism_policy.targets.observe(
-            yellow_present=yellow_present,
-            yellow_overlap=self._yellow_overlap(
-                yellow_mask, check_x, regions, active_range=(left_x, right_x)
-            )
-            if yellow_present
-            else None,
-            blue=blue_target,
-        )
-        if target is not None:
-            self._press_qte(
-                "yellow_overlap" if target == "yellow" else "blue_fallback",
-                cursor_x=cursor_x,
-                check_x=check_x if target == "yellow" else cursor_x,
-                target=target,
-                active_range=(left_x, right_x),
-                blocker_rect=blocker_rect,
-                yellow_pixels=yellow_pixels,
-                yellow_threshold=self.abyss_yellow_pixel_threshold,
-                yellow_source_pixels=self._yellow_source_pixels,
-                yellow_source_min_pixels=self.yellow_source_min_pixels,
-                **self._yellow_evidence(target),
-                **self._blue_evidence(target, blue_target),
-            )
-        self._qte_trace.observe(
-            "tracking",
-            blocker=blocker_rect,
-            cursor=cursor_x,
-            yellow=yellow_pixels,
-            active=(left_x, right_x),
-            pressed=target is not None,
-        )
+        self.yellow_presence_threshold = self.abyss_yellow_pixel_threshold

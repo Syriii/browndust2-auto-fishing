@@ -2,6 +2,9 @@
 
 import cv2
 
+from bd2_fishing.game.fishing.mechanics.blockers import BlockerDetector
+from bd2_fishing.game.fishing.mechanics.catalogue import review_cues
+from bd2_fishing.game.fishing.mechanics.freeze_candidates import read_freeze_candidate
 from bd2_fishing.game.fishing.mechanics.regions import read_mechanism_regions
 from bd2_fishing.game.fishing.pointer import read_pointer
 from bd2_fishing.perception import image as vision
@@ -37,9 +40,9 @@ class SceneSignals:
             )
             for color in ("green", "red")
         ]
-        self.time_threshold = geometry.scale_pixel_threshold(
-            50, vision.build_pixel_threshold_scale(config, window)
-        )
+        scale = vision.build_pixel_threshold_scale(config, window)
+        self.time_threshold = geometry.scale_pixel_threshold(50, scale)
+        self.walls = BlockerDetector.from_config(config, scale)
 
     def inspect(self, frame):
         region, source = self.control_region, self.evidence_region
@@ -77,6 +80,12 @@ class SceneSignals:
         threshold = max(3, round(qte.shape[0] * qte.shape[1] * 0.003))
         signals = []
         regions = read_mechanism_regions(qte)
+        freeze = read_freeze_candidate(qte) if active else None
+        walls = self.walls.read_all(qte, masks["white"]) if active else ()
+        if freeze is not None:
+            signals.append(f"freeze_counter_{freeze.count}")
+        if walls:
+            signals.append("wall_candidate")
         if regions.bubble_spans:
             signals.append("bubble_candidate")
         if regions.shell_spans:
@@ -104,15 +113,22 @@ class SceneSignals:
         return tuple(signals) if active else (), dict(
             roi_available=True,
             qte_active=active,
+            mechanism_review=review_cues(signals if active else ()),
+            freeze_counter=None
+            if freeze is None
+            else dict(count=freeze.count, span=freeze.span, score=freeze.score, confirmed=False),
             pixels=pixels,
             bright_cursor_x=cursor,
             pointer_candidates=candidates,
             pointer_reason=reading.reason,
             qte_shape=list(qte.shape),
             bubble_spans=regions.bubble_spans,
+            wall_rects=walls,
             shell_spans=regions.shell_spans,
             green_hold_candidate=regions.green_present,
             appearance_regions={
+                "wall_candidate": tuple((x, x + width) for x, _y, width, _height in walls),
+                "freeze_candidate": () if freeze is None else (freeze.span,),
                 "red_region": regions.red_spans,
                 "purple_region": regions.purple_spans,
                 "bubble_candidate": regions.bubble_spans,

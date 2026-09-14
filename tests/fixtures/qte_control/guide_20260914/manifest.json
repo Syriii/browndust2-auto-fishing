@@ -1,0 +1,28 @@
+{
+  "source": "https://truth.bahamut.com.tw/s01/202602/forum/76207/3ffe5527a641c7ed5e0cda880b06409a.WEBP",
+  "page": "https://forum.gamer.com.tw/C.php?bsn=76207&snA=8280",
+  "source_sha256": "ca7b830db22920b8889bc897cb92a07948ddce25a88872904871a6b40a3cc4f8",
+  "crop_tblr": [
+    400,
+    515,
+    435,
+    1760
+  ],
+  "file": "wall.png",
+  "sha256": "4ceac54ce2355116cc472319aad880b6bb071e1c778a8747c7ada9f3ddf6c840",
+  "scope": "社区攻略静态原图的 QTE 裁剪；真指针379，墙408:435；不是游戏连续解除验收。",
+  "additional_samples": [
+    {
+      "file": "wall_gamekee.webp",
+      "source": "https://cdnimg-v2.gamekee.com/wiki2.0/images/w_144/h_104/50118/787687/2026/2/11/107443.png?x-image-process=image/format,webp/ignore-error,1&eo-img.format=webp",
+      "sha256": "481dfba6c7a579d81f2b0243a2c9c7bacf02562bbef3b734125c0bbd02d1f167",
+      "positive_crop_tblr": [
+        32,
+        71,
+        0,
+        144
+      ],
+      "scope": "完整压缩图中的光标不能误认墙；条体裁剪含独立来源墙体60:69，不代表连续碰撞验收。"
+    }
+  ]
+}

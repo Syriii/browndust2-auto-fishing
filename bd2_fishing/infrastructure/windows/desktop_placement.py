@@ -1,5 +1,6 @@
 """只定位程序自身窗口，使用所在显示器的可用区域（排除任务栏）。"""
 
+import pywintypes
 import win32api
 import win32con
 import win32gui
@@ -23,9 +24,13 @@ def _placement_context(handle, parent_handle):
         anchor = win32gui.GetWindowRect(parent_handle)
         monitor = win32api.MonitorFromWindow(parent_handle, win32con.MONITOR_DEFAULTTONEAREST)
     else:
-        monitor = win32api.MonitorFromPoint(
-            win32api.GetCursorPos(), win32con.MONITOR_DEFAULTTONEAREST
-        )
+        try:
+            cursor = win32api.GetCursorPos()
+        except pywintypes.error:
+            # 桌面暂不可访问时仍可显示助手；只回退自身窗口的显示器定位。
+            monitor = win32api.MonitorFromWindow(handle, win32con.MONITOR_DEFAULTTONEAREST)
+        else:
+            monitor = win32api.MonitorFromPoint(cursor, win32con.MONITOR_DEFAULTTONEAREST)
     work_area = win32api.GetMonitorInfo(monitor)["Work"]
     return handle, work_area, anchor
 

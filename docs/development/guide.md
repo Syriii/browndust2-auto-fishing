@@ -34,6 +34,7 @@ py -3.12 -m venv .venv
 | `bootstrap.py` | 日志、异常处理、DPI、启动检查与桌面组装 |
 | `app/desktop.py`、`preferences.py`、`calibration.py` | UI 服务、设置字段与校准 |
 | `app/service.py`、`session.py`、`ocr_setup.py` | 单任务工作线程、聚焦、COM、电源、OCR 与资源收尾 |
+| `app/fish_catalogue.py`、`fishing_collection.py`、`target_routing.py` | 离线图鉴、个人鱼获、目标管理与跨岛／昼夜调度 |
 | `app/fishing_task.py` | 钓鱼轮次协调、地点策略选择、等待上钩与恢复 |
 | `app/startup.py`、`updates.py` | 配置初始化和迁移、在线/本地更新用例 |
 | `game/islands/` | 六钓场目录与别名、文字读取、已有地图往返刷新；天空岛暂用通用策略 |
@@ -46,12 +47,14 @@ py -3.12 -m venv .venv
 | `game/fishing/scene_*.py`、`hook_diagnostics.py` | 特殊外观、场景时间线与上钩取证 |
 | `game/fishing/actions.py`、`cast_feedback.py`、`page.py` | 抛竿与恢复、提示判断、待机页面确认 |
 | `game/fishing/dialogs.py`、`notices.py`、`startup.py` | 分层弹窗、完整错误码核对与启动接续；启动 150302 缺 OCR 见审查报告 |
+| `game/fishing/catch_identity.py`、`catch_marks.py`、`daytime.py` | 鱼种与尺寸标签、实读等级、游戏时钟识别；未知不猜测 |
+| `infrastructure/fishing_journal.py` | SQLite 鱼获与目标事务、同轮去重和持久图片 |
 | `perception/` | 通用图像、OCR 合同和文字处理 |
 | `runtime/` | 取消、输入锁、几何、有效区域落点、轮次上下文和设备合同 |
 | `infrastructure/windows/`、`ocr/` | Windows 窗口与输入、DXcam/GDI、RapidOCR |
 | `infrastructure/settings.py`、`paths.py`、`maintenance.py` | 配置、运行路径及便携版待机清理 |
 | `infrastructure/diagnostics/`、`updates/` | 后台日志/证据与文件更新事务 |
-| `ui/` | 主窗口、设置、日志展示、更新入口、主题与滚动容器 |
+| `ui/` | 单窗口钓鱼／图鉴／目标／鱼获／设置，日志、更新、主题与滚动容器 |
 | `resources/`、`game/fishing/assets/` | 默认配置与应用图标、玩法识别模板 |
 
 实际允许的导入方向由[开发规范](standards.md)及 `scripts/checks/check_architecture.py` 限制。UI 经 app 访问任务和设备；runtime 不导入游戏或基础设施；纯机制规则不持有设备。现有执行和观察模块仍可使用具体适配器，尚未把所有 I/O 改成依赖注入。
@@ -76,6 +79,8 @@ py -3.12 -m venv .venv
 | 便携 EXE | EXE 旁 `config/config.ini` | `logs/`、`screenshots/` | `data/` |
 | 仓库外普通安装 | 用户目录 `BD2_AutoFishing/config.ini` | 同根 `logs/`、`diagnostics/` | 同根 `data/` |
 
+个人记录 `data/fishing.sqlite3` 保存鱼获、图片与待完成目标，不随诊断轮转；预览使用内存数据库，不写入用户记录。
+
 路径不依赖终端当前目录。默认配置只维护在 `resources/default.ini`，设置读取器通过包资源加载。识别模板、图标、OCR 模型和 Tcl/Tk 随发布包收集；测试样本、个人配置和日志不打入包。
 
 `build/` 保存中间文件和 egg-info，`dist/` 保存本机当前交付包。构建不会覆盖维护者的 `deployment/`，源码修改也不会改变旧 EXE。更多归属见[统一布局](../design/repository-layout.md)。
@@ -96,6 +101,7 @@ py -3.12 -m venv .venv
 ```powershell
 .\.venv\Scripts\python.exe -X utf8 -B scripts/checks/smoke_ui.py --hidden
 .\.venv\Scripts\python.exe -X utf8 -B scripts/checks/smoke_updates.py
+.\.venv\Scripts\python.exe -X utf8 -B scripts/checks/smoke_catalogue.py --visible
 ```
 
 纯文档改动检查事实、路径、链接和差异即可，不需重复本地游戏或整套回归；GitHub CI 仍按仓库工作流执行。识别改动使用真实正负例；时序改动记录帧龄、输入与停止行为，不能用合成图或平均耗时替代端到端验证。

@@ -84,7 +84,7 @@ class BlueStrategyTests(unittest.TestCase):
         strategy._time_bar_visible_from_masks = Mock(return_value=True)
         strategy._press_qte = Mock()
         if cls is AbyssMawQTEStrategy:
-            strategy._blocker_detector.read = Mock(return_value=None)
+            strategy._blocker_detector.read_all = Mock(return_value=())
         return strategy
 
     def run_frames(self, strategy, frames):

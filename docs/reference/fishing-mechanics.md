@@ -2,6 +2,8 @@
 
 [文档目录](../README.md) · [当前开发状态](../development/status.md)
 
+2026-09-14 起，两份攻略、鱼种资料、繁简译名及机制覆盖统一维护在[钓鱼资料库](fishing/README.md)。本文保留早期观察和争议依据；最新规则以[机制覆盖表](fishing/mechanisms.md)为入口，旧段落不代表最新实现或 EXE 状态。
+
 ## 来源与使用范围
 
 2026-09-09 后续已通过浏览器查看图 2-1 和图 2-2 的十二张技能配图，并做源码静态回放；
@@ -71,6 +73,8 @@ F01–F04 确认为没有命中需要命中的区域，与 F05/F06 的分身识�
 这些是场景与处理规则的确认，不把原始 FAIL/MISS/unknown 记录改写为其他结果。
 
 ## 当前源码的实际覆盖（2026-09-09）
+
+此节保留阶段记录。2026-09-14 已将反弹壁及普通目标入口统一到所有钓场的公共控制层，不再由深渊专用分支提供；最新机制状态以[统一覆盖表](fishing/mechanisms.md)为准。
 
 核对入口：[`main.py`](../../bd2_fishing/app/fishing_task.py)、[`qte_strategy.py`](../../bd2_fishing/game/fishing/qte.py)、[`qte_feedback.py`](../../bd2_fishing/game/fishing/feedback.py)、[`catch_result.py`](../../bd2_fishing/game/fishing/settlement.py)。
 
