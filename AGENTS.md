@@ -16,6 +16,8 @@
 
 ## 当前实现与审查入口
 
+- 0.4.0 已完成正式发布；固定本地 EXE 与线上附件分别核验，官方包使用其自带 Python 编译源码后逐模块比对。当前证据与两套哈希见 `docs/development/cases/2026-09-14-release-0.4.0.md`；后续纯文档提交不移动标签或重建附件。
+
 - 版本号以 `pyproject.toml` 为准；源码、安装元数据、`dist/` 清单、`deployment/` 和 GitHub Release 分开核对。相同版本号不证明未打包改动已进入 EXE。
 - 六钓场已登记，共用机制识别与输入仲裁。码头/选岛/启航和恢复返回已接入，从游戏开始页进入玩法及全部机制的完整解除尚未实现。
 - QTE 共用控制循环和 `MechanismPolicy`；黄条实体与短期边界确认在 `yellow_geometry.py`，中心偏好在 `yellow_aim.py`，泡泡身份与残影分别由 `bubble_targets.py`、`bubble_memory.py` 管理。
