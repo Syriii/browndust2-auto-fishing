@@ -3,20 +3,30 @@
 import tkinter as tk
 from tkinter import ttk
 
-from bd2_fishing.ui.theme import SURFACE
+from bd2_fishing.ui.theme import BACKGROUND, SURFACE
 
 
 class ScrollablePage(ttk.Frame):
-    def __init__(self, parent):
-        super().__init__(parent, style="Card.TFrame")
+    def __init__(self, parent, *, padding=20, surface=False):
+        super().__init__(
+            parent, style="Sheet.TFrame" if surface else "TFrame", padding=1 if surface else 0
+        )
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
-        self.canvas = tk.Canvas(self, background=SURFACE, highlightthickness=0, width=1, height=1)
+        self.canvas = tk.Canvas(
+            self,
+            background=SURFACE if surface else BACKGROUND,
+            highlightthickness=0,
+            width=1,
+            height=1,
+        )
         self.canvas.grid(row=0, column=0, sticky="nsew")
         self.scrollbar = ttk.Scrollbar(self, command=self.canvas.yview)
         self.scrollbar.grid(row=0, column=1, sticky="ns")
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
-        self.body = ttk.Frame(self.canvas, padding=20, style="Card.TFrame")
+        self.body = ttk.Frame(
+            self.canvas, padding=padding, style="Card.TFrame" if surface else "TFrame"
+        )
         self.item = self.canvas.create_window(0, 0, window=self.body, anchor="nw")
         self._wheel_delta = 0
         self.canvas.bind("<Configure>", self._layout)

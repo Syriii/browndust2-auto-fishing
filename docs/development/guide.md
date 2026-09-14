@@ -111,3 +111,7 @@ py -3.12 -m venv .venv
 真实游戏调试从 `scripts/live/` 显式运行源码；发布 EXE 的用户验收另行安排。工具及参数的影响见[工具说明](tools.md)，不要在离线检查中顺带启动实机工具。
 
 日常提交走[短期分支与 PR](branching.md)，发布走[构建与发布](releasing.md)。当前已验证范围和开放问题分别见[状态](status.md)与[验证计划](validation-plan.md)。
+
+## 桌面视觉修改验收
+
+0.4.1 共用 theme、icons、fish_tile 和 collection_widgets 控制实际 UI 表现；修改后验证真实 Tk 窗口与 EXE，不能仅检查 HTML 原型。TkTextFont 控制输入框文字，需与 ttk 字体同步。图卡刷新保留键盘焦点，取消点击与选择模式共用入口；图片缓存有界。使用 smoke_catalogue.py --visible 检查键盘、鼠标、目标页返回及窗口高度，设置功能使用 smoke_ui.py 验证。

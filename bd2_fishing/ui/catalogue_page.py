@@ -5,17 +5,19 @@ from tkinter import ttk
 
 from bd2_fishing.app.fishing_collection import CONDITIONS
 from bd2_fishing.ui.collection_widgets import FishPhotos, ViewButtons, clear_children, show_facts
+from bd2_fishing.ui.fish_tile import FishTile
 from bd2_fishing.ui.scrolling import ScrollablePage
 
 
 class CataloguePage(ttk.Frame):
     def __init__(self, parent, app):
-        super().__init__(parent, style="Card.TFrame", padding=16)
+        super().__init__(parent, padding=22)
         self.app = app
         self.service = app.services.fish_catalogue_service()
         self.photos = FishPhotos(self.service, self)
         self.view, self.selected, self.picking = "grid", None, False
         self.draft = {}
+        self.pick_origin = "catalogue"
         self._resize_id = None
         self._columns = 0
         self.query = tk.StringVar()
@@ -23,22 +25,24 @@ class CataloguePage(ttk.Frame):
         self.time = tk.StringVar(value="全部时段")
         self.rarity = tk.StringVar(value="全部稀有度")
         self.default_condition = tk.StringVar(value=CONDITIONS["any"])
-        self.heading = ttk.Frame(self, style="Card.TFrame")
+        self.heading = ttk.Frame(self)
         self.heading.pack(fill="x", pady=(0, 12))
-        self.title = ttk.Label(self.heading, text="鱼种图鉴", style="Section.TLabel")
+        self.title = ttk.Label(self.heading, text="鱼种图鉴", style="Heading.TLabel")
         self.title.pack(side="left")
-        self.pick_button = ttk.Button(self.heading, text="选择目标", command=self.begin_pick)
+        self.pick_button = ttk.Button(
+            self.heading, text="选择目标", style="Start.TButton", command=self.begin_pick
+        )
         self.pick_button.pack(side="right")
-        toolbar = ttk.Frame(self, style="Card.TFrame")
+        toolbar = ttk.Frame(self)
         toolbar.pack(fill="x", pady=(0, 8))
-        ttk.Label(toolbar, text="搜索鱼名（支持简繁体）").pack(side="left")
-        entry = ttk.Entry(toolbar, textvariable=self.query, width=18)
+        ttk.Label(toolbar, text="鱼名", style="Page.TLabel").pack(side="left")
+        entry = ttk.Entry(toolbar, textvariable=self.query, width=24)
         entry.pack(side="left", padx=8)
         entry.bind("<Return>", lambda _: self.render(reset=True))
         ttk.Button(toolbar, text="搜索", command=lambda: self.render(reset=True)).pack(side="left")
         self.views = ViewButtons(toolbar, self.change_view)
         self.views.pack(side="right")
-        filters = ttk.Frame(self, style="Card.TFrame")
+        filters = ttk.Frame(self)
         filters.pack(fill="x", pady=(0, 10))
         choices = (
             (
@@ -48,13 +52,16 @@ class CataloguePage(ttk.Frame):
             (self.time, ["全部时段", "白天", "夜晚"]),
             (self.rarity, ["全部稀有度", "普通", "稀有", "传说"]),
         )
-        for variable, values in choices:
+        for label, (variable, values) in zip(("钓场", "时段", "稀有度"), choices):
+            group = ttk.Frame(filters)
+            group.pack(side="left", fill="x", expand=True, padx=(0, 10))
+            ttk.Label(group, text=label, style="PageHint.TLabel").pack(anchor="w", pady=(0, 4))
             box = ttk.Combobox(
-                filters, textvariable=variable, values=values, state="readonly", width=13
+                group, textvariable=variable, values=values, state="readonly", width=13
             )
-            box.pack(side="left", padx=(0, 8))
+            box.pack(fill="x")
             box.bind("<<ComboboxSelected>>", lambda _: self.render(reset=True))
-        ttk.Button(filters, text="重置", command=self.reset).pack(side="left")
+        ttk.Button(filters, text="重置", command=self.reset).pack(side="left", anchor="s")
         self.condition_bar = ttk.Frame(self, style="Card.TFrame")
         ttk.Label(self.condition_bar, text="新选鱼要求").pack(side="left")
         ttk.Combobox(
@@ -67,17 +74,17 @@ class CataloguePage(ttk.Frame):
         ttk.Label(self.condition_bar, text="点击鱼卡选择，再点取消", style="Hint.TLabel").pack(
             side="left"
         )
-        self.count = ttk.Label(self, style="Hint.TLabel")
+        self.count = ttk.Label(self, style="PageHint.TLabel")
         self.count.pack(anchor="w", pady=(0, 6))
-        self.content = ttk.Frame(self, style="Card.TFrame")
+        self.content = ttk.Frame(self)
         self.content.pack(fill="both", expand=True)
         self.content.columnconfigure(0, weight=1)
         self.content.rowconfigure(0, weight=1)
-        self.browser = ScrollablePage(self.content)
+        self.browser = ScrollablePage(self.content, padding=0)
         self.browser.grid(row=0, column=0, sticky="nsew")
         self.browser.canvas.bind("<Configure>", self.resize_cards, add="+")
-        self.side = ScrollablePage(self.content)
-        self.side.configure(width=240)
+        self.side = ScrollablePage(self.content, padding=16, surface=True)
+        self.side.configure(width=round(240 * self.photos.scale))
         self.side.grid_propagate(False)
         self.source_button = ttk.Button(self, text="资料说明", command=self.about)
         self.source_button.pack(anchor="w", pady=(8, 0))
@@ -91,7 +98,11 @@ class CataloguePage(ttk.Frame):
         self.draft.clear()
 
     def resize_cards(self, event):
-        columns = max(2, min(5, max(400, event.width - 40) // 160)) if self.view == "grid" else 1
+        columns = (
+            max(2, min(5, max(280, event.width - 8) // round(155 * self.photos.scale)))
+            if self.view == "grid"
+            else 1
+        )
         if columns == self._columns:
             return
         if self._resize_id:
@@ -114,10 +125,11 @@ class CataloguePage(ttk.Frame):
         self.view = view
         self.render()
 
-    def begin_pick(self, identity=None):
+    def begin_pick(self, identity=None, *, origin="catalogue"):
         if self.app.controller.running:
             return
         self.picking = True
+        self.pick_origin = origin
         self.selected = None
         self.draft = self.app.collection.selected()
         if identity:
@@ -125,7 +137,7 @@ class CataloguePage(ttk.Frame):
                 identity,
                 next(k for k, label in CONDITIONS.items() if label == self.default_condition.get()),
             )
-        self.app.show_page("catalogue")
+        self.app.show_page("target-picker" if origin == "targets" else "catalogue")
         self.render()
 
     def choose(self, identity):
@@ -143,6 +155,8 @@ class CataloguePage(ttk.Frame):
     def cancel(self):
         self.close()
         self.render()
+        if self.pick_origin == "targets":
+            self.app.show_page("targets")
 
     def save(self):
         if self.app.controller.running:
@@ -155,6 +169,8 @@ class CataloguePage(ttk.Frame):
         self.app.show_page("targets")
 
     def render(self, reset=False):
+        focus_identity = getattr(self.focus_get(), "fish_identity", None)
+        self.tiles = {}
         position = self.browser.canvas.yview()[0]
         self.title.configure(text="选择目标鱼" if self.picking else "鱼种图鉴")
         self.pick_button.configure(
@@ -180,8 +196,10 @@ class CataloguePage(ttk.Frame):
             self.side.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
         else:
             self.side.grid_remove()
-        width = max(400, self.browser.canvas.winfo_width() - 40)
-        columns = max(2, min(5, width // 160)) if self.view == "grid" else 1
+        width = max(280, self.browser.canvas.winfo_width() - 8)
+        columns = (
+            max(2, min(5, width // round(155 * self.photos.scale))) if self.view == "grid" else 1
+        )
         self._columns = columns
         for column in range(5):
             self.browser.body.columnconfigure(column, weight=1 if column < columns else 0)
@@ -192,6 +210,8 @@ class CataloguePage(ttk.Frame):
         self._render_side()
         self.browser.update_idletasks()
         self.browser.canvas.yview_moveto(0 if reset else position)
+        if focus_identity in self.tiles:
+            self.tiles[focus_identity].focus_set()
 
     def _caption(self, item):
         caption = f"{item.name}\n{'全天' if item.availability == 'both' else '白天' if item.availability == 'day' else '夜晚'}"
@@ -204,22 +224,32 @@ class CataloguePage(ttk.Frame):
         return caption
 
     def _render_card(self, item, index, columns, width):
-        frame = ttk.Frame(self.browser.body, style="Card.TFrame", padding=4)
-        frame.grid(row=index // columns, column=index % columns, sticky="nsew", padx=3, pady=4)
-        picture = self.photos.get(item.id, (130, 84) if self.view == "grid" else (78, 50))
-        button = ttk.Button(
-            frame,
-            image=picture or "",
-            text=self._caption(item),
-            compound="top" if self.view == "grid" else "left",
-            style="TButton" if self.view == "grid" else "FishList.TButton",
-            command=lambda identity=item.id: self.choose(identity),
+        frame = ttk.Frame(self.browser.body, style="Card.TFrame", padding=0)
+        frame.grid(
+            row=index // columns, column=index % columns, sticky="nsew", padx=(0, 8), pady=(0, 9)
         )
-        button.pack(fill="x")
-        if item.id in self.draft if self.picking else self.selected == item.id:
-            button.state(["pressed"])
+        tile = FishTile(
+            frame,
+            photo=lambda size: self.photos.get(item.id, size),
+            name=item.name,
+            subtitle=self._caption(item).split("\n", 1)[1].split(" · 已选")[0].split("    ")[0],
+            command=lambda identity=item.id: self.choose(identity),
+            view=self.view,
+            selected=item.id in self.draft if self.picking else self.selected == item.id,
+            badge="已选" if self.picking and item.id in self.draft else "",
+            colorful=item.rarity == "legendary",
+        )
+        tile.fish_identity = item.id
+        self.tiles[item.id] = tile
+        tile.pack(fill="x")
         if self.view == "list" and self.selected == item.id and not self.picking:
-            show_facts(frame, self.service, item.id, width=max(250, width - 150))
+            show_facts(
+                frame,
+                self.service,
+                item.id,
+                width=max(200, width - round(240 * self.photos.scale)),
+                inset=round(108 * self.photos.scale),
+            )
             ttk.Button(
                 frame,
                 text="设为目标",

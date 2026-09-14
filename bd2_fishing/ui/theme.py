@@ -2,22 +2,30 @@
 
 import tkinter as tk
 from importlib.resources import as_file, files
+from tkinter import font as tkfont
 from tkinter import ttk
+
+from PIL import Image, ImageDraw, ImageTk
 
 BACKGROUND = "#edf2f4"
 SURFACE = "#ffffff"
 INK = "#203640"
 MUTED = "#627780"
 ACCENT = "#087f78"
-FONT = "Microsoft YaHei UI"
+LINE = "#dce5e8"
+TINT = "#e2f2ef"
+FONT = "微软雅黑"
 
 
 def apply_theme(root):
     root.configure(background=BACKGROUND)
+    # 输入框使用 Tk 命名字体，不会继承 ttk 的全局字体。
+    for name in ("TkDefaultFont", "TkTextFont", "TkMenuFont"):
+        tkfont.nametofont(name, root=root).configure(family=FONT, size=11)
     root.option_add("*TCombobox*Listbox.font", (FONT, 10))
     style = ttk.Style(root)
     style.theme_use("clam")
-    style.configure(".", font=(FONT, 10), foreground=INK, background=SURFACE)
+    style.configure(".", font=(FONT, 11), foreground=INK, background=SURFACE)
     style.configure("TFrame", background=BACKGROUND)
     style.configure("Card.TFrame", background=SURFACE)
     style.configure("TLabel", background=SURFACE)
@@ -28,6 +36,9 @@ def apply_theme(root):
     style.configure("TLabelframe", background=SURFACE, bordercolor="#d4dfe2")
     style.configure("TLabelframe.Label", background=SURFACE, font=(FONT, 11, "bold"))
     style.configure("Section.TLabel", font=(FONT, 11, "bold"))
+    style.configure("Heading.TLabel", background=BACKGROUND, font=(FONT, 17, "bold"))
+    style.configure("CardTitle.TLabel", font=(FONT, 12, "bold"))
+    style.configure("PageHint.TLabel", background=BACKGROUND, foreground=MUTED, font=(FONT, 10))
     style.configure("Advice.TLabel", foreground=ACCENT, font=(FONT, 9))
     style.configure("TButton", padding=(14, 8), background="#f3f7f7", bordercolor="#d4dfe2")
     style.map("TButton", background=[("active", "#e3eeed")])
@@ -42,9 +53,122 @@ def apply_theme(root):
     style.configure("TEntry", padding=6, fieldbackground=SURFACE, bordercolor="#c6d4d9")
     style.configure("TCombobox", padding=5, arrowsize=14, bordercolor="#c6d4d9")
     style.map("TCombobox", fieldbackground=[("readonly", SURFACE)])
+    style.configure("TCombobox", lightcolor=LINE, darkcolor=LINE, arrowcolor=MUTED)
+    style.configure("TEntry", lightcolor=LINE, darkcolor=LINE)
+    style.configure(
+        "Vertical.TScrollbar",
+        background="#c5d3d8",
+        troughcolor=BACKGROUND,
+        borderwidth=0,
+        arrowsize=10,
+    )
+    style.layout(
+        "Vertical.TScrollbar",
+        [
+            (
+                "Vertical.Scrollbar.trough",
+                {
+                    "sticky": "ns",
+                    "children": [("Vertical.Scrollbar.thumb", {"expand": "1", "sticky": "nswe"})],
+                },
+            )
+        ],
+    )
+    _rounded_styles(root, style)
     style.configure("TCheckbutton", background=SURFACE, padding=(0, 3))
     style.map("TCheckbutton", background=[("active", SURFACE)])
     _checkmark_style(root, style)
+
+
+def _rounded_styles(root, style):
+    """九宫格圆角底图沿用 ttk 的禁用、焦点和键盘行为。"""
+    scale = root.winfo_fpixels("1i") / 96
+    radius = max(6, round(7 * scale))
+    size = radius * 2 + 5
+    root._surface_images = images = []
+
+    def surface(fill, border, outside=BACKGROUND):
+        bitmap = Image.new("RGB", (size * 4, size * 4), outside)
+        ImageDraw.Draw(bitmap).rounded_rectangle(
+            (2, 2, size * 4 - 3, size * 4 - 3),
+            radius=radius * 4,
+            fill=fill,
+            outline=border,
+            width=4,
+        )
+        photo = ImageTk.PhotoImage(
+            bitmap.resize((size, size), Image.Resampling.LANCZOS), master=root
+        )
+        images.append(photo)
+        return photo
+
+    palettes = {
+        "TButton": (SURFACE, LINE, "#f2f8f7", TINT, INK),
+        "Start.TButton": (ACCENT, ACCENT, "#096b66", "#096b66", "white"),
+        "Stop.TButton": ("#b34249", "#b34249", "#94333a", "#94333a", "white"),
+        "Nav.TButton": (SURFACE, SURFACE, "#f1f7f6", TINT, INK),
+        "View.TButton": (SURFACE, LINE, "#f1f7f6", TINT, INK),
+    }
+    for name, (fill, border, hover, selected, foreground) in palettes.items():
+        element = "Rounded." + name
+        style.element_create(
+            element,
+            "image",
+            surface(fill, border, SURFACE if name == "Nav.TButton" else BACKGROUND),
+            ("disabled", surface("#eef2f3", LINE)),
+            ("pressed", surface(selected, ACCENT if name != "Nav.TButton" else TINT)),
+            ("focus", surface(fill, ACCENT)),
+            ("active", surface(hover, border)),
+            border=radius,
+            padding=0,
+            sticky="nsew",
+        )
+        style.layout(
+            name,
+            [
+                (
+                    element,
+                    {
+                        "sticky": "nsew",
+                        "children": [
+                            (
+                                "Button.padding",
+                                {
+                                    "sticky": "nsew",
+                                    "children": [("Button.label", {"sticky": "nsew"})],
+                                },
+                            )
+                        ],
+                    },
+                )
+            ],
+        )
+        style.configure(
+            name,
+            padding=(14, 9),
+            foreground=foreground,
+            background=fill,
+            borderwidth=1,
+            relief="flat",
+            anchor="center",
+            bordercolor=border,
+            lightcolor=border,
+            darkcolor=border,
+        )
+        style.map(
+            name,
+            background=[("disabled", "#eef2f3"), ("pressed", selected), ("active", hover)],
+            foreground=[("disabled", "#8b9da3"), ("pressed", foreground)],
+            bordercolor=[("focus", ACCENT), ("pressed", ACCENT)],
+        )
+    style.configure("Nav.TButton", anchor="w", padding=(14, 13))
+    style.map("Nav.TButton", foreground=[("pressed", ACCENT)])
+    style.configure("View.TButton", padding=9, width=0)
+    style.element_create(
+        "Sheet.border", "image", surface(SURFACE, LINE), border=radius, sticky="nsew"
+    )
+    style.layout("Sheet.TFrame", [("Sheet.border", {"sticky": "nsew"})])
+    style.configure("Sheet.TFrame", background=BACKGROUND)
 
 
 def _checkmark_style(root, style):

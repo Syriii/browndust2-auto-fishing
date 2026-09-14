@@ -104,20 +104,25 @@ class FishingApp:
     def show_page(self, page):
         if self.closing:
             return
+        visible = "catalogue" if page == "target-picker" else page
         for key, widget in self.pages.items():
-            if key == page:
+            if key == visible:
                 widget.grid(row=0, column=0, sticky="nsew")
             else:
                 widget.grid_remove()
         self.current_page = page
         self.settings_visible = page == "settings"
         for key, button in self.nav_buttons.items():
-            button.state(["pressed"] if key == page else ["!pressed"])
+            button.state(
+                ["pressed"]
+                if key == ("targets" if page == "target-picker" else page)
+                else ["!pressed"]
+            )
         if page == "targets":
             self.targets_page.render()
         elif page == "catches":
             self.catches_page.render()
-        elif page == "catalogue":
+        elif page in ("catalogue", "target-picker"):
             self.catalogue.after_idle(self.catalogue.render)
 
     def toggle_logs(self):
