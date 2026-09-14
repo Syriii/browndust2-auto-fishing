@@ -4,7 +4,7 @@
 
 [下载最新正式版](https://github.com/Syriii/browndust2-auto-fishing/releases/latest) · [使用指南](docs/user/usage.md) · [更新记录](CHANGELOG.md) · [完整文档](docs/README.md)
 
-**版本说明：** 当前源码与固定本地 EXE 为 **0.4.1**。本版按第四版原型优化实际桌面的导航、鱼卡、筛选、详情和设置排版；支持 84 种离线鱼图。[0.4.1 正式发布](https://github.com/Syriii/browndust2-auto-fishing/releases/tag/v0.4.1)与官方下载核验已完成，详见[当前状态](docs/development/status.md)。
+**版本说明：** 当前源码与固定本地 EXE 为 **0.4.2**，优化 EXE 启动、圆角背景绘制和图鉴加载。图鉴仅加载当前可见鱼图，再次打开保留滚动位置；游戏识别资源在开始任务时加载。构建与发布核验进度见[当前状态](docs/development/status.md)。
 
 支持图片多选、任意尺寸／MAX／MIN 目标、跨岛与昼夜等待，以及带图鱼获历史。红色 `Maximum Size`、黄色 `New Record`、等级与边框颜色分别记录；MIN 和彩色三级成功页尚缺实图验证，见[截图复核](docs/development/catch-markers-2026-09-14.md)。
 

@@ -84,7 +84,9 @@ def _rounded_styles(root, style):
     """九宫格圆角底图沿用 ttk 的禁用、焦点和键盘行为。"""
     scale = root.winfo_fpixels("1i") / 96
     radius = max(6, round(7 * scale))
-    size = radius * 2 + 5
+    # Tk 平铺中心而非拉伸。5px 中心铺满大面板会产生数万次原生绘图。
+    # 宽高设为 0，让底图不参与控件最小尺寸计算。
+    size = radius * 2 + 128
     root._surface_images = images = []
 
     def surface(fill, border, outside=BACKGROUND):
@@ -120,6 +122,8 @@ def _rounded_styles(root, style):
             ("focus", surface(fill, ACCENT)),
             ("active", surface(hover, border)),
             border=radius,
+            width=0,
+            height=0,
             padding=0,
             sticky="nsew",
         )
@@ -165,7 +169,13 @@ def _rounded_styles(root, style):
     style.map("Nav.TButton", foreground=[("pressed", ACCENT)])
     style.configure("View.TButton", padding=9, width=0)
     style.element_create(
-        "Sheet.border", "image", surface(SURFACE, LINE), border=radius, sticky="nsew"
+        "Sheet.border",
+        "image",
+        surface(SURFACE, LINE),
+        border=radius,
+        width=0,
+        height=0,
+        sticky="nsew",
     )
     style.layout("Sheet.TFrame", [("Sheet.border", {"sticky": "nsew"})])
     style.configure("Sheet.TFrame", background=BACKGROUND)

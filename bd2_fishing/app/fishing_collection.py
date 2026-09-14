@@ -4,11 +4,9 @@ import uuid
 from datetime import datetime, timezone
 from io import BytesIO
 
-import cv2
 from PIL import Image
 
 from bd2_fishing.game.fishing.catalogue import load_catalogue
-from bd2_fishing.game.fishing.catch_identity import identify_catch, refine_reward_identity
 from bd2_fishing.infrastructure.fishing_journal import FishingJournal
 from bd2_fishing.runtime import control
 
@@ -48,6 +46,10 @@ class FishingCollection:
     def confirm(self, observer):
         if observer.result.status != "caught":
             return
+        import cv2
+
+        from bd2_fishing.game.fishing.catch_identity import identify_catch, refine_reward_identity
+
         fish, size_kind = identify_catch(observer.reward_readings, observer.current_location)
         frame = observer.evidence_frames.get("settlement.png")
         if frame is None:

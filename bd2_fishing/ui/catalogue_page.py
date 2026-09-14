@@ -20,6 +20,8 @@ class CataloguePage(ttk.Frame):
         self.pick_origin = "catalogue"
         self._resize_id = None
         self._columns = 0
+        self._render_key = None
+        self.tiles = {}
         self.query = tk.StringVar()
         self.island = tk.StringVar(value="全部钓场")
         self.time = tk.StringVar(value="全部时段")
@@ -88,7 +90,6 @@ class CataloguePage(ttk.Frame):
         self.side.grid_propagate(False)
         self.source_button = ttk.Button(self, text="资料说明", command=self.about)
         self.source_button.pack(anchor="w", pady=(8, 0))
-        self.render()
 
     def open(self):
         self.app.show_page("catalogue")
@@ -98,6 +99,8 @@ class CataloguePage(ttk.Frame):
         self.draft.clear()
 
     def resize_cards(self, event):
+        if not self.winfo_ismapped():
+            return
         columns = (
             max(2, min(5, max(280, event.width - 8) // round(155 * self.photos.scale)))
             if self.view == "grid"
@@ -169,6 +172,26 @@ class CataloguePage(ttk.Frame):
         self.app.show_page("targets")
 
     def render(self, reset=False):
+        width = max(280, self.browser.canvas.winfo_width() - 8)
+        columns = (
+            max(2, min(5, width // round(155 * self.photos.scale))) if self.view == "grid" else 1
+        )
+        key = (
+            self.view,
+            self.selected,
+            self.picking,
+            tuple(self.draft.items()),
+            self.query.get(),
+            self.island.get(),
+            self.time.get(),
+            self.rarity.get(),
+            columns,
+        )
+        if key == self._render_key:
+            if reset:
+                self.browser.canvas.yview_moveto(0)
+            return
+        self._render_key = key
         focus_identity = getattr(self.focus_get(), "fish_identity", None)
         self.tiles = {}
         position = self.browser.canvas.yview()[0]

@@ -35,8 +35,18 @@ class FishTile(tk.Canvas):
         self.name, self.subtitle, self.badge = name, subtitle, badge
         self.selected, self.colorful, self.hover = selected, colorful, False
         self.photo = None
+        self._draw_key = None
+        self.viewport = parent
+        while self.viewport is not None and not isinstance(self.viewport, tk.Canvas):
+            self.viewport = self.viewport.master
+        self._viewport_binding = (
+            self.viewport.bind("<<ViewportChanged>>", self._draw, add="+")
+            if self.viewport is not None
+            else None
+        )
         self._pointer_down = False
         self.bind("<Configure>", self._draw)
+        self.bind("<Expose>", self._draw)
         self.bind("<Enter>", lambda _: self._hover(True))
         self.bind("<Leave>", lambda _: self._hover(False))
         self.bind("<FocusIn>", self._draw)
@@ -45,6 +55,12 @@ class FishTile(tk.Canvas):
         self.bind("<ButtonRelease-1>", self._release)
         self.bind("<Return>", self._activate)
         self.bind("<space>", self._activate)
+
+    def destroy(self):
+        if self._viewport_binding:
+            self.viewport.unbind("<<ViewportChanged>>", self._viewport_binding)
+            self._viewport_binding = None
+        super().destroy()
 
     def _hover(self, active):
         self.hover = active
@@ -65,12 +81,27 @@ class FishTile(tk.Canvas):
             return self._activate(event)
 
     def _draw(self, event=None):
-        self.delete("all")
         width, height = self.winfo_width(), self.winfo_height()
-        if width < 10:
+        if width < 10 or not self.winfo_ismapped() or not self._visible(height):
             return
+        key = width, height, self.selected, self.hover, self.focus_get() is self, self.badge
+        if key == self._draw_key:
+            return
+        self.delete("all")
         self._background(width, height)
         self._content(width, height)
+        self._draw_key = key
+
+    def _visible(self, height):
+        if self.viewport is None:
+            return True
+        # 滚动容器 body 的原生坐标可能包含 Tk 的屏外偏移，使用 Canvas 视口坐标。
+        top = self.winfo_y() - self.viewport.canvasy(0)
+        parent = self.master
+        while parent.master is not self.viewport:
+            top += parent.winfo_y()
+            parent = parent.master
+        return top < self.viewport.winfo_height() and top + height > 0
 
     def _background(self, width, height):
         s = self.scale

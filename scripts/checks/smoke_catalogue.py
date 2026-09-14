@@ -37,6 +37,22 @@ def main():
             assert len(panel.service.fish) == 84
             assert len(panel.browser.body.winfo_children()) == 84
             assert all(panel.photos.cache.values())
+            if args.visible:
+                # 首屏只解码可见图片；移到末尾必须补画，返回页面保留控件和滚动位置。
+                assert 0 < sum(tile.photo is not None for tile in panel.tiles.values()) < 84
+                panel.browser.canvas.yview_moveto(1)
+                pump()
+                assert panel.tiles[panel.service.fish[-1].id].photo is not None
+                previous_tiles = dict(panel.tiles)
+                position = panel.browser.canvas.yview()
+                app.show_page("targets")
+                pump()
+                panel.open()
+                pump()
+                assert panel.tiles == previous_tiles
+                assert panel.browser.canvas.yview() == position
+                panel.browser.canvas.yview_moveto(0)
+                pump()
             geometry = root.winfo_width(), root.winfo_height()
             first = panel.service.fish[0].id
             panel.change_view("list")
