@@ -13,6 +13,7 @@ from pathlib import Path
 
 import cv2
 
+from bd2_fishing.game.fishing.catch_marks import read_reward_grade
 from bd2_fishing.game.fishing.evidence_selection import select_round_frames
 from bd2_fishing.game.fishing.recovery import RoundObservationError, recover_round
 from bd2_fishing.game.fishing.scene import FishingSceneReader
@@ -87,6 +88,8 @@ class CatchObserver:
         self.log = get_logger(__name__, self.round_id)
         self.engine, self.config, self.window = engine, config, window
         self.current_location = None
+        self.reward_readings = []
+        self.on_confirm = None
         self.lock = threading.Lock()
         # 本锁只协调本轮计时器与结算；跨轮原生调用互斥由共享引擎负责。
         self.ocr_lock = threading.Lock()
@@ -214,6 +217,10 @@ class CatchObserver:
                 reward_texts = read_settlement_texts(self.engine, reward)
                 run_control.checkpoint()
             self.result = classify_settlement(panel, reward_texts, recent, distance_texts)
+            self.reward_readings = reward_texts
+            self.result.stars, self.result.border_color = read_reward_grade(
+                frame, confirmed_catch=self.result.status == "caught"
+            )
         labels = {"caught": "确认捕获", "suspected_escape": "疑似超时逃脱", "unknown": "未确认"}
         self.log.debug(
             "结算观察依据: 结果=%s 原因=%s 奖励=%s 尺寸cm=%s 剩余cm=%s",
@@ -238,6 +245,8 @@ class CatchObserver:
             self.evidence_frames["last_timer_qte.png"] = readings[-1][2]
         if distance_reading is not None:
             self.evidence_frames["distance_qte.png"] = distance_reading[2]
+        if self.result.status == "caught" and self.on_confirm is not None:
+            self.on_confirm(self)
 
     def _wait_for_result_page(self, deadline, guard):
         """沿用调用者的单一预算；保留首末帧、逐次取消与窗口保护。"""

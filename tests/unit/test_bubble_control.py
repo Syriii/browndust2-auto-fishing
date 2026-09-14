@@ -92,7 +92,7 @@ class BubbleStrategyTests(unittest.TestCase):
         strategy._press_qte = Mock()
         strategy._time_bar_visible_from_masks = Mock(return_value=True)
         if cls is qte.AbyssMawQTEStrategy:
-            strategy._blocker_detector.read = Mock(return_value=None)
+            strategy._blocker_detector.read_all = Mock(return_value=())
         return strategy
 
     def run_frames(self, strategy, frames):

@@ -7,6 +7,7 @@
 | 脚本（相对 `scripts/`） | 用途 | 对游戏的影响 |
 | --- | --- | --- |
 | `checks/check_architecture.py` | 静态导入方向与循环检查 | 不导入设备、不连接游戏 |
+| `checks/render_fishing_catalogue.py` | 从唯一鱼种 JSON 生成参考表；`--check` 只核对一致性 | 不联网、不连接游戏、不读取玩家进度；默认只更新图鉴 Markdown |
 | `checks/replay_mechanisms.py` | 已保存原图的机制定位回放与局部耗时报告 | 不加载相机、窗口或输入模块；只读取原图，输出 JSON |
 | `checks/review_feedback.py` | 只读证据包索引、未确认分类与同轮追溯 | 不连接游戏，不解压或改写原 ZIP；生成 JSON/Markdown |
 | `benchmarks/qte_latency.py` | 合成图像与日志提交时延基准 | 不连接游戏、不发送输入；结果写入 .local/benchmarks |
@@ -16,6 +17,7 @@
 | `checks/check_portable_package.py` | 完整包与真实更新助手的隔离升级、恢复验证 | 使用 C# 测试 EXE，不运行钓鱼程序；需 Windows .NET Framework csc |
 | `checks/smoke_capture.py` | 检查 DXcam 创建、截图和释放；可模拟旧工厂缓存缺失 | 只读截图，不聚焦或发送输入 |
 | `checks/smoke_feedback_capture.py` | 检查 GDI 与 DXcam 并行采集及资源释放 | 只读截图，不发送输入 |
+| `checks/record_manual_mechanisms.py` | 录制手动冰冻／绿条演示，默认 60 秒、30 FPS | 只读局部截图与空格状态；不聚焦、不运行钓鱼、不发送输入 |
 | `live/run_live_diagnostic.py` | 有时限的钓鱼诊断，默认 90 秒 | 真实抛竿和按键，沿用读取的配置；失焦或到时停止 |
 | `live/record_qte_session.py` | 录制输入时序、QTE 反馈和结算证据，默认 45 秒 | 真实钓鱼；本进程关闭自动清包，参数覆盖不写回配置 |
 | `live/clean_backpack_once.py` | 明确执行一次手动清包 | 实际出售背包物品，不受自动清包开关约束 |
@@ -23,6 +25,16 @@
 当前手动清包脚本缺少前台窗口检查和统一异常释放，出售步骤也没有逐步页面确认；这是待修缺陷，不应由脚本目录名推断它已具备主界面的全部保护。详见[代码审查 R1/R2](code-review-2026-09-14.md)。
 
 ## 常用命令
+
+用户当前不安排冰冻／绿条演示，优先等日常使用中自然遇到后反馈。以下手动工具仅供以后有条件时选用，不需要为了正常反馈提前开启：先停止自动钓鱼，打开游戏并准备手动操作，然后运行：
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 -B scripts/checks/record_manual_mechanisms.py --seconds 60
+```
+
+默认留 5 秒切回游戏；采集开始时及每次抓取前后检查游戏前台和窗口位置。失焦、锁屏、窗口变化、Ctrl+C、到时或 `--stop-file` 指定文件出现即停止；停止后完成已接收帧写盘。不会主动切换窗口或触发抛竿。默认截客户区横向 30%–70%、纵向 64%–96%，覆盖 QTE 冰晶、反馈及下沿；实际内容覆盖须在首轮回看确认。
+
+输出到 `.local/diagnostics/manual_mechanisms_<时间戳>/` 的 `frames.zip` 与 `metadata.json`。后台最多排队 8 帧，文件预算 256 MiB，最大 300 秒／60 FPS；帧号缺口、`dropped` 和 `unsaved` 保留丢失情况。空格只读取每张图前后的当前状态，不安装键盘钩子，短按可能漏记；不能据此声称游戏已收到输入。采样不自动判定机制解除，需回看冻结前后或完整绿条过程、对应反馈，并确认其间没有关键缺帧。工具目前通过模拟采集检查，尚未完成游戏端实测。
 
 对指定诊断目录生成反馈索引；可重复传入 `--input-dir`，原包不改写：
 

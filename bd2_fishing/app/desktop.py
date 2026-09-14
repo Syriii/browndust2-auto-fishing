@@ -37,6 +37,23 @@ class DesktopServices:
 
         return UpdateService()
 
+    def fish_catalogue_service(self):
+        from bd2_fishing.app.fish_catalogue import FishCatalogueService
+
+        return FishCatalogueService()
+
+    def fishing_collection_service(self):
+        from bd2_fishing.app.fishing_collection import FishingCollection
+
+        if self.read_only:
+            return FishingCollection()
+        directory = (
+            paths.get_data_path()
+            if self.config_path == paths.get_config_path()
+            else self.config_path.parent / "data"
+        )
+        return FishingCollection(directory / "fishing.sqlite3")
+
     def maintain_storage(self):
         from bd2_fishing.infrastructure.maintenance import cleanup
 

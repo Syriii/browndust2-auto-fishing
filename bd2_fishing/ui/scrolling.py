@@ -14,9 +14,11 @@ class ScrollablePage(ttk.Frame):
         self.canvas = tk.Canvas(self, background=SURFACE, highlightthickness=0, width=1, height=1)
         self.canvas.grid(row=0, column=0, sticky="nsew")
         self.scrollbar = ttk.Scrollbar(self, command=self.canvas.yview)
+        self.scrollbar.grid(row=0, column=1, sticky="ns")
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         self.body = ttk.Frame(self.canvas, padding=20, style="Card.TFrame")
         self.item = self.canvas.create_window(0, 0, window=self.body, anchor="nw")
+        self._wheel_delta = 0
         self.canvas.bind("<Configure>", self._layout)
         self.body.bind("<Configure>", self._layout)
         self.winfo_toplevel().bind("<MouseWheel>", self._wheel, add="+")
@@ -26,10 +28,7 @@ class ScrollablePage(ttk.Frame):
         height = max(self.canvas.winfo_height(), self.body.winfo_reqheight())
         self.canvas.itemconfigure(self.item, width=width, height=height)
         self.canvas.configure(scrollregion=(0, 0, width, height))
-        if height > self.canvas.winfo_height():
-            self.scrollbar.grid(row=0, column=1, sticky="ns")
-        else:
-            self.scrollbar.grid_remove()
+        if height <= self.canvas.winfo_height():
             self.canvas.yview_moveto(0)
         for widget in self.body.winfo_children():
             if isinstance(widget, ttk.Label):
@@ -45,5 +44,9 @@ class ScrollablePage(ttk.Frame):
         while widget is not None and widget is not self:
             widget = getattr(widget, "master", None)
         if widget is self and self.body.winfo_height() > self.canvas.winfo_height():
-            self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
+            self._wheel_delta += event.delta
+            steps = int(self._wheel_delta / 120)
+            self._wheel_delta -= steps * 120
+            if steps:
+                self.canvas.yview_scroll(-steps, "units")
             return "break"

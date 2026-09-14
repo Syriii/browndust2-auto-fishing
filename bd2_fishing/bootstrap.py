@@ -19,12 +19,13 @@ def main() -> None:
 
     root = Path(get_base_path())
     frozen = getattr(sys, "frozen", False)
-    preview = "--preview" in sys.argv
+    preview_catalogue = "--preview-catalogue" in sys.argv
+    preview = "--preview" in sys.argv or preview_catalogue
     try:
         with installation_lock(root) if frozen else nullcontext():
             if frozen and not preview and _recover_pending(root):
                 return
-            _desktop(preview)
+            _desktop(preview, catalogue=preview_catalogue)
     except Exception as exc:
         import ctypes
 
@@ -51,7 +52,7 @@ def _recover_pending(root):
     return True
 
 
-def _desktop(preview):
+def _desktop(preview, *, catalogue=False):
     from bd2_fishing.app.desktop import DesktopServices
     from bd2_fishing.app.session import run_once
     from bd2_fishing.app.startup import initialize_desktop
@@ -67,6 +68,6 @@ def _desktop(preview):
 
     services.startup_messages = result["messages"]
     try:
-        launch(run_once, preview=preview, services=services)
+        launch(run_once, preview=preview, services=services, show_catalogue=catalogue)
     finally:
         logging.shutdown()

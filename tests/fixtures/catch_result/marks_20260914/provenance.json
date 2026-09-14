@@ -1,0 +1,872 @@
+[
+  {
+    "file": "max_green.png",
+    "sha256": "0749c298d817d3e65dfe2fe7724d41edb8f583f9d7d9b3f7ea123174a9b0a28f",
+    "source": "E:\\entertainment\\BD2_AutoFishing\\archive\\builds\\20260911-before-0.3.1\\BD2_AutoFishing\\screenshots\\catch_result\\success\\event_1789112092332251300_0b361f27.zip!resume_first.png",
+    "round_id": "181d269e-172",
+    "reward": {
+      "status": "caught",
+      "reason": "结算关闭提示与鱼奖励数量、尺寸同时出现",
+      "reward": "斗鱼×1",
+      "size_cm": 7.5,
+      "remaining_cm": null
+    },
+    "reward_texts": [
+      {
+        "text": "斗鱼×1",
+        "score": 0.87164,
+        "box": {
+          "points": [
+            [
+              93,
+              16
+            ],
+            [
+              131,
+              16
+            ],
+            [
+              131,
+              28
+            ],
+            [
+              93,
+              28
+            ]
+          ],
+          "score": 0.87164
+        }
+      },
+      {
+        "text": "7.5cm",
+        "score": 0.998,
+        "box": {
+          "points": [
+            [
+              93,
+              34
+            ],
+            [
+              124,
+              34
+            ],
+            [
+              124,
+              44
+            ],
+            [
+              93,
+              44
+            ]
+          ],
+          "score": 0.998
+        }
+      },
+      {
+        "text": "Maximum Size",
+        "score": 0.95474,
+        "box": {
+          "points": [
+            [
+              133,
+              35
+            ],
+            [
+              197,
+              35
+            ],
+            [
+              197,
+              45
+            ],
+            [
+              133,
+              45
+            ]
+          ],
+          "score": 0.95474
+        }
+      }
+    ],
+    "stars": 1,
+    "border": "green"
+  },
+  {
+    "file": "max_blue.png",
+    "sha256": "9adcff1b2f0d9e17699131564850c648bd25f71412cd77ac52029906c42ca463",
+    "source": "E:\\entertainment\\BD2_AutoFishing\\archive\\builds\\20260913-before-0.3.6\\BD2_AutoFishing\\screenshots\\catch_result\\success\\event_1789217836379626700_13310f61.zip!resume_first.png",
+    "round_id": "9e5212d5-481",
+    "reward": {
+      "status": "caught",
+      "reason": "结算关闭提示与鱼奖励数量、尺寸同时出现",
+      "reward": "魔鬼鱼×1",
+      "size_cm": 600.0,
+      "remaining_cm": null
+    },
+    "reward_texts": [
+      {
+        "text": "魔鬼鱼×1",
+        "score": 0.90583,
+        "box": {
+          "points": [
+            [
+              93,
+              16
+            ],
+            [
+              142,
+              16
+            ],
+            [
+              142,
+              28
+            ],
+            [
+              93,
+              28
+            ]
+          ],
+          "score": 0.90583
+        }
+      },
+      {
+        "text": "600cm",
+        "score": 0.99634,
+        "box": {
+          "points": [
+            [
+              94,
+              34
+            ],
+            [
+              128,
+              35
+            ],
+            [
+              127,
+              44
+            ],
+            [
+              93,
+              43
+            ]
+          ],
+          "score": 0.99634
+        }
+      },
+      {
+        "text": "Maximum Size",
+        "score": 0.92815,
+        "box": {
+          "points": [
+            [
+              137,
+              35
+            ],
+            [
+              201,
+              35
+            ],
+            [
+              201,
+              45
+            ],
+            [
+              137,
+              45
+            ]
+          ],
+          "score": 0.92815
+        }
+      }
+    ],
+    "stars": 2,
+    "border": "blue"
+  },
+  {
+    "file": "max_other_green.png",
+    "sha256": "219c0bc8a2740bc6510ae82a0750c2763c627ac098e16c8883aea9cbc6cadc9d",
+    "source": "E:\\entertainment\\BD2_AutoFishing\\archive\\builds\\20260913-before-0.3.7\\BD2_AutoFishing\\screenshots\\catch_result\\success\\event_1789285293570792400_c9301832.zip!resume_first.png",
+    "round_id": "22f3e0a0-274",
+    "reward": {
+      "status": "caught",
+      "reason": "结算关闭提示与鱼奖励数量、尺寸同时出现",
+      "reward": "蝴蝶鱼×1",
+      "size_cm": 30.0,
+      "remaining_cm": null
+    },
+    "reward_texts": [
+      {
+        "text": "蝴蝶鱼×1",
+        "score": 0.91067,
+        "box": {
+          "points": [
+            [
+              93,
+              16
+            ],
+            [
+              142,
+              17
+            ],
+            [
+              141,
+              28
+            ],
+            [
+              93,
+              28
+            ]
+          ],
+          "score": 0.83803
+        }
+      },
+      {
+        "text": "30cm",
+        "score": 0.99488,
+        "box": {
+          "points": [
+            [
+              93,
+              34
+            ],
+            [
+              121,
+              35
+            ],
+            [
+              121,
+              44
+            ],
+            [
+              93,
+              44
+            ]
+          ],
+          "score": 0.99488
+        }
+      },
+      {
+        "text": "Maximum Size",
+        "score": 0.96873,
+        "box": {
+          "points": [
+            [
+              130,
+              35
+            ],
+            [
+              194,
+              35
+            ],
+            [
+              194,
+              45
+            ],
+            [
+              130,
+              45
+            ]
+          ],
+          "score": 0.96873
+        }
+      }
+    ],
+    "stars": 1,
+    "border": "green"
+  },
+  {
+    "file": "max_luohan.png",
+    "sha256": "774738841897486120e111f80e05994a3696cb6363a039e6599016e1fc4ed595",
+    "source": "E:\\entertainment\\BD2_AutoFishing\\archive\\builds\\20260914-before-0.3.9\\BD2_AutoFishing\\screenshots\\catch_result\\success\\event_1789321804886214100_8db3ec68.zip!resume_first.png",
+    "round_id": "c6d29910-338",
+    "reward": {
+      "status": "caught",
+      "reason": "结算关闭提示与鱼奖励数量、尺寸同时出现",
+      "reward": "罗汉鱼×1",
+      "size_cm": 45.0,
+      "remaining_cm": null
+    },
+    "reward_texts": [
+      {
+        "text": "罗汉鱼×1",
+        "score": 0.93121,
+        "box": {
+          "points": [
+            [
+              93,
+              16
+            ],
+            [
+              142,
+              17
+            ],
+            [
+              141,
+              28
+            ],
+            [
+              93,
+              28
+            ]
+          ],
+          "score": 0.93121
+        }
+      },
+      {
+        "text": "45cm",
+        "score": 0.99657,
+        "box": {
+          "points": [
+            [
+              93,
+              34
+            ],
+            [
+              121,
+              35
+            ],
+            [
+              121,
+              44
+            ],
+            [
+              93,
+              44
+            ]
+          ],
+          "score": 0.99657
+        }
+      },
+      {
+        "text": "Maximum Size",
+        "score": 0.96873,
+        "box": {
+          "points": [
+            [
+              130,
+              35
+            ],
+            [
+              194,
+              35
+            ],
+            [
+              194,
+              45
+            ],
+            [
+              130,
+              45
+            ]
+          ],
+          "score": 0.96873
+        }
+      }
+    ],
+    "stars": 1,
+    "border": "green"
+  },
+  {
+    "file": "max_blue_holdout.png",
+    "sha256": "8847932a9cf4aeef3fa946007cbc7e119dc2916612cbcd401d516bdec35d7bac",
+    "source": "E:\\entertainment\\BD2_AutoFishing\\archive\\builds\\20260914-before-0.3.9\\BD2_AutoFishing\\screenshots\\catch_result\\success\\event_1789343202840631700_e1625f28.zip!resume_first.png",
+    "round_id": "c6d29910-342",
+    "reward": {
+      "status": "caught",
+      "reason": "结算关闭提示与鱼奖励数量、尺寸同时出现",
+      "reward": "魔鬼鱼×1",
+      "size_cm": 600.0,
+      "remaining_cm": null
+    },
+    "reward_texts": [
+      {
+        "text": "魔鬼鱼×1",
+        "score": 0.90716,
+        "box": {
+          "points": [
+            [
+              93,
+              16
+            ],
+            [
+              142,
+              16
+            ],
+            [
+              142,
+              28
+            ],
+            [
+              93,
+              28
+            ]
+          ],
+          "score": 0.90716
+        }
+      },
+      {
+        "text": "600cm",
+        "score": 0.99622,
+        "box": {
+          "points": [
+            [
+              94,
+              34
+            ],
+            [
+              128,
+              35
+            ],
+            [
+              127,
+              44
+            ],
+            [
+              93,
+              43
+            ]
+          ],
+          "score": 0.99622
+        }
+      },
+      {
+        "text": "Maximum Size",
+        "score": 0.92815,
+        "box": {
+          "points": [
+            [
+              137,
+              35
+            ],
+            [
+              201,
+              35
+            ],
+            [
+              201,
+              45
+            ],
+            [
+              137,
+              45
+            ]
+          ],
+          "score": 0.92815
+        }
+      }
+    ],
+    "stars": 2,
+    "border": "blue"
+  },
+  {
+    "file": "max_blue_later.png",
+    "sha256": "ae99d94b3c8067e6ee5d8e98956582119b8774ed64607aa949f85611c43bf727",
+    "source": "E:\\entertainment\\BD2_AutoFishing\\archive\\builds\\dist-20260910-131345\\mechanisms-20260909\\BD2_AutoFishing\\diagnostics\\catch_result\\success\\event_1788965072892694800_91027001.zip!resume_first.png",
+    "round_id": "61247381-016",
+    "reward": {
+      "status": "caught",
+      "reason": "结算关闭提示与鱼奖励数量、尺寸同时出现",
+      "reward": "魔鬼鱼×1",
+      "size_cm": 600.0,
+      "remaining_cm": null
+    },
+    "reward_texts": [
+      {
+        "text": "魔鬼鱼×1",
+        "score": 0.89275,
+        "box": {
+          "points": [
+            [
+              93,
+              16
+            ],
+            [
+              142,
+              17
+            ],
+            [
+              142,
+              28
+            ],
+            [
+              93,
+              28
+            ]
+          ],
+          "score": 0.89275
+        }
+      },
+      {
+        "text": "600cm",
+        "score": 0.98346,
+        "box": {
+          "points": [
+            [
+              93,
+              34
+            ],
+            [
+              128,
+              35
+            ],
+            [
+              127,
+              44
+            ],
+            [
+              93,
+              43
+            ]
+          ],
+          "score": 0.98346
+        }
+      },
+      {
+        "text": "Maximum Size",
+        "score": 0.92815,
+        "box": {
+          "points": [
+            [
+              137,
+              35
+            ],
+            [
+              201,
+              35
+            ],
+            [
+              201,
+              45
+            ],
+            [
+              137,
+              45
+            ]
+          ],
+          "score": 0.92815
+        }
+      }
+    ],
+    "stars": 2,
+    "border": "blue"
+  },
+  {
+    "file": "new_record_blue.png",
+    "sha256": "949944fd75bf3adbe94c725e54a3f49f50aeefd7b83a1e1b366180ede55cbca8",
+    "source": "E:\\entertainment\\BD2_AutoFishing\\archive\\builds\\dist-20260910-131345\\mechanisms-20260909\\BD2_AutoFishing\\diagnostics\\catch_result\\success\\event_1788964932187925200_ac96c7f5.zip!resume_first.png",
+    "round_id": "61247381-011",
+    "reward": {
+      "status": "caught",
+      "reason": "结算关闭提示与鱼奖励数量、尺寸同时出现",
+      "reward": "丝带鳗x1",
+      "size_cm": 142.3,
+      "remaining_cm": null
+    },
+    "reward_texts": [
+      {
+        "text": "丝带鳗x1",
+        "score": 0.85982,
+        "box": {
+          "points": [
+            [
+              93,
+              16
+            ],
+            [
+              141,
+              17
+            ],
+            [
+              141,
+              28
+            ],
+            [
+              93,
+              28
+            ]
+          ],
+          "score": 0.82052
+        }
+      },
+      {
+        "text": "142.3cm",
+        "score": 0.99938,
+        "box": {
+          "points": [
+            [
+              94,
+              34
+            ],
+            [
+              137,
+              35
+            ],
+            [
+              137,
+              45
+            ],
+            [
+              94,
+              44
+            ]
+          ],
+          "score": 0.99938
+        }
+      },
+      {
+        "text": "New Record",
+        "score": 0.99109,
+        "box": {
+          "points": [
+            [
+              148,
+              35
+            ],
+            [
+              208,
+              35
+            ],
+            [
+              208,
+              45
+            ],
+            [
+              148,
+              45
+            ]
+          ],
+          "score": 0.99109
+        }
+      }
+    ],
+    "stars": 2,
+    "border": "blue"
+  },
+  {
+    "file": "new_record_green.png",
+    "sha256": "54240a51ccd3d192c9d3573d980a0b7263fe03a5f3c237a480f821ad2200dba1",
+    "source": "E:\\entertainment\\BD2_AutoFishing\\archive\\builds\\dist-20260910-131345\\ui-icon-20260909\\BD2_AutoFishing\\diagnostics\\catch_result\\success\\event_1788947805213823100_69e66ad9.zip!resume_first.png",
+    "round_id": "094c5c05-001",
+    "reward": {
+      "status": "caught",
+      "reason": "结算关闭提示与鱼奖励数量、尺寸同时出现",
+      "reward": "铝鱼x1",
+      "size_cm": 21.2,
+      "remaining_cm": null
+    },
+    "reward_texts": [
+      {
+        "text": "铝鱼x1",
+        "score": 0.76645,
+        "box": {
+          "points": [
+            [
+              93,
+              16
+            ],
+            [
+              131,
+              16
+            ],
+            [
+              131,
+              28
+            ],
+            [
+              92,
+              28
+            ]
+          ],
+          "score": 0.76645
+        }
+      },
+      {
+        "text": "21.2cm",
+        "score": 0.99869,
+        "box": {
+          "points": [
+            [
+              93,
+              34
+            ],
+            [
+              131,
+              34
+            ],
+            [
+              131,
+              44
+            ],
+            [
+              93,
+              44
+            ]
+          ],
+          "score": 0.99869
+        }
+      },
+      {
+        "text": "New Record",
+        "score": 0.92777,
+        "box": {
+          "points": [
+            [
+              142,
+              35
+            ],
+            [
+              202,
+              35
+            ],
+            [
+              202,
+              45
+            ],
+            [
+              142,
+              45
+            ]
+          ],
+          "score": 0.92777
+        }
+      }
+    ],
+    "stars": 1,
+    "border": "green"
+  },
+  {
+    "file": "ordinary_day_green.png",
+    "sha256": "06229ddf945a0ca4c5d4aec9028ee12e565be7e60bb1f950c799dc87ffad3a24",
+    "source": "E:\\entertainment\\BD2_AutoFishing\\archive\\builds\\20260912-before-0.3.4\\BD2_AutoFishing\\screenshots\\catch_result\\success\\event_1789178607686906200_46cc8a14.zip!settlement_first.png",
+    "round_id": "a6a206a2-057",
+    "reward": {
+      "status": "caught",
+      "reason": "结算关闭提示与鱼奖励数量、尺寸同时出现",
+      "reward": "斗鱼×1",
+      "size_cm": 5.9,
+      "remaining_cm": null
+    },
+    "reward_texts": [
+      {
+        "text": "斗鱼×1",
+        "score": 0.87536,
+        "box": {
+          "points": [
+            [
+              93,
+              16
+            ],
+            [
+              131,
+              16
+            ],
+            [
+              131,
+              29
+            ],
+            [
+              93,
+              28
+            ]
+          ],
+          "score": 0.87536
+        }
+      },
+      {
+        "text": "5.9cm",
+        "score": 0.99829,
+        "box": {
+          "points": [
+            [
+              93,
+              34
+            ],
+            [
+              125,
+              34
+            ],
+            [
+              124,
+              45
+            ],
+            [
+              93,
+              44
+            ]
+          ],
+          "score": 0.99829
+        }
+      }
+    ],
+    "stars": 1,
+    "border": "green"
+  },
+  {
+    "file": "ordinary_day_blue.png",
+    "sha256": "9ce2eb995c59e5c8cc52262631ae83e2dd418a398a09f02c345fb5cf7e2b5550",
+    "source": "E:\\entertainment\\BD2_AutoFishing\\archive\\builds\\20260912-before-0.3.4\\BD2_AutoFishing\\screenshots\\catch_result\\success\\event_1789178814550451000_4cd89d01.zip!settlement_first.png",
+    "round_id": "a6a206a2-065",
+    "reward": {
+      "status": "caught",
+      "reason": "结算关闭提示与鱼奖励数量、尺寸同时出现",
+      "reward": "锯鲨x1",
+      "size_cm": 189.0,
+      "remaining_cm": null
+    },
+    "reward_texts": [
+      {
+        "text": "锯鲨x1",
+        "score": 0.86788,
+        "box": {
+          "points": [
+            [
+              93,
+              16
+            ],
+            [
+              131,
+              16
+            ],
+            [
+              131,
+              29
+            ],
+            [
+              93,
+              29
+            ]
+          ],
+          "score": 0.86788
+        }
+      },
+      {
+        "text": "189cm",
+        "score": 0.99892,
+        "box": {
+          "points": [
+            [
+              94,
+              34
+            ],
+            [
+              128,
+              35
+            ],
+            [
+              128,
+              45
+            ],
+            [
+              94,
+              44
+            ]
+          ],
+          "score": 0.99892
+        }
+      }
+    ],
+    "stars": 2,
+    "border": "blue"
+  }
+]

@@ -109,3 +109,5 @@ deployment 是维护者本机约定，不是普通用户需要建立的目录。
 ## 新版更新协议
 
 构建版本取自 pyproject.toml；助手独立 onefile，主程序保持 onedir。程序目录不携带个人配置；生成 manifest.json 后再压缩 ZIP，并生成 ZIP SHA-256。所有运行文件纳入清单，更新时自动处理过期依赖。首次迁移旧版和手动 ZIP 导入见[使用说明](../user/updating.md)，事务约束见[设计](../design/portable-update.md)。
+
+图鉴包还须运行 `scripts/checks/smoke_catalogue.py`，核对 84 张本地图与 JSON 哈希，并通过 `BD2_AutoFishing.exe --preview-catalogue` 实际打开图鉴，确认 Pillow Tk 图像组件未被裁剪。该参数采用只读预览服务，不连接游戏。

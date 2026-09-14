@@ -43,6 +43,8 @@
 
 ## 游戏资料
 
+- [钓鱼资料库](reference/fishing/README.md)：两份攻略的更新登记、84 种鱼的繁简别名与配图、14 项机制覆盖和图例来源。
+- [图片选鱼与鱼获记录方案](design/fish-targets.md)：多选、最大／最小、昼夜调度和清包衔接；0.4.0 已接入，游戏验收边界见当前状态。
 - [钓鱼机制参考](reference/fishing-mechanics.md)：注明读取日期的社区资料与争议，不视为全部已实现。
 - [Fishing Voyage 封面](reference/fishing-voyage.md)：原图、可见标题和页面识别边界。
 - [入口、选岛与许可证](reference/voyage-navigation.md)：七张用户原图、页面转换、天空岛购买前后、鱼种解锁与待实现规则。

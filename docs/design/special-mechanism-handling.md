@@ -4,6 +4,8 @@
 
 本文保留样本驱动的机制设计过程。v0.2.0 已包含其中已落地的局部防护与状态规则，但不代表完整机制解除已验证；当前支持范围见[开发状态](../development/status.md)，完整链条缺口见[机制审计](../development/mechanism-chain-audit.md)。
 
+2026-09-14 统一复用：特殊机制由同帧外观触发，不依赖鱼名、岛屿或图鉴预期。`BaseQTEStrategy` 共用墙体检测、遮挡合并、`MechanismPolicy` 仲裁及普通目标处理；墙体结果只在当帧共享，所有钓场都能使用。地点子类仅保留旧黄条面积阈值。冰冻观察和绿色状态机同样共用，完整解除仍按日常遇到后反馈的安排验证。
+
 2026-09-10 代码位置更新：识别、蓝区、绿色和泡泡规则统一归 `game/fishing/mechanics/`，
 原 `mechanisms.py` 对应 `mechanics/regions.py`；`policy.py` 负责共用仲裁，qte 负责同步执行。
 下文历史记录的旧路径不代表仍存在同名根级模块。完整结构见[程序架构第 6 节](architecture.md)。

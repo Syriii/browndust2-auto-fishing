@@ -26,6 +26,16 @@ class MechanismRegions:
     shell_spans: tuple[tuple[int, int], ...] = ()
     green_spans: tuple[tuple[int, int], ...] = ()
     bubble_remnant_spans: tuple[tuple[int, int], ...] = ()
+    # None 表示调用方尚未检查墙体；空元组表示当前帧已检查且无候选。
+    wall_rects: tuple[tuple[int, int, int, int], ...] | None = None
+
+    def with_walls(self, walls):
+        """同帧墙体同时约束普通目标、泡泡及绿色持有，不改变其他遮挡。"""
+        blocked = self.blocked.copy()
+        for left, _top, width, _height in walls:
+            if width > 0 and left < len(blocked) and left + width > 0:
+                blocked[max(0, left) : min(len(blocked), left + width)] = True
+        return replace(self, blocked=blocked, wall_rects=tuple(walls))
 
     def with_green_exclusion(self):
         """普通单击只避让已定位绿色的整个外包范围；无位置证据时禁用全条。"""

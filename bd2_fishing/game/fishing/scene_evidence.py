@@ -6,6 +6,7 @@ import uuid
 from collections import Counter, deque
 from pathlib import Path
 
+from bd2_fishing.game.fishing.mechanics.catalogue import REVISION
 from bd2_fishing.game.fishing.mechanics.lifecycle import AppearanceTracker
 from bd2_fishing.game.fishing.pointer import PointerMotion
 from bd2_fishing.game.fishing.scene_signals import SceneSignals
@@ -237,6 +238,8 @@ class SceneRecorder:
             rejected_part_submissions=self.rejected_parts,
             round_id=self.round_id,
             event="qte_scene_observation",
+            mechanism_catalogue_revision=REVISION,
+            mechanism_identity="unconfirmed",
             saved_at_unix=time.time(),
             capture_backend="GDI screen BitBlt (BGR)",
             evidence_region=self.region.as_tuple(),
@@ -269,6 +272,7 @@ class SceneRecorder:
                 name: dict(lower=list(lower), upper=list(upper))
                 for name, (lower, upper) in self.signals.appearance_ranges.items()
             },
+            wall_detector=self.signals.walls.parameters(),
             periodic_interval_seconds=self.interval,
             note="外观线索及低频整轮时间线，不是技能身份、解除成功或按键结果判定；"
             "独立观察帧不是控制决策帧。未知、短暂、被遮挡机制可能未触发候选；"

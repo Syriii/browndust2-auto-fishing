@@ -2,6 +2,10 @@
 
 [机制资料](../reference/fishing-mechanics.md) · [处理设计](../design/special-mechanism-handling.md) · [开发状态](status.md)
 
+## 2026-09-14 补充入口
+
+新 GameKee 配图和六岛资料统一纳入[资料库](../reference/fishing/README.md)，最新覆盖见[机制表](../reference/fishing/mechanisms.md)。同帧多墙交集已从深渊分支移入公共控制层，六岛的普通目标、泡泡和绿色遮挡共用墙体结果；场景证据附可能机制与未映射线索。冰冻、绿条起按端等缺口仍开放。下文为历史审计证据，不因资料扩充或结构统一自动标为全部通过。
+
 资料审计始于 2026-09-09，2026-09-10 补充 mechanics 拆分和外观实例记录。v0.2.0 已发布这些已落地改动；下文的配图结论仍属于静态审计，待补链路不因发布而标为完成。
 
 后续各项的样本、实测入口与完成判据统一纳入[待验证问题与推进计划](validation-plan.md)，

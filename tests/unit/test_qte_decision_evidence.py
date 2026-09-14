@@ -178,7 +178,7 @@ class DecisionEvidenceTests(unittest.TestCase):
                             if reason == "blue_fallback"
                             else np.zeros_like(cursor)
                         )
-                        strategy._blocker_detector.read = Mock(return_value=None)
+                        strategy._blocker_detector.read_all = Mock(return_value=())
                     with (
                         patch.object(qte_strategy.pydirectinput, "press") as press,
                         patch("bd2_fishing.runtime.control.sleep"),

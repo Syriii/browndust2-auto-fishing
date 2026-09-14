@@ -94,7 +94,7 @@ class CombinedMechanismTests(TestCase):
 
     def test_blocker_never_projects_cursor_onto_a_nearby_yellow_target(self):
         s = strategy(AbyssMawQTEStrategy)
-        s._blocker_detector.read = Mock(return_value=(90, 0, 20, 19))
+        s._blocker_detector.read_all = Mock(return_value=((90, 0, 20, 19),))
         hsv = np.zeros((19, 244, 3), np.uint8)
         hsv[:, 78:90] = (25, 255, 255)
         for _ in range(3):
@@ -113,7 +113,7 @@ class CombinedMechanismTests(TestCase):
                 hsv[:, 97:132] = shell[:, 97:132]
                 s = strategy(cls)
                 if cls is AbyssMawQTEStrategy:
-                    s._blocker_detector.read = Mock(return_value=None)
+                    s._blocker_detector.read_all = Mock(return_value=())
                 for _ in range(3):
                     s._track_targets(hsv, x, read_mechanism_regions(hsv))
                 if x == 45:
@@ -147,7 +147,7 @@ class CombinedMechanismTests(TestCase):
         for cls in (FrostStraitQTEStrategy, AbyssMawQTEStrategy):
             s = strategy(cls)
             if cls is AbyssMawQTEStrategy:
-                s._blocker_detector.read = Mock(return_value=None)
+                s._blocker_detector.read_all = Mock(return_value=())
             for i in range(3):
                 with patch("bd2_fishing.game.fishing.qte.time.monotonic", return_value=i * 0.02):
                     handled, found = s._mechanism_step(hsv, cursor)

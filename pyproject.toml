@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bd2-fishing"
-version = "0.3.9"
+version = "0.4.0"
 description = "BrownDust II Fishing Voyage desktop assistant"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -13,6 +13,7 @@ dependencies = [
     "numpy==2.2.6",
     "opencv-python==4.12.0.88",
     "onnxruntime==1.24.4",
+    "pillow==12.3.0",
     "PyDirectInput==1.0.4",
     "pywin32==311",
     "rapidocr==3.7.0",
@@ -32,7 +33,7 @@ namespaces = false
 
 [tool.setuptools.package-data]
 "bd2_fishing" = ["resources/*.ini", "resources/icons/*.ico", "resources/icons/*.png"]
-"bd2_fishing.game.fishing" = ["assets/*.png", "assets/README.md"]
+"bd2_fishing.game.fishing" = ["assets/*.png", "assets/*.json", "assets/README.md", "assets/fish_images/*.jpg"]
 
 [tool.ruff]
 target-version = "py312"
