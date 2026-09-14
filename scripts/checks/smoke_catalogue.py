@@ -56,6 +56,13 @@ def main():
             geometry = root.winfo_width(), root.winfo_height()
             first = panel.service.fish[0].id
             panel.change_view("list")
+            pump()
+            if args.visible:
+                panel.browser.canvas.yview_moveto(1)
+                pump()
+                assert panel.browser.canvas.yview()[1] == 1.0
+                assert panel.tiles[panel.service.fish[-1].id].photo is not None
+                panel.browser.canvas.yview_moveto(0)
             panel.choose(first)
             pump()
             assert panel.selected == first

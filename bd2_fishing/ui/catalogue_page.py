@@ -231,7 +231,7 @@ class CataloguePage(ttk.Frame):
         if not fish:
             ttk.Label(self.browser.body, text="没有符合条件的鱼").pack(pady=25)
         self._render_side()
-        self.browser.update_idletasks()
+        self.browser.refresh()
         self.browser.canvas.yview_moveto(0 if reset else position)
         if focus_identity in self.tiles:
             self.tiles[focus_identity].focus_set()
