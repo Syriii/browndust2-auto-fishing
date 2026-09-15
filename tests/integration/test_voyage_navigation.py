@@ -157,6 +157,20 @@ class VoyageImageTests(TestCase):
         )
         self.assertLess(reading.action_point[0], 270)
 
+    def test_night_start_hands_unconfirmed_island_to_startup_without_navigation(self):
+        frame = cv2.imread(str(FIXTURES / "controls/island_night_start_20260915.png"))
+        nav = VoyageNavigator(self.config, Rect(0, 0, 945, 532), self.reader.engine, "亚特兰蒂斯")
+        nav.guard = Mock()
+        camera = Mock()
+        camera.grab.return_value = frame
+        self.assertEqual(nav.fishing.inspect(frame).state, "unrecognized")
+        self.assertEqual(nav.reader.inspect(frame).page, "island")
+        with patch("bd2_fishing.game.navigation.voyage.game_input.click") as click:
+            self.assertIsNone(nav.run(camera))
+            click.assert_not_called()
+        self.assertFalse(nav.active)
+        self.assertFalse(nav.details["actions"])
+
     def test_travel_confirmation_images_identify_destination_and_button(self):
         for name in ("travel_consumables_confirmation.png", "travel_confirmation_user.png"):
             with self.subTest(name=name):
@@ -364,6 +378,21 @@ class NavigationPolicyTests(TestCase):
         self.nav.observe = Mock(return_value=(self.frame, "waiting"))
         self.assertIsNone(self.nav.run(Mock()))
         self.assertEqual(self.nav.details["actions"], [])
+
+    def test_active_navigation_does_not_treat_unconfirmed_island_as_arrival(self):
+        reading = VoyageReading(page="island", island="亚特兰蒂斯")
+        for explicit in (False, True):
+            with self.subTest(explicit=explicit):
+                self.nav.active = True
+                self.nav.change_from_island = explicit
+                self.nav.observe = Mock(return_value=(self.frame, reading))
+                with (
+                    patch("bd2_fishing.game.navigation.voyage.control.sleep"),
+                    patch("bd2_fishing.game.navigation.voyage.game_input.click") as click,
+                    self.assertRaisesRegex(NavigationFailed, "未确认可换图"),
+                ):
+                    self.nav.run(Mock())
+                click.assert_not_called()
 
     def test_explicit_change_does_not_treat_waiting_as_success(self):
         nav = VoyageNavigator(

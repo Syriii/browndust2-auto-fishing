@@ -21,6 +21,7 @@ class FishingCatalogueTests(TestCase):
             {
                 "fish_05_01",
                 "fish_05_03",
+                "fish_05_04",
                 "fish_05_05",
                 "fish_05_06",
                 "fish_05_07",

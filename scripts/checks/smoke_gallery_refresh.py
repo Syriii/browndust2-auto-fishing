@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from bd2_fishing.app.desktop import DesktopServices
+from bd2_fishing.ui.scrolling import ScrollablePage
 from bd2_fishing.ui.window import FishingApp
 
 
@@ -75,6 +76,42 @@ def main():
                 assert panel.tiles == tiles
                 assert panel.browser.canvas.yview() == position
 
+            # 目标模式沿用鱼卡；连续多选保留现有草稿条件控件。
+            tiles = dict(panel.tiles)
+            panel.begin_pick()
+            pump()
+            assert panel.tiles == tiles
+            first = panel.service.fish[0].id
+            panel.choose(first)
+            pump()
+            first_rows = panel.pick_rows
+            for fish in panel.service.fish[1:40]:
+                panel.choose(fish.id)
+                pump()
+                assert panel.tiles == tiles
+                assert panel.pick_rows is first_rows
+                assert panel.pick_rows.exists(first)
+            panel.pick_rows.edit(first)
+            panel.pick_rows.editor.set("MAX ＋ MIN")
+            panel.pick_rows.editor.event_generate("<<ComboboxSelected>>")
+            pump()
+            assert panel.draft[first] == "both"
+            panel.cancel()
+            pump()
+            assert panel.selected is not None
+            tile = next(tile for tile in panel.tiles.values() if tile._visible(tile.winfo_height()))
+            elements = tile.find_all()
+            with patch.object(tile, "photo_provider", wraps=tile.photo_provider) as photo:
+                tile._hover(True)
+                tile._hover(False)
+                assert tile.find_all() == elements
+                photo.assert_not_called()
+            # 临时滚动容器销毁后不遗留主窗口的滚轮回调。
+            binding = root.bind("<MouseWheel>")
+            scroll = ScrollablePage(root)
+            scroll.destroy()
+            assert root.bind("<MouseWheel>").strip() == binding.strip()
+
             journal = app.collection.journal
             for index, fish in enumerate(panel.service.fish[:8]):
                 journal.record(
@@ -93,6 +130,9 @@ def main():
                 )
             previous = journal.history()
             app.show_page("run")
+            # winfo_containing 依据屏幕层叠；先抬起测试窗口，避免其他应用遮挡。
+            root.lift()
+            pump()
             catches = app.catches_page
             original_picture = catches.photos.get
 

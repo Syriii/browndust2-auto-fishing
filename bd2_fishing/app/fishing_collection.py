@@ -11,6 +11,7 @@ from bd2_fishing.infrastructure.fishing_journal import FishingJournal
 from bd2_fishing.runtime import control
 
 CONDITIONS = {"any": "任意尺寸", "max": "MAX 最大", "min": "MIN 最小", "both": "MAX ＋ MIN"}
+TIME_POLICIES = {"wait": "等待指定时段", "continuous": "持续钓鱼，不等时段"}
 
 
 class FishingCollection:
@@ -19,6 +20,7 @@ class FishingCollection:
         self.catalogue = {f.id: f for f in load_catalogue()}
         self.run_id = None
         self.targeted = False
+        self.wait_for_time = True
 
     def save_targets(self, selected):
         rows = []
@@ -36,11 +38,12 @@ class FishingCollection:
             result[identity] = "both" if identity in result else condition
         return result
 
-    def begin(self, targeted=False):
+    def begin(self, targeted=False, *, wait_for_time=True):
         if targeted and not self.journal.targets():
             raise ValueError("请先选择目标鱼")
         self.run_id = uuid.uuid4().hex
         self.targeted = targeted
+        self.wait_for_time = wait_for_time
         self.journal.begin_run(self.run_id, targeted)
 
     def confirm(self, observer):

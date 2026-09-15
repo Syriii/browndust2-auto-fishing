@@ -8,6 +8,7 @@ from collections import deque
 from tkinter import messagebox
 
 from bd2_fishing.app.desktop import DesktopServices, FishingLocation
+from bd2_fishing.app.fishing_collection import TIME_POLICIES
 from bd2_fishing.runtime import control as run_control
 from bd2_fishing.ui.logs import UILogHandler
 from bd2_fishing.ui.updates import UpdatePanel
@@ -24,10 +25,16 @@ class FishingApp:
         self.task_mode = tk.StringVar(value="自由钓鱼")
         self._collection_revision = -1
         self._collection_active = False
+        self._controls_key = None
         self.current_page = "run"
         self.config_path = self.services.config_path
         config = self.services.load_settings()
         self.snapshot = config
+        self.time_policy = tk.StringVar(
+            value=TIME_POLICIES.get(
+                config.get("app", "target_time_policy", fallback="wait"), TIME_POLICIES["wait"]
+            )
+        )
         self.selected_location = None
         self.closing = False
         self.preferences = None
@@ -139,17 +146,17 @@ class FishingApp:
         if self.closing or self.controller.running:
             return
         if self.updates.busy:
-            self.detail.set("正在检查更新或维护存储，请等待完成。")
+            self._set_text(self.detail, "正在检查更新或维护存储，请等待完成。")
             return
         if self.preferences.busy:
-            self.detail.set("设备检测或校准进行中，请等待完成。")
+            self._set_text(self.detail, "设备检测或校准进行中，请等待完成。")
             return
         if self.preferences.dirty:
             self.open_preferences()
             self.preferences.notice.set("请先保存或撤销更改，再开始任务")
             return
         if self.catalogue.picking:
-            self.detail.set("请先保存或取消正在选择的目标，再开始任务。")
+            self._set_text(self.detail, "请先保存或取消正在选择的目标，再开始任务。")
             return
         try:
             if not self.preview:
@@ -162,6 +169,9 @@ class FishingApp:
                         "app": {
                             "location": self.location.get(),
                             "prevent_sleep": str(self.awake.get()).lower(),
+                            "target_time_policy": next(
+                                k for k, v in TIME_POLICIES.items() if v == self.time_policy.get()
+                            ),
                         },
                     }
                 )
@@ -169,7 +179,11 @@ class FishingApp:
                 None if self.location.get() == "自动识别" else FishingLocation(self.location.get())
             )
             self.catalogue.close()
-            self.collection.begin(self.task_mode.get() == "按目标钓鱼")
+            self.collection.begin(
+                self.task_mode.get() == "按目标钓鱼",
+                wait_for_time=self.time_policy.get() == TIME_POLICIES["wait"],
+            )
+            self.session_catches.refresh()
             self.show_page("run")
             self.controller.start()
             self.preferences.set_locked(self.controller.running)
@@ -228,8 +242,18 @@ class FishingApp:
         if pending:
             self._append(pending)
 
-    def _refresh_task_state(self):
-        active = self.controller.running
+    def _refresh_controls(self, active):
+        key = (
+            active,
+            self.closing,
+            active and self.controller.control.stopped.is_set(),
+            self.preferences.busy,
+            self.updates.busy,
+            self.task_mode.get(),
+        )
+        if key == self._controls_key:
+            return
+        self._controls_key = key
         self.catalogue_button.configure(state="disabled" if active or self.closing else "normal")
         state = "disabled" if active or self.closing else "normal"
         stopping = active and self.controller.control.stopped.is_set()
@@ -247,6 +271,20 @@ class FishingApp:
             widget.configure(state=state)
         self.location_box.configure(state="disabled" if active or self.closing else "readonly")
         self.mode_box.configure(state="disabled" if active or self.closing else "readonly")
+        self.time_box.configure(
+            state="disabled"
+            if active or self.closing or self.task_mode.get() != "按目标钓鱼"
+            else "readonly"
+        )
+        self.targets_page.time_box.configure(
+            state="disabled" if active or self.closing else "readonly"
+        )
+
+    def _refresh_task_state(self):
+        active = self.controller.running
+        self._refresh_controls(active)
+        if self.current_page == "run":
+            self.session_catches.refresh()
         revision = self.collection.journal.revision
         if revision != self._collection_revision or active != self._collection_active:
             self._collection_revision, self._collection_active = revision, active
@@ -258,10 +296,15 @@ class FishingApp:
                 self.catches_page.render()
         return self._refresh_status(active)
 
+    @staticmethod
+    def _set_text(variable, text):
+        if variable.get() != text:
+            variable.set(text)
+
     def _refresh_status(self, active):
         if self.closing:
-            self.status.set("正在关闭")
-            self.detail.set("等待当前操作退出并释放按键、截图和电源请求…")
+            self._set_text(self.status, "正在关闭")
+            self._set_text(self.detail, "等待当前操作退出并释放按键、截图和电源请求…")
             if not active:
                 logging.getLogger().removeHandler(self.handler)
                 self.collection.journal.close()
@@ -269,18 +312,21 @@ class FishingApp:
                 return False
         elif active:
             stopping = self.controller.control.stopped.is_set()
-            self.status.set("正在停止" if stopping else self.controller.control.phase)
-            self.detail.set("点击停止任务结束运行；切离游戏、锁屏或移动窗口也会停止任务。")
+            self._set_text(self.status, "正在停止" if stopping else self.controller.control.phase)
+            self._set_text(
+                self.detail, "点击停止任务结束运行；切离游戏、锁屏或移动窗口也会停止任务。"
+            )
         else:
-            self.status.set("需要处理" if self.controller.last_error else "待机")
-            self.detail.set(
+            self._set_text(self.status, "需要处理" if self.controller.last_error else "待机")
+            self._set_text(
+                self.detail,
                 (
                     "任务发生错误，请查看下方运行记录；诊断详情可在日志筛选中查看。"
                     if self.controller.last_error
                     else ""
                 )
                 or self.controller.last_stop_reason
-                or "点击开始，自动聚焦游戏后运行。"
+                or "点击开始，自动聚焦游戏后运行。",
             )
         return True
 

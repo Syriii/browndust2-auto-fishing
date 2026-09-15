@@ -3,10 +3,12 @@
 import tkinter as tk
 from tkinter import ttk
 
+from bd2_fishing.app.fishing_collection import TIME_POLICIES
 from bd2_fishing.ui.catalogue_page import CataloguePage
 from bd2_fishing.ui.collection_pages import CatchesPage, TargetsPage
 from bd2_fishing.ui.icons import navigation_icon
 from bd2_fishing.ui.preferences import PreferencesPage
+from bd2_fishing.ui.session_catches import SessionCatches
 from bd2_fishing.ui.theme import ACCENT, FONT, apply_icon, apply_theme, center_window
 
 
@@ -19,23 +21,10 @@ def build_workspace(app, locations):
     apply_theme(root)
     ttk.Style(root).configure("FishList.TButton", anchor="w", padding=(10, 6))
     app.brand_icon = apply_icon(root)
-    root.rowconfigure(1, weight=1)
+    root.rowconfigure(0, weight=1)
     root.columnconfigure(0, weight=1)
-    brand = ttk.Frame(root, style="Card.TFrame", padding=(20, 12))
-    brand.grid(row=0, column=0, sticky="ew")
-    app.header_icon = app.brand_icon.subsample(2)
-    ttk.Label(
-        brand,
-        image=app.header_icon,
-        text="  BD2 自动钓鱼",
-        compound="left",
-        style="CardTitle.TLabel",
-    ).pack(side="left")
-    ttk.Label(
-        brand, text="界面预览" if app.preview else "钓鱼 · 图鉴 · 鱼获", style="Hint.TLabel"
-    ).pack(side="right")
     outer = ttk.Frame(root)
-    outer.grid(row=1, column=0, sticky="nsew")
+    outer.grid(row=0, column=0, sticky="nsew")
     outer.rowconfigure(0, weight=1)
     outer.columnconfigure(1, weight=1)
     nav = ttk.Frame(outer, width=round(146 * scale), padding=(10, 18), style="Card.TFrame")
@@ -81,14 +70,14 @@ def build_workspace(app, locations):
     app.deck.rowconfigure(0, weight=1)
     app.deck.columnconfigure(0, weight=1)
     app.run_panel = panel = ttk.Frame(app.deck, padding=22)
-    ttk.Label(panel, text="钓鱼任务", style="Heading.TLabel").pack(anchor="w", pady=(0, 16))
+    ttk.Label(panel, text="钓鱼任务", style="Heading.TLabel").pack(anchor="w", pady=(0, 10))
     overview = ttk.Frame(panel)
-    overview.pack(fill="x", pady=(0, 16))
+    overview.pack(fill="x", pady=(0, 10))
     overview.columnconfigure(0, weight=3, uniform="overview")
     overview.columnconfigure(1, weight=2, uniform="overview")
     task = ttk.Frame(overview, style="Sheet.TFrame", padding=12)
     task.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
-    ttk.Label(task, text="任务设置", style="CardTitle.TLabel").pack(anchor="w", pady=(0, 8))
+    ttk.Label(task, text="任务设置", style="CardTitle.TLabel").pack(anchor="w", pady=(0, 4))
     controls = ttk.Frame(task, style="Card.TFrame")
     controls.pack(fill="x")
     ttk.Label(controls, text="任务模式").grid(row=0, column=0, sticky="w", padx=(0, 12), pady=4)
@@ -99,14 +88,23 @@ def build_workspace(app, locations):
         state="readonly",
         width=22,
     )
-    app.mode_box.grid(row=0, column=1, sticky="w")
+    app.mode_box.grid(row=0, column=1, sticky="w", pady=3)
     ttk.Label(controls, text="起始钓场").grid(row=1, column=0, sticky="w", pady=4)
     app.location_box = ttk.Combobox(
         controls, values=locations, textvariable=app.location, state="readonly", width=22
     )
-    app.location_box.grid(row=1, column=1, sticky="w")
+    app.location_box.grid(row=1, column=1, sticky="w", pady=3)
+    ttk.Label(controls, text="目标时段").grid(row=2, column=0, sticky="w", pady=4)
+    app.time_box = ttk.Combobox(
+        controls,
+        textvariable=app.time_policy,
+        values=list(TIME_POLICIES.values()),
+        state="readonly",
+        width=22,
+    )
+    app.time_box.grid(row=2, column=1, sticky="w", pady=3)
     options = ttk.Frame(task, style="Card.TFrame")
-    options.pack(fill="x", pady=(8, 0))
+    options.pack(fill="x", pady=(4, 0))
     app.clear_check = ttk.Checkbutton(options, text="满包时自动清理", variable=app.auto_clear)
     app.clear_check.pack(side="left", padx=(0, 12))
     app.awake_check = ttk.Checkbutton(options, text="运行时保持唤醒", variable=app.awake)
@@ -122,8 +120,14 @@ def build_workspace(app, locations):
     app.parameter_summary = tk.StringVar()
     app.summary_label = ttk.Label(progress, textvariable=app.parameter_summary, style="Hint.TLabel")
     app.summary_label.pack(anchor="w")
-    app.log_panel = ttk.Frame(panel, style="Sheet.TFrame", padding=16)
-    app.log_panel.pack(fill="both", expand=True)
+    activity = ttk.Frame(panel)
+    activity.pack(fill="both", expand=True)
+    activity.columnconfigure(0, weight=1)
+    activity.rowconfigure(0, weight=1)
+    app.log_panel = ttk.Frame(activity, style="Sheet.TFrame", padding=12)
+    app.log_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+    app.session_catches = SessionCatches(activity, app)
+    app.session_catches.grid(row=0, column=1, sticky="nsew")
     app.log_notice = tk.StringVar(value="保留 1500 条进展 · 完整内容见日志文件")
     build_logs(app, app.log_panel)
     app.catalogue = CataloguePage(app.deck, app)
@@ -142,7 +146,7 @@ def build_workspace(app, locations):
         "settings": app.preferences,
     }
     footer = ttk.Frame(root, padding=(22, 10), style="Card.TFrame")
-    footer.grid(row=2, column=0, sticky="ew")
+    footer.grid(row=1, column=0, sticky="ew")
     footer.columnconfigure(0, weight=1)
     app.status_label = ttk.Label(
         footer, textvariable=app.status, foreground=ACCENT, font=(FONT, 12, "bold")
@@ -179,8 +183,8 @@ def build_logs(app, panel):
     text_frame.pack(fill="both", expand=True)
     app.text = tk.Text(
         text_frame,
-        bg="#f5f8fa",
-        fg="#344c57",
+        bg="#f2f3f7",
+        fg="#34343a",
         relief="flat",
         wrap="word",
         font=(FONT, 9),
@@ -189,7 +193,7 @@ def build_logs(app, panel):
         state="disabled",
         height=1,
         width=1,
-        selectbackground="#c8e6e1",
+        selectbackground="#d4e5ff",
         highlightthickness=0,
         spacing1=2,
     )
@@ -199,7 +203,7 @@ def build_logs(app, panel):
     app.text.pack(side="left", fill="both", expand=True)
     app.text.tag_configure("WARNING", foreground="#a2600e")
     app.text.tag_configure("ERROR", foreground="#b52f38")
-    app.text.tag_configure("DEBUG", foreground="#677b91")
+    app.text.tag_configure("DEBUG", foreground="#8e8e93")
     app.issue_label = ttk.Label(panel, textvariable=app.issue, wraplength=550, style="Hint.TLabel")
     app.issue_label.pack(fill="x", pady=(8, 0))
     links = ttk.Frame(panel, style="Card.TFrame")

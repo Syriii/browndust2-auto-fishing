@@ -40,7 +40,11 @@ class CatchHistoryDisplayTests(TestCase):
             )
 
     def test_verified_client_names_still_require_confident_catch_ocr(self):
-        for name, identity in (("蓝龙海神鳃×1", "fish_05_03"), ("鸳鸯鱼x1", "fish_05_08")):
+        for name, identity in (
+            ("蓝龙海神鳃×1", "fish_05_03"),
+            ("鸳鸯鱼x1", "fish_05_08"),
+            ("神仙鱼x1", "fish_05_04"),
+        ):
             fish, _ = identify_catch([OCRText(name, 0.99)], FishingLocation.ATLANTIS)
             self.assertEqual(fish.id, identity)
             fish, _ = identify_catch([OCRText(name, 0.85)], FishingLocation.ATLANTIS)

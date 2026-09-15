@@ -5,7 +5,7 @@ from collections import OrderedDict
 from datetime import datetime
 from tkinter import ttk
 
-from bd2_fishing.app.fishing_collection import CONDITIONS
+from bd2_fishing.app.fishing_collection import CONDITIONS, TIME_POLICIES
 from bd2_fishing.ui.collection_widgets import (
     FishDetails,
     FishPhotos,
@@ -24,6 +24,8 @@ class TargetsPage(ttk.Frame):
         self.service = app.services.fish_catalogue_service()
         self.photos = FishPhotos(self.service, self)
         self._render_key = None
+        self._rows = {}
+        self._empty = None
         header = ttk.Frame(self)
         header.pack(fill="x", pady=(0, 14))
         ttk.Label(header, text="钓鱼目标", style="Heading.TLabel").pack(side="left")
@@ -34,6 +36,17 @@ class TargetsPage(ttk.Frame):
             command=lambda: app.catalogue.begin_pick(origin="targets"),
         )
         self.edit.pack(side="right")
+        timing = ttk.Frame(self)
+        timing.pack(fill="x", pady=(0, 10))
+        ttk.Label(timing, text="目标时段", style="Page.TLabel").pack(side="left", padx=(0, 10))
+        self.time_box = ttk.Combobox(
+            timing,
+            textvariable=app.time_policy,
+            values=list(TIME_POLICIES.values()),
+            state="readonly",
+            width=24,
+        )
+        self.time_box.pack(side="left")
         self.scroll = ScrollablePage(self, padding=0)
         self.scroll.pack(fill="both", expand=True)
         self.summary = ttk.Label(self, style="PageHint.TLabel")
@@ -63,23 +76,35 @@ class TargetsPage(ttk.Frame):
         if key == self._render_key:
             return
         self._render_key = key
-        clear_children(self.scroll.body)
         self.edit.configure(state="disabled" if active else "normal")
+        for identity in tuple(self._rows):
+            if identity not in selected:
+                row, *_ = self._rows.pop(identity)
+                row.destroy()
+        if selected and self._empty is not None:
+            self._empty.destroy()
+            self._empty = None
         for identity, condition in selected.items():
+            if identity in self._rows:
+                row, variable, box, remove = self._rows[identity]
+                variable.set(CONDITIONS[condition])
+                box.configure(state="disabled" if active else "readonly")
+                remove.configure(state="disabled" if active else "normal")
+                continue
             fish = self.service.by_id[identity]
             row = ttk.Frame(self.scroll.body, padding=16, style="Sheet.TFrame")
             row.pack(fill="x", pady=4)
-            ttk.Label(row, image=self.photos.get(identity, (85, 58)) or "").pack(
-                side="left", padx=(0, 12)
-            )
+            row.photo = self.photos.get(identity, (85, 58))
+            ttk.Label(row, image=row.photo or "").pack(side="left", padx=(0, 12))
             text = f"{fish.name}\n{fish.location.value} · {'全天' if fish.availability == 'both' else '白天' if fish.availability == 'day' else '夜晚'}"
             ttk.Label(row, text=text).pack(side="left")
-            ttk.Button(
+            remove = ttk.Button(
                 row,
                 text="移除",
                 command=lambda i=identity: self.remove(i),
                 state="disabled" if active else "normal",
-            ).pack(side="right", padx=(10, 0))
+            )
+            remove.pack(side="right", padx=(10, 0))
             variable = tk.StringVar(value=CONDITIONS[condition])
             box = ttk.Combobox(
                 row,
@@ -93,17 +118,21 @@ class TargetsPage(ttk.Frame):
                 "<<ComboboxSelected>>",
                 lambda _, i=identity, v=variable: self.update_condition(i, v.get()),
             )
-        if not selected:
-            ttk.Label(self.scroll.body, text="暂无待完成目标", style="Section.TLabel").pack(
+            self._rows[identity] = row, variable, box, remove
+        if not selected and self._empty is None:
+            self._empty = ttk.Frame(self.scroll.body, style="Card.TFrame")
+            self._empty.pack(fill="x")
+            ttk.Label(self._empty, text="暂无待完成目标", style="Section.TLabel").pack(
                 pady=(35, 12)
             )
             ttk.Label(
-                self.scroll.body,
+                self._empty,
                 text="先选任意尺寸、MAX、MIN 或两者，再选鱼图。",
                 style="Hint.TLabel",
             ).pack()
         count = len(self.app.collection.journal.targets())
         self.summary.configure(text=f"待完成 {count} 项要求 · 完成后移出待办，鱼获保留在历史中")
+        self.scroll.refresh()
 
 
 class CatchesPage(ttk.Frame):
@@ -159,6 +188,16 @@ class CatchesPage(ttk.Frame):
         self.notice.pack(fill="x", pady=(10, 0))
 
     def prepare(self):
+        if (
+            self._render_key is not None
+            and self._resize_id is None
+            and (self.winfo_width(), self.winfo_height())
+            == (self.master.winfo_width(), self.master.winfo_height())
+        ):
+            previous = self._render_key
+            self.render()
+            if previous == self._render_key:
+                return
         self.update_idletasks()
         self.render()
         if self._resize_id is not None:
