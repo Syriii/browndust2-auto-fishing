@@ -44,6 +44,10 @@ def main():
             app.catalogue.open()
             pump()
             panel = app.catalogue
+            assert not panel.details.note.winfo_ismapped()
+            assert panel.choose_target.winfo_rooty() + panel.choose_target.winfo_height() <= (
+                panel.side.canvas.winfo_rooty() + panel.side.canvas.winfo_height()
+            )
             for view in ("grid", "list"):
                 panel.change_view(view)
                 pump()

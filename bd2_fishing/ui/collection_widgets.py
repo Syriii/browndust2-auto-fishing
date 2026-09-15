@@ -105,7 +105,6 @@ class FishDetails(ttk.Frame):
         self.mechanisms.pack(fill="x")
         self.mechanism_rows = {}
         self.note = ttk.Label(self, style="Hint.TLabel", wraplength=180)
-        self.note.pack(fill="x", pady=8)
         self.photo = None
 
     def show(self, name, photo, details, *, note=""):
@@ -129,6 +128,10 @@ class FishDetails(ttk.Frame):
             content.grid(row=row, column=1, sticky="new", pady=4)
         self._show_mechanisms(details["mechanisms"])
         self.note.configure(text=note)
+        if note:
+            self.note.pack(fill="x", pady=8)
+        else:
+            self.note.pack_forget()
 
     @staticmethod
     def _wrap(event):
