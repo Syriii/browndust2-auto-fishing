@@ -89,7 +89,12 @@ class TargetDraft(ttk.Treeview):
 
     def _finish_edit(self):
         self._editor_id = None
-        if self.editor is not None and self.focus_get() is not self.editor:
+        if self.editor is None:
+            return
+        # ttk 弹出列表由 Tcl 创建，没有对应的 Python 控件，focus_get 会抛 KeyError。
+        focused = str(self.tk.call("focus"))
+        editor = str(self.editor)
+        if focused != editor and not focused.startswith(editor + "."):
             self._close_editor()
 
     def _close_editor(self):
