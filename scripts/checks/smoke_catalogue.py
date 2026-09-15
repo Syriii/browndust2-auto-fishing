@@ -94,10 +94,10 @@ def main():
             pump()
             assert panel.selected == first
             card = panel.browser.body.winfo_children()[0]
-            assert len(card.winfo_children()) >= 3
+            assert len(card.winfo_children()) == 1
             facts = [
                 label.cget("text")
-                for group in card.winfo_children()
+                for group in panel.side.body.winfo_children()
                 for label in group.winfo_children()
                 if isinstance(label, ttk.Label)
             ]
@@ -108,16 +108,16 @@ def main():
                 tile.focus_force()
                 tile.event_generate("<Return>")
                 pump()
-                assert panel.selected is None
+                assert panel.selected == first
                 assert root.focus_get() is panel.tiles[first]
                 # 鼠标按下后移出卡片松开，不应选中。
                 tile = panel.tiles[first]
                 tile.event_generate("<Button-1>", x=10, y=10)
                 tile.event_generate("<ButtonRelease-1>", x=-5, y=-5)
-                assert panel.selected is None
+                assert panel.selected == first
             else:
                 panel.choose(first)
-                assert panel.selected is None
+                assert panel.selected == first
             panel.query.set("布蘭")
             panel.render(reset=True)
             assert len(panel.browser.body.winfo_children()) == 1
@@ -154,6 +154,91 @@ def main():
             assert app.collection.selected()[first] == "both"
             app.targets_page.remove(first)
             assert app.collection.journal.targets() == []
+            evidence = (
+                Path(__file__).resolve().parents[2]
+                / "tests/fixtures/catch_result/names_20260915/blue-dragon.jpg"
+            ).read_bytes()
+            for index, (identity, name) in enumerate(
+                ((None, "蓝龙海神x1"), ("fish_05_03", "蓝龙海神鳃"), (None, "鱼×1"))
+            ):
+                app.collection.journal.record(
+                    dict(
+                        run_id="gallery",
+                        round_id=str(index),
+                        caught_at=f"2026-09-{14 if index == 0 else 15}T02:03:00+00:00",
+                        fish_id=identity,
+                        name=name,
+                        location="亚特兰蒂斯",
+                        size_cm=4.0,
+                        size_kind="unknown",
+                        rarity="common" if identity else "unknown",
+                        stars=1,
+                    ),
+                    evidence,
+                )
+            history = app.collection.journal.history()
+            app.show_page("catches")
+            catches = app.catches_page
+            catches.change_category("all")
+            pump()
+            for view in ("grid", "list"):
+                catches.change_view(view)
+                pump()
+                if args.visible:
+                    assert catches.side.winfo_viewable()
+                    assert catches.side.winfo_x() > catches.scroll.winfo_x()
+                    assert (
+                        len(
+                            {
+                                (tile.photo.width(), tile.photo.height())
+                                for tile in catches.tiles.values()
+                                if tile.photo is not None
+                            }
+                        )
+                        == 1
+                    )
+                for item in history:
+                    catches.toggle(item["id"])
+                    pump()
+                    facts = [
+                        label.cget("text")
+                        for group in catches.side.body.winfo_children()
+                        for label in group.winfo_children()
+                        if isinstance(label, ttk.Label)
+                    ]
+                    assert {"捕获时间", "尺寸", "等级", "稀有度", "钓场", "时段"} <= set(facts)
+                    assert catches.expanded == item["id"]
+            dates = app.collection.journal.history_dates()
+            assert len(dates) == 2
+            for day in dates:
+                catches.day.set(day)
+                catches.change_day()
+                pump()
+                expected = {row["id"] for row in app.collection.journal.history(day=day)}
+                assert set(catches.tiles) == expected
+                selected = catches.expanded
+                catches.change_view("grid")
+                pump()
+                assert set(catches.tiles) == expected and catches.expanded == selected
+                if args.visible:
+                    expected_width = catches.scroll.canvas.winfo_width() / catches._columns
+                    assert all(
+                        tile.winfo_width() <= expected_width for tile in catches.tiles.values()
+                    )
+                for item in app.collection.journal.history(day=day):
+                    assert catches.tiles[item["id"]].footnote == catches._caught_at(item).strftime(
+                        "%H:%M"
+                    )
+            catches.day.set("2099-01-01")
+            catches.change_day()
+            pump()
+            assert not catches.tiles and catches.expanded is None
+            catches.day.set("全部日期")
+            catches.change_day()
+            pump()
+            assert len(catches.tiles) == len(history)
+            assert app.collection.journal.history() == history
+            assert app.collection.journal.targets() == []
             for page in ("run", "catalogue", "catches", "settings", "targets"):
                 app.show_page(page)
                 pump()
@@ -169,7 +254,7 @@ def main():
                 assert panel.browser.canvas.yview()[0] > before
             assert not errors, errors
             print(
-                "PASS: 84 offline fish, filters and traditional search, inline list facts, independent MAX/MIN targets, page geometry and clean close; no game access"
+                "PASS: 84 offline fish, dense grid and fixed facts, list view, filters and traditional search, independent MAX/MIN targets, page geometry and clean close; no game access"
             )
         finally:
             app.close()

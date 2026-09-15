@@ -5,8 +5,15 @@ from io import BytesIO
 
 from PIL import Image
 
-from bd2_fishing.game.fishing.catalogue import load_catalogue, normalize_name
+from bd2_fishing.game.fishing.catalogue import (
+    find_fish,
+    load_catalogue,
+    normalize_name,
+    reward_name,
+)
+from bd2_fishing.game.fishing.catch_icon import match_catch_icon
 from bd2_fishing.game.fishing.mechanics.catalogue import MECHANISMS
+from bd2_fishing.game.islands.catalog import FishingLocation
 
 RARITIES = {"common": "普通", "rare": "稀有", "legendary": "传说"}
 TIMES = {"day": "白天", "night": "夜晚", "both": "昼夜"}
@@ -32,6 +39,30 @@ class FishCatalogueService:
     def __init__(self):
         self.fish = load_catalogue()
         self.by_id = {fish.id: fish for fish in self.fish}
+
+    def catch_reference(self, item):
+        """为历史展示关联唯一同名资料；不改捕获确认、首次标记或目标。"""
+        if item["fish_id"] in self.by_id:
+            return self.by_id[item["fish_id"]]
+        try:
+            location = FishingLocation(item["location"])
+        except ValueError:
+            location = None
+        candidates = find_fish(reward_name(item["name"]), location=location)
+        return candidates[0] if len(candidates) == 1 else None
+
+    @staticmethod
+    def catch_name(name):
+        name = reward_name(name)
+        return "鱼种未确认" if name in ("", "鱼") else name
+
+    @staticmethod
+    def catch_image_reference(raw, location):
+        try:
+            location = FishingLocation(location)
+        except ValueError:
+            return None
+        return match_catch_icon(raw, location)
 
     def search(self, query="", *, island="全部钓场", time="全部时段", rarity="全部稀有度"):
         key = normalize_name(query)

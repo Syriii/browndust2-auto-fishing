@@ -1,6 +1,7 @@
 """鱼种参考目录及明确别名查询；不识别鱼获或自动出售。"""
 
 import json
+import re
 import unicodedata
 from dataclasses import dataclass
 from functools import lru_cache
@@ -29,6 +30,11 @@ class Fish:
 def normalize_name(name: str) -> str:
     """只统一 Unicode 和空白；译名差异由显式别名处理，不模糊猜测鱼种。"""
     return "".join(unicodedata.normalize("NFKC", name).split()).casefold()
+
+
+def reward_name(text: str) -> str:
+    """移除结算名称末尾的数量，不猜测被 OCR 丢失的文字。"""
+    return re.sub(r"\s*[×xX*]\s*[1-9]\d*\s*$", "", unicodedata.normalize("NFKC", text)).strip()
 
 
 def parse_catalogue(document):

@@ -1,10 +1,16 @@
-"""嵌入式图鉴：同一鱼卡只浏览或选目标，列表详情就地展开。"""
+"""嵌入式图鉴：左侧密集鱼图或列表，右侧固定详情与目标草稿。"""
 
 import tkinter as tk
 from tkinter import ttk
 
 from bd2_fishing.app.fishing_collection import CONDITIONS
-from bd2_fishing.ui.collection_widgets import FishPhotos, ViewButtons, clear_children, show_facts
+from bd2_fishing.ui.collection_widgets import (
+    FishPhotos,
+    ViewButtons,
+    clear_children,
+    gallery_columns,
+    show_facts,
+)
 from bd2_fishing.ui.fish_tile import FishTile
 from bd2_fishing.ui.scrolling import ScrollablePage
 
@@ -14,7 +20,7 @@ class CataloguePage(ttk.Frame):
         super().__init__(parent, padding=22)
         self.app = app
         self.service = app.services.fish_catalogue_service()
-        self.photos = FishPhotos(self.service, self)
+        self.photos = FishPhotos(self.service, self, crop=False)
         self.view, self.selected, self.picking = "grid", None, False
         self.draft = {}
         self.pick_origin = "catalogue"
@@ -88,6 +94,7 @@ class CataloguePage(ttk.Frame):
         self.side = ScrollablePage(self.content, padding=16, surface=True)
         self.side.configure(width=round(240 * self.photos.scale))
         self.side.grid_propagate(False)
+        self.side.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
         self.source_button = ttk.Button(self, text="资料说明", command=self.about)
         self.source_button.pack(anchor="w", pady=(8, 0))
 
@@ -113,11 +120,7 @@ class CataloguePage(ttk.Frame):
     def resize_cards(self, event):
         if not self.winfo_ismapped():
             return
-        columns = (
-            max(2, min(5, max(280, event.width - 8) // round(155 * self.photos.scale)))
-            if self.view == "grid"
-            else 1
-        )
+        columns = gallery_columns(event.width - 8, self.photos.scale) if self.view == "grid" else 1
         if columns == self._columns:
             return
         if self._resize_id:
@@ -164,7 +167,7 @@ class CataloguePage(ttk.Frame):
                     k for k, v in CONDITIONS.items() if v == self.default_condition.get()
                 )
         else:
-            self.selected = None if self.selected == identity and self.view == "list" else identity
+            self.selected = identity
         self.render()
 
     def cancel(self):
@@ -185,9 +188,7 @@ class CataloguePage(ttk.Frame):
 
     def render(self, reset=False):
         width = max(280, self.browser.canvas.winfo_width() - 8)
-        columns = (
-            max(2, min(5, width // round(155 * self.photos.scale))) if self.view == "grid" else 1
-        )
+        columns = gallery_columns(width, self.photos.scale) if self.view == "grid" else 1
         key = (
             self.view,
             self.selected,
@@ -223,28 +224,30 @@ class CataloguePage(ttk.Frame):
             time=self.time.get(),
             rarity=self.rarity.get(),
         )
+        if not self.picking and self.selected not in {item.id for item in fish}:
+            self.selected = fish[0].id if fish else None
+            self._render_key = None
         self.count.configure(text=f"{len(fish)} / {len(self.service.fish)} 种鱼")
         clear_children(self.browser.body)
         clear_children(self.side.body)
-        side = self.picking or (self.view == "grid" and self.selected is not None)
-        if side:
-            self.side.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
-        else:
-            self.side.grid_remove()
         width = max(280, self.browser.canvas.winfo_width() - 8)
-        columns = (
-            max(2, min(5, width // round(155 * self.photos.scale))) if self.view == "grid" else 1
-        )
+        columns = gallery_columns(width, self.photos.scale) if self.view == "grid" else 1
         self._columns = columns
-        for column in range(5):
-            self.browser.body.columnconfigure(column, weight=1 if column < columns else 0)
+        for column in range(12):
+            self.browser.body.columnconfigure(
+                column,
+                weight=1 if column < columns else 0,
+                uniform="fish" if column < columns else "",
+            )
         for index, item in enumerate(fish):
             self._render_card(item, index, columns, width)
         if not fish:
             ttk.Label(self.browser.body, text="没有符合条件的鱼").pack(pady=25)
         self._render_side()
+        self.side.refresh()
         self.browser.refresh()
         self.browser.canvas.yview_moveto(0 if reset else position)
+        self._render_key = (key[0], self.selected, *key[2:-1], columns)
         if focus_identity in self.tiles:
             self.tiles[focus_identity].focus_set()
 
@@ -269,27 +272,15 @@ class CataloguePage(ttk.Frame):
             name=item.name,
             subtitle=self._caption(item).split("\n", 1)[1].split(" · 已选")[0].split("    ")[0],
             command=lambda identity=item.id: self.choose(identity),
-            view=self.view,
+            view="icons" if self.view == "grid" else "list",
             selected=item.id in self.draft if self.picking else self.selected == item.id,
             badge="已选" if self.picking and item.id in self.draft else "",
             colorful=item.rarity == "legendary",
+            rank=item.rarity_rank,
         )
         tile.fish_identity = item.id
         self.tiles[item.id] = tile
         tile.pack(fill="x")
-        if self.view == "list" and self.selected == item.id and not self.picking:
-            show_facts(
-                frame,
-                self.service,
-                item.id,
-                width=max(200, width - round(240 * self.photos.scale)),
-                inset=round(108 * self.photos.scale),
-            )
-            ttk.Button(
-                frame,
-                text="设为目标",
-                command=lambda identity=item.id: self.begin_pick(identity),
-            ).pack(anchor="e")
 
     def _render_side(self):
         if self.picking:
@@ -330,11 +321,10 @@ class CataloguePage(ttk.Frame):
             ttk.Button(
                 self.side.body, text="设为目标", command=lambda: self.begin_pick(self.selected)
             ).pack(fill="x", pady=8)
-            ttk.Button(self.side.body, text="关闭详情", command=self.hide_detail).pack(fill="x")
-
-    def hide_detail(self):
-        self.selected = None
-        self.render()
+        else:
+            ttk.Label(self.side.body, text="没有符合筛选条件的鱼", style="Hint.TLabel").pack(
+                pady=16
+            )
 
     def about(self):
         from tkinter import messagebox

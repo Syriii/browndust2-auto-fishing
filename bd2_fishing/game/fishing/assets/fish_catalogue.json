@@ -2615,13 +2615,15 @@
     {
       "id": "fish_05_03",
       "island_id": "ATLANTIS",
-      "name_zh": "海蛞蝓",
+      "name_zh": "蓝龙海神鳃",
       "name_tw": "海蛞蝓",
       "aliases": [
-        "海蛞蝓"
+        "海蛞蝓",
+        "蓝龙海神",
+        "蓝龙海神鳃"
       ],
-      "name_status": "converted_reference",
-      "client_name_verified": false,
+      "name_status": "client_verified",
+      "client_name_verified": true,
       "rarity": "common",
       "rarity_rank": 1,
       "availability": "both",
@@ -2650,7 +2652,12 @@
       "sources": [
         "bahamut"
       ],
-      "notes": []
+      "notes": [],
+      "client_name_evidence": {
+        "fixture": "tests/fixtures/catch_result/names_20260915/blue-dragon.jpg",
+        "reviewed_on": "2026-09-15",
+        "method": "成功页中文鱼名、鱼身外观与同岛图鉴原图核对；蓝龙海神为现有 OCR 漏字记录，保留为明确别名"
+      }
     },
     {
       "id": "fish_05_04",
@@ -2743,14 +2750,15 @@
     {
       "id": "fish_05_06",
       "island_id": "ATLANTIS",
-      "name_zh": "银鲳",
+      "name_zh": "鲳鱼",
       "name_tw": "銀鯧",
       "aliases": [
         "銀鯧",
-        "银鲳"
+        "银鲳",
+        "鲳鱼"
       ],
-      "name_status": "converted_reference",
-      "client_name_verified": false,
+      "name_status": "client_verified",
+      "client_name_verified": true,
       "rarity": "common",
       "rarity_rank": 1,
       "availability": "both",
@@ -2779,7 +2787,12 @@
       "sources": [
         "bahamut"
       ],
-      "notes": []
+      "notes": [],
+      "client_name_evidence": {
+        "fixture": "tests/fixtures/catch_result/names_20260915/silver-pomfret.jpg",
+        "reviewed_on": "2026-09-15",
+        "method": "成功页中文鱼名、鱼身外观与同岛图鉴原图核对；另两轮独立结算保留作图标匹配回归"
+      }
     },
     {
       "id": "fish_05_07",
@@ -2833,14 +2846,15 @@
     {
       "id": "fish_05_08",
       "island_id": "ATLANTIS",
-      "name_zh": "七彩麒麟鱼",
+      "name_zh": "鸳鸯鱼",
       "name_tw": "七彩麒麟魚",
       "aliases": [
         "七彩麒麟魚",
-        "七彩麒麟鱼"
+        "七彩麒麟鱼",
+        "鸳鸯鱼"
       ],
-      "name_status": "converted_reference",
-      "client_name_verified": false,
+      "name_status": "client_verified",
+      "client_name_verified": true,
       "rarity": "common",
       "rarity_rank": 1,
       "availability": "day",
@@ -2869,7 +2883,12 @@
       "sources": [
         "bahamut"
       ],
-      "notes": []
+      "notes": [],
+      "client_name_evidence": {
+        "fixture": "tests/fixtures/catch_result/names_20260915/mandarinfish.jpg",
+        "reviewed_on": "2026-09-15",
+        "method": "成功页中文鱼名、鱼身外观与同岛图鉴原图核对；蓝龙海神为现有 OCR 漏字记录，保留为明确别名"
+      }
     },
     {
       "id": "fish_05_09",
