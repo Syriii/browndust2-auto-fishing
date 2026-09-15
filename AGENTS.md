@@ -16,7 +16,7 @@
 
 ## 当前实现与审查入口
 
-- 0.4.8 发布验收见 docs/development/cases/2026-09-15-release-0.4.8.md。本次鱼获四列紧凑图卡按 ID 增量维护；神仙鱼客户端名与原天使鱼别名共用目录，历史展示关联不回写捕获确认或完成目标。
+- 0.4.8 已正式发布，固定本地 EXE 与官方附件分别核验；645 项回归和 Windows CI 通过，验收见 docs/development/cases/2026-09-15-release-0.4.8.md。本次鱼获四列紧凑图卡按 ID 增量维护；神仙鱼客户端名与原天使鱼别名共用目录，历史展示关联不回写捕获确认或完成目标。
 - TargetDraft 的弹出列表由 Tcl 创建，焦点比较使用 Tcl 路径并包含编辑器子树，不通过 focus_get 转成 Python 控件；smoke_target_draft.py 覆盖真实弹出菜单与提交、取消、离焦，并在 Windows CI 执行。
 - 0.4.7 本地界面性能修改：目标草稿使用 TargetDraft 原生列表，按需编辑尺寸；图卡悬停不重建图片，ScrollablePage 合并回调且销毁时解绑。全仓直接复查见 docs/development/code-review-2026-09-15.md，最终交付和未完成的 EXE 视觉／短屏验收见 cases/2026-09-15-ui-fluid.md（位于 docs/development）。毛玻璃目前仅磨砂视觉，不宣称实时模糊或全部动画流畅。
 
