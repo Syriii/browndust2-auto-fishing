@@ -4,7 +4,7 @@ import re
 
 import cv2
 
-from bd2_fishing.game.fishing.catalogue import find_fish
+from bd2_fishing.game.fishing.catalogue import find_fish, reward_name
 from bd2_fishing.game.fishing.catch_marks import parse_size_marks
 
 
@@ -15,7 +15,7 @@ def identify_catch(texts, location=None):
         text, score = item.text.strip(), item.score
         if score < 0.90:
             continue
-        name = re.sub(r"\s*[×xX*]\s*[1-9]\d*\s*$", "", text)
+        name = reward_name(text)
         for fish in find_fish(name, location=location):
             candidates[fish.id] = fish
     fish = next(iter(candidates.values())) if len(candidates) == 1 else None

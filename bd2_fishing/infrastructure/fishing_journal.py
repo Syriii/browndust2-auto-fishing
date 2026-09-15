@@ -107,7 +107,7 @@ class FishingJournal:
         self.revision += 1
         return True
 
-    def history(self, category="all", before=None, limit=100):
+    def history(self, category="all", before=None, limit=100, *, day=None):
         filters = {
             "all": "1",
             "first": "first_catch=1",
@@ -117,6 +117,11 @@ class FishingJournal:
         }
         where = filters[category]
         parameters = []
+        if day == "unknown":
+            where += " AND date(caught_at, 'localtime') IS NULL"
+        elif day is not None:
+            where += " AND date(caught_at, 'localtime') = ?"
+            parameters.append(day)
         if before is not None:
             where += " AND id < ?"
             parameters.append(before)
@@ -126,8 +131,17 @@ class FishingJournal:
                 for row in self.db.execute(
                     "SELECT id,caught_at,fish_id,name,location,size_cm,size_kind,rarity,first_catch,"
                     "stars,border_color,new_record "
-                    f"FROM catches WHERE {where} ORDER BY id DESC LIMIT ?",
+                    f"FROM catches WHERE {where} ORDER BY julianday(caught_at) DESC, id DESC LIMIT ?",
                     (*parameters, limit),
+                )
+            ]
+
+    def history_dates(self):
+        with self.lock:
+            return [
+                row[0]
+                for row in self.db.execute(
+                    "SELECT DISTINCT date(caught_at, 'localtime') AS day FROM catches ORDER BY day DESC"
                 )
             ]
 

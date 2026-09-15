@@ -18,7 +18,15 @@ class FishingCatalogueTests(TestCase):
         self.assertEqual(set().union(*(f.possible_mechanisms for f in fish)), MECHANISM_IDS)
         self.assertEqual(
             {f.id for f in fish if f.client_name_verified},
-            {"fish_05_01", "fish_05_05", "fish_05_07", "fish_05_11"},
+            {
+                "fish_05_01",
+                "fish_05_03",
+                "fish_05_05",
+                "fish_05_06",
+                "fish_05_07",
+                "fish_05_08",
+                "fish_05_11",
+            },
         )
 
     def test_regional_translations_and_table_typo_resolve_to_same_species(self):
@@ -26,6 +34,8 @@ class FishingCatalogueTests(TestCase):
             ("波纹唇鱼", "拿破崙魚", "拿破仑鱼"),
             ("罗汉鱼", "花羅漢", "花罗汉"),
             ("蝴蝶鱼", "蝶魚", "蝶鱼"),
+            ("蓝龙海神鳃", "蓝龙海神", "海蛞蝓"),
+            ("鸳鸯鱼", "七彩麒麟鱼", "七彩麒麟魚"),
             ("布兰什", "布蘭琪", "布兰琪"),
             ("巨骨舌鱼", "巨骨蛇魚"),
             ("龙睛金鱼", "龍晴金魚", "龍睛金魚"),

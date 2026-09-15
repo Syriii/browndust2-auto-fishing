@@ -4,14 +4,19 @@ import tkinter as tk
 from collections import OrderedDict
 from tkinter import ttk
 
-from PIL import ImageOps, ImageTk
+from PIL import Image, ImageOps, ImageTk
 
 from bd2_fishing.ui.theme import ACCENT, FONT
 
 
+def gallery_columns(width, scale):
+    return max(2, min(12, max(1, width) // round(72 * scale)))
+
+
 class FishPhotos:
-    def __init__(self, service, master):
+    def __init__(self, service, master, *, crop=True):
         self.service, self.master = service, master
+        self.crop = crop
         self.cache = OrderedDict()
         self.scale = master.winfo_fpixels("1i") / 96
 
@@ -19,8 +24,16 @@ class FishPhotos:
         key = identity, size
         if key not in self.cache:
             try:
+                original = self.service.picture(identity, (size[0] * 2, size[1] * 2))
+                picture = (
+                    ImageOps.fit(original, size)
+                    if self.crop
+                    else ImageOps.pad(
+                        original, size, method=Image.Resampling.LANCZOS, color="#f5f8fa"
+                    )
+                )
                 self.cache[key] = ImageTk.PhotoImage(
-                    ImageOps.fit(self.service.picture(identity, (size[0] * 2, size[1] * 2)), size),
+                    picture,
                     master=self.master,
                 )
             except (OSError, KeyError):
@@ -77,6 +90,10 @@ class ViewButtons(ttk.Frame):
 
 def show_facts(parent, service, identity, width=450, inset=12):
     details = service.details(identity)
+    show_details(parent, details, width=width, inset=inset)
+
+
+def show_details(parent, details, width=450, inset=12):
     facts = ttk.Frame(parent, style="Card.TFrame")
     facts.pack(fill="x", padx=inset, pady=8)
     facts.columnconfigure(1, weight=1)
@@ -84,8 +101,10 @@ def show_facts(parent, service, identity, width=450, inset=12):
         ttk.Label(facts, text=label, style="Hint.TLabel", width=8).grid(
             row=row, column=0, sticky="nw", pady=4
         )
-        ttk.Label(facts, text=value, wraplength=width, justify="left").grid(
-            row=row, column=1, sticky="nw", pady=4
+        value_label = ttk.Label(facts, text=value, wraplength=width, justify="left")
+        value_label.grid(row=row, column=1, sticky="new", pady=4)
+        value_label.bind(
+            "<Configure>", lambda event: event.widget.configure(wraplength=max(40, event.width))
         )
     for name, text in details["mechanisms"]:
         ttk.Label(parent, text=name, font=(FONT, 10, "bold")).pack(

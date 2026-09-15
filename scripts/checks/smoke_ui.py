@@ -75,6 +75,21 @@ def main():
 
     try:
         root.update_idletasks()
+        if not hidden:
+            original_geometry = root.geometry()
+            if not args.short_screen:
+                root.geometry("960x640")
+            pump(lambda: app.text.winfo_viewable() and app.text.winfo_height() >= 80)
+            for widget in (app.text, app.clear_check, app.awake_check, app.update_button):
+                assert widget.winfo_viewable()
+                assert widget.winfo_x() + widget.winfo_width() <= widget.master.winfo_width()
+                assert widget.winfo_y() + widget.winfo_height() <= widget.master.winfo_height()
+            assert app.text.winfo_height() >= 80, app.text.winfo_height()
+            assert (
+                app.text.winfo_rooty() + app.text.winfo_height() < app.action_button.winfo_rooty()
+            )
+            root.geometry(original_geometry)
+            root.update_idletasks()
         if args.short_screen:
             bounds = win32gui.GetWindowRect(win32gui.GetAncestor(root.winfo_id(), 2))
             assert bounds[0] >= work_area[0] and bounds[1] >= work_area[1], bounds

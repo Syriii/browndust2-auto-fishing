@@ -1,11 +1,18 @@
 """目标待办与带图鱼获历史，编辑只发生在待机时。"""
 
 import tkinter as tk
+from collections import OrderedDict
 from datetime import datetime
 from tkinter import ttk
 
 from bd2_fishing.app.fishing_collection import CONDITIONS
-from bd2_fishing.ui.collection_widgets import FishPhotos, ViewButtons, clear_children, show_facts
+from bd2_fishing.ui.collection_widgets import (
+    FishPhotos,
+    ViewButtons,
+    clear_children,
+    gallery_columns,
+    show_details,
+)
 from bd2_fishing.ui.fish_tile import FishTile
 from bd2_fishing.ui.scrolling import ScrollablePage
 
@@ -100,9 +107,13 @@ class CatchesPage(ttk.Frame):
         super().__init__(parent, padding=22)
         self.app = app
         self.service = app.services.fish_catalogue_service()
-        self.photos = FishPhotos(self.service, self)
-        self.category, self.view, self.expanded = "first", "list", None
-        self.limit = 80
+        self.photos = FishPhotos(self.service, self, crop=False)
+        self.category, self.view, self.expanded = "first", "grid", None
+        self.limit, self._columns = 80, 0
+        self._resize_id = None
+        self.tiles = {}
+        self._references = OrderedDict()
+        self.day = tk.StringVar(value="全部日期")
         toolbar = ttk.Frame(self)
         toolbar.pack(fill="x", pady=(0, 12))
         ttk.Label(toolbar, text="鱼获记录", style="Heading.TLabel").pack(side="left")
@@ -115,11 +126,40 @@ class CatchesPage(ttk.Frame):
             button = ttk.Button(tabs, text=text, command=lambda k=key: self.change_category(k))
             button.pack(side="left", padx=(0, 8))
             self.tabs[key] = button
-        self.scroll = ScrollablePage(self, padding=0)
-        self.scroll.pack(fill="both", expand=True)
+        dates = ttk.Frame(self)
+        dates.pack(fill="x", pady=(0, 8))
+        ttk.Label(dates, text="日期", style="Page.TLabel").pack(side="left")
+        self.date_box = ttk.Combobox(dates, textvariable=self.day, state="readonly", width=18)
+        self.date_box.pack(side="left", padx=8)
+        self.date_box.bind("<<ComboboxSelected>>", lambda _: self.change_day())
+        content = ttk.Frame(self)
+        content.pack(fill="both", expand=True)
+        content.columnconfigure(0, weight=1)
+        content.rowconfigure(0, weight=1)
+        self.scroll = ScrollablePage(content, padding=0)
+        self.scroll.grid(row=0, column=0, sticky="nsew")
+        self.scroll.canvas.bind("<Configure>", self.resize_cards, add="+")
+        self.side = ScrollablePage(content, padding=16, surface=True)
+        self.side.configure(width=round(240 * self.photos.scale))
+        self.side.grid_propagate(False)
+        self.side.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
         self.more = ttk.Button(self, text="加载更早记录", command=self.load_more)
         self.notice = ttk.Label(self, style="PageHint.TLabel")
         self.notice.pack(fill="x", pady=(10, 0))
+
+    def resize_cards(self, event):
+        if not self.winfo_ismapped():
+            return
+        columns = gallery_columns(event.width - 8, self.photos.scale) if self.view == "grid" else 1
+        if columns == self._columns:
+            return
+        if self._resize_id is not None:
+            self.after_cancel(self._resize_id)
+        self._resize_id = self.after(120, self._finish_resize)
+
+    def _finish_resize(self):
+        self._resize_id = None
+        self.render()
 
     def change_category(self, category):
         self.category, self.limit, self.expanded = category, 80, None
@@ -129,37 +169,82 @@ class CatchesPage(ttk.Frame):
         self.view = view
         self.render()
 
+    def change_day(self):
+        self.limit, self.expanded = 80, None
+        self.render(reset=True)
+
     def load_more(self):
         self.limit += 80
         self.render()
 
     def toggle(self, identity):
-        self.expanded = None if self.expanded == identity else identity
+        self.expanded = identity
         self.render()
 
     def render(self, reset=False):
         position = self.scroll.canvas.yview()[0]
         clear_children(self.scroll.body)
+        clear_children(self.side.body)
+        self.tiles = {}
         self.views.select(self.view)
         for key, button in self.tabs.items():
             button.state(["pressed"] if key == self.category else ["!pressed"])
-        rows = self.app.collection.journal.history(self.category, limit=self.limit + 1)
-        for col in range(3):
+        self.date_box.configure(
+            values=[
+                "全部日期",
+                *(day or "日期未确认" for day in self.app.collection.journal.history_dates()),
+            ]
+        )
+        day = self.day.get()
+        rows = self.app.collection.journal.history(
+            self.category,
+            limit=self.limit + 1,
+            day=None if day == "全部日期" else "unknown" if day == "日期未确认" else day,
+        )
+        visible = rows[: self.limit]
+        if self.expanded not in {item["id"] for item in visible}:
+            self.expanded = visible[0]["id"] if visible else None
+        width = self.scroll.canvas.winfo_width() - 8
+        columns = gallery_columns(width, self.photos.scale) if self.view == "grid" else 1
+        self._columns = columns
+        for col in range(12):
             self.scroll.body.columnconfigure(
-                col, weight=1 if self.view == "grid" or col == 0 else 0
+                col, weight=1 if col < columns else 0, uniform="fish" if col < columns else ""
             )
-        columns = 3 if self.view == "grid" else 1
-        for index, item in enumerate(rows[: self.limit]):
-            self._render_catch(item, index, columns)
+        groups = OrderedDict()
+        for item in visible:
+            caught_at = self._caught_at(item)
+            date = caught_at.date().isoformat() if caught_at else "日期未确认"
+            groups.setdefault(date, []).append(item)
+        row = 0
+        for date, items in groups.items():
+            caption = f"今天 · {date}" if date == datetime.now().date().isoformat() else date
+            ttk.Label(self.scroll.body, text=caption, style="PageHint.TLabel").grid(
+                row=row, column=0, columnspan=columns, sticky="w", padx=4, pady=(8, 4)
+            )
+            for index, item in enumerate(items):
+                self._render_catch(item, index, columns, row + 1)
+            row += 1 + (len(items) + columns - 1) // columns
         if not rows:
             ttk.Label(self.scroll.body, text="暂无这类鱼获", style="Section.TLabel").grid(pady=35)
+            ttk.Label(self.side.body, text="捕获后可在这里查看详情", style="Hint.TLabel").pack(
+                pady=16
+            )
         if len(rows) > self.limit:
             self.more.pack(before=self.notice, pady=8)
         else:
             self.more.pack_forget()
         self.notice.configure(text=f"已显示 {min(len(rows), self.limit)} 条")
+        self.side.refresh()
         self.scroll.refresh()
         self.scroll.canvas.yview_moveto(0 if reset else position)
+
+    @staticmethod
+    def _caught_at(item):
+        try:
+            return datetime.fromisoformat(item["caught_at"]).astimezone()
+        except (ValueError, TypeError):
+            return None
 
     @staticmethod
     def _label(item):
@@ -171,41 +256,88 @@ class CatchesPage(ttk.Frame):
         if item["new_record"]:
             tags.append("新纪录")
         size = f"{item['size_cm']} cm" if item["size_cm"] is not None else "尺寸未确认"
-        label = f"{item['name']}\n{size}  {' · '.join(tags)}"
-        return label
+        return f"{size}  {' · '.join(tags)}"
 
-    def _render_catch(self, item, index, columns):
+    def _picture(self, item, fish, size):
+        return self.photos.get(fish.id, size) if fish else None
+
+    def _reference(self, item):
+        key = item["id"], item["fish_id"], item["name"], item["location"]
+        if key not in self._references:
+            fish = self.service.catch_reference(item)
+            source = "confirmed" if item["fish_id"] else "name"
+            if fish is None:
+                fish = self.service.catch_image_reference(
+                    self.app.collection.journal.evidence(item["id"]), item["location"]
+                )
+                source = "image"
+            self._references[key] = fish, source
+        self._references.move_to_end(key)
+        while len(self._references) > 256:
+            self._references.popitem(last=False)
+        return self._references[key]
+
+    def _render_catch(self, item, index, columns, row_offset=0):
         card = ttk.Frame(self.scroll.body, padding=0, style="Card.TFrame")
-        card.grid(row=index // columns, column=index % columns, sticky="nsew", padx=4, pady=4)
-
-        def picture(size):
-            photo = self.photos.get(item["fish_id"], size) if item["fish_id"] else None
-            return photo if photo is not None else self.app.collection_photo(item, size)
-
-        FishTile(
+        card.grid(
+            row=row_offset + index // columns, column=index % columns, sticky="nsew", padx=4, pady=4
+        )
+        fish, source = self._reference(item)
+        name = fish.name if fish else self.service.catch_name(item["name"])
+        caught_at = self._caught_at(item)
+        time = caught_at.strftime("%H:%M") if caught_at else "时间未确认"
+        tile = FishTile(
             card,
-            photo=picture,
-            name=item["name"],
-            subtitle=self._label(item).split("\n", 1)[1],
-            view=self.view,
+            photo=lambda size: self._picture(item, fish, size),
+            name=name,
+            subtitle=f"{self._label(item)} · {time}",
+            view="icons" if self.view == "grid" else "list",
             command=lambda i=item["id"]: self.toggle(i),
             selected=self.expanded == item["id"],
             colorful=item["rarity"] == "legendary",
-        ).pack(fill="x")
+            rank=item["stars"],
+            footnote=time,
+            measurement=f"{item['size_cm']:g}cm" if item["size_cm"] is not None else "尺寸未确认",
+            marker=item["size_kind"].upper() if item["size_kind"] in ("max", "min") else "",
+        )
+        self.tiles[item["id"]] = tile
+        tile.pack(fill="x")
         if self.expanded == item["id"]:
-            self._show_details(card, item, columns)
+            self._show_details(item, fish, name, source)
 
-    def _show_details(self, card, item, columns):
-        try:
-            caught_at = (
-                datetime.fromisoformat(item["caught_at"]).astimezone().strftime("%Y-%m-%d %H:%M:%S")
-            )
-        except ValueError:
-            caught_at = item["caught_at"]
-        ttk.Label(
-            card,
-            text=f"{item['location']} · {caught_at}",
-            style="Hint.TLabel",
-        ).pack(anchor="w", pady=8)
-        if item["fish_id"]:
-            show_facts(card, self.service, item["fish_id"], width=180 if columns == 3 else 480)
+    def _show_details(self, item, fish, name, source):
+        panel = self.side.body
+        ttk.Label(panel, text=name, style="Section.TLabel").pack(anchor="w")
+        photo = self.photos.get(fish.id, (185, 120)) if fish else None
+        self.detail_photo = photo
+        ttk.Label(panel, image=photo or "", text="" if photo else "待补充图鉴资料").pack(pady=8)
+        timestamp = self._caught_at(item)
+        caught_at = timestamp.strftime("%Y-%m-%d %H:%M:%S") if timestamp else item["caught_at"]
+        details = (
+            self.service.details(fish.id)
+            if fish
+            else {
+                "facts": (("稀有度", "未确认"), ("钓场", item["location"]), ("时段", "未确认")),
+                "mechanisms": (),
+            }
+        )
+        details["facts"] = (
+            *details["facts"],
+            ("捕获时间", caught_at),
+            ("尺寸", f"{item['size_cm']} cm" if item["size_cm"] is not None else "未确认"),
+            ("等级", f"{item['stars']} 级" if item["stars"] is not None else "未确认"),
+        )
+        if item["size_kind"] in ("max", "min"):
+            details["facts"] += (("尺寸成就", item["size_kind"].upper()),)
+        if item["new_record"]:
+            details["facts"] += (("个人纪录", "新纪录"),)
+        show_details(panel, details, width=150)
+        if not item["fish_id"]:
+            ttk.Label(
+                panel,
+                text=("图鉴按鱼获图像匹配" if source == "image" else "图鉴按记录名称匹配")
+                if fish
+                else "鱼种尚未确认，暂无对应图鉴资料。",
+                style="Hint.TLabel",
+                wraplength=180,
+            ).pack(fill="x", pady=8)

@@ -18,22 +18,40 @@ class FishTile(tk.Canvas):
         selected=False,
         badge="",
         colorful=False,
+        rank=None,
+        footnote="",
+        measurement="",
+        marker="",
     ):
         self.scale = parent.winfo_fpixels("1i") / 96
         self.is_list = view == "list"
+        self.is_icon = view == "icons"
         super().__init__(
             parent,
             background=BACKGROUND,
             highlightthickness=0,
             bd=0,
-            width=round(140 * self.scale),
-            height=round((78 if self.is_list else 159) * self.scale),
+            width=round((64 if self.is_icon else 140) * self.scale),
+            height=round(
+                (
+                    90
+                    if self.is_icon and footnote
+                    else 72
+                    if self.is_icon
+                    else 78
+                    if self.is_list
+                    else 159
+                )
+                * self.scale
+            ),
             takefocus=True,
             cursor="hand2",
         )
         self.photo_provider, self.command = photo, command
         self.name, self.subtitle, self.badge = name, subtitle, badge
         self.selected, self.colorful, self.hover = selected, colorful, False
+        self.rank = rank
+        self.footnote, self.measurement, self.marker = footnote, measurement, marker
         self.photo = None
         self._draw_key = None
         self.viewport = parent
@@ -142,6 +160,9 @@ class FishTile(tk.Canvas):
 
     def _content(self, width, height):
         s = self.scale
+        if self.is_icon:
+            self._icon_content(width, height)
+            return
         if self.is_list:
             picture_size = (round(88 * s), round(56 * s))
             image_x, image_y = 10 * s, 11 * s
@@ -172,6 +193,30 @@ class FishTile(tk.Canvas):
         )
         self._marks(width, height)
 
+    def _icon_content(self, width, height):
+        s = self.scale
+        edge = max(20, round(min(width - 10 * s, 62 * s)))
+        self.photo = self.photo_provider((edge, edge))
+        if self.photo:
+            self.create_image(width / 2, 36 * s, image=self.photo)
+        else:
+            self.create_text(width / 2, 36 * s, text="?", fill=MUTED, font=(FONT, 18))
+        if self.measurement:
+            self.create_rectangle(3 * s, 51 * s, width - 3 * s, 67 * s, fill="#e5efee", outline="")
+            self.create_text(width / 2, 59 * s, text=self.measurement, fill=INK, font=(FONT, 8))
+        if self.footnote:
+            self.create_text(width / 2, 79 * s, text=self.footnote, fill=MUTED, font=(FONT, 8))
+        if self.marker:
+            self.create_rectangle(3 * s, 3 * s, 31 * s, 17 * s, fill=ACCENT, outline="")
+            self.create_text(17 * s, 10 * s, text=self.marker, fill="white", font=(FONT, 8))
+        if self.rank in (1, 2, 3):
+            color = {1: "#65aa70", 2: "#5f9dd4", 3: "#a879bd"}[self.rank]
+            for index in range(self.rank):
+                x = width - (8 + index * 7) * s
+                self.create_oval(x - 4 * s, 5 * s, x, 9 * s, fill=color, outline=color)
+        if self.badge:
+            self.create_text(7 * s, height - 7 * s, text="✓", anchor="sw", fill=ACCENT)
+
     def _marks(self, width, height):
         s = self.scale
         if self.badge:
@@ -190,7 +235,7 @@ class FishTile(tk.Canvas):
             self.create_text(
                 width - 20 * s,
                 height / 2,
-                text="⌃" if self.selected else "⌄",
+                text="›",
                 fill=MUTED,
                 font=(FONT, 13),
             )

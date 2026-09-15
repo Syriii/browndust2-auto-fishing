@@ -7,8 +7,6 @@ import tkinter as tk
 from collections import deque
 from tkinter import messagebox
 
-from PIL import ImageTk
-
 from bd2_fishing.app.desktop import DesktopServices, FishingLocation
 from bd2_fishing.runtime import control as run_control
 from bd2_fishing.ui.logs import UILogHandler
@@ -26,7 +24,6 @@ class FishingApp:
         self.task_mode = tk.StringVar(value="自由钓鱼")
         self._collection_revision = -1
         self._collection_active = False
-        self._evidence_photos = {}
         self.current_page = "run"
         self.config_path = self.services.config_path
         config = self.services.load_settings()
@@ -92,15 +89,6 @@ class FishingApp:
             return False
         return True
 
-    def collection_photo(self, item, size):
-        key = item["id"], size
-        if key not in self._evidence_photos:
-            photo = self.collection.picture(item["id"], size)
-            self._evidence_photos[key] = (
-                ImageTk.PhotoImage(photo, master=self.root) if photo else None
-            )
-        return self._evidence_photos[key]
-
     def show_page(self, page):
         if self.closing:
             return
@@ -131,14 +119,6 @@ class FishingApp:
             self.targets_page.render()
         elif page == "catches":
             self.catches_page.render()
-
-    def toggle_logs(self):
-        if self.log_panel.winfo_manager():
-            self.log_panel.pack_forget()
-            self.log_toggle.configure(text="展开运行日志")
-        else:
-            self.log_panel.pack(fill="both", expand=True)
-            self.log_toggle.configure(text="收起运行日志")
 
     def _settings_saved(self):
         values = self.services.preference_values()
