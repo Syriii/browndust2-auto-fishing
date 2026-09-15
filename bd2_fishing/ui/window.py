@@ -105,10 +105,19 @@ class FishingApp:
         if self.closing:
             return
         visible = "catalogue" if page == "target-picker" else page
+        target = self.pages[visible]
+        previous = self.pages[
+            "catalogue" if self.current_page == "target-picker" else self.current_page
+        ]
+        if target is not previous:
+            target.lower(previous)
+        target.grid(row=0, column=0, sticky="nsew")
+        if page in ("catalogue", "target-picker"):
+            # 先在旧页下面完成首屏布局和鱼图绘制，再切换，避免露出空白内容区。
+            self.catalogue.prepare()
+        target.tkraise()
         for key, widget in self.pages.items():
-            if key == visible:
-                widget.grid(row=0, column=0, sticky="nsew")
-            else:
+            if key != visible:
                 widget.grid_remove()
         self.current_page = page
         self.settings_visible = page == "settings"
@@ -122,8 +131,6 @@ class FishingApp:
             self.targets_page.render()
         elif page == "catches":
             self.catches_page.render()
-        elif page in ("catalogue", "target-picker"):
-            self.catalogue.after_idle(self.catalogue.render)
 
     def toggle_logs(self):
         if self.log_panel.winfo_manager():

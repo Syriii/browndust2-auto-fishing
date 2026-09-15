@@ -31,7 +31,34 @@ def main():
                 time.sleep(0.03)
 
         try:
-            app.catalogue.open()
+            pump()
+            loads = []
+            original_photo = app.catalogue.photos.get
+
+            def first_page_photo(*photo_args, **kwargs):
+                loads.append(photo_args)
+                if args.visible:
+                    assert app.run_panel.winfo_viewable()
+                    widget = root.winfo_containing(
+                        app.deck.winfo_rootx() + 30, app.deck.winfo_rooty() + 30
+                    )
+                    while widget is not None and widget.master is not app.deck:
+                        widget = widget.master
+                    assert widget is app.run_panel
+                return original_photo(*photo_args, **kwargs)
+
+            with patch.object(app.catalogue.photos, "get", side_effect=first_page_photo):
+                app.catalogue.open()
+            if args.visible:
+                assert loads
+                assert not app.run_panel.winfo_viewable()
+                assert app.catalogue.tiles[app.catalogue.service.fish[0].id].photo is not None
+                assert all(
+                    tile.photo is not None
+                    for tile in app.catalogue.tiles.values()
+                    if tile._visible(tile.winfo_height())
+                )
+                assert app.catalogue._resize_id is None
             pump()
             panel = app.catalogue
             assert len(panel.service.fish) == 84

@@ -40,17 +40,17 @@ class FishTile(tk.Canvas):
         while self.viewport is not None and not isinstance(self.viewport, tk.Canvas):
             self.viewport = self.viewport.master
         self._viewport_binding = (
-            self.viewport.bind("<<ViewportChanged>>", self._draw, add="+")
+            self.viewport.bind("<<ViewportChanged>>", self.draw, add="+")
             if self.viewport is not None
             else None
         )
         self._pointer_down = False
-        self.bind("<Configure>", self._draw)
-        self.bind("<Expose>", self._draw)
+        self.bind("<Configure>", self.draw)
+        self.bind("<Expose>", self.draw)
         self.bind("<Enter>", lambda _: self._hover(True))
         self.bind("<Leave>", lambda _: self._hover(False))
-        self.bind("<FocusIn>", self._draw)
-        self.bind("<FocusOut>", self._draw)
+        self.bind("<FocusIn>", self.draw)
+        self.bind("<FocusOut>", self.draw)
         self.bind("<Button-1>", self._press)
         self.bind("<ButtonRelease-1>", self._release)
         self.bind("<Return>", self._activate)
@@ -64,7 +64,7 @@ class FishTile(tk.Canvas):
 
     def _hover(self, active):
         self.hover = active
-        self._draw()
+        self.draw()
 
     def _activate(self, event):
         self.focus_set()
@@ -80,7 +80,7 @@ class FishTile(tk.Canvas):
         if pressed and 0 <= event.x < self.winfo_width() and 0 <= event.y < self.winfo_height():
             return self._activate(event)
 
-    def _draw(self, event=None):
+    def draw(self, event=None):
         width, height = self.winfo_width(), self.winfo_height()
         if width < 10 or not self.winfo_ismapped() or not self._visible(height):
             return
