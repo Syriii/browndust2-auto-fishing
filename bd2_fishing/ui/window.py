@@ -132,14 +132,6 @@ class FishingApp:
         elif page == "catches":
             self.catches_page.render()
 
-    def toggle_logs(self):
-        if self.log_panel.winfo_manager():
-            self.log_panel.pack_forget()
-            self.log_toggle.configure(text="展开运行日志")
-        else:
-            self.log_panel.pack(fill="both", expand=True)
-            self.log_toggle.configure(text="收起运行日志")
-
     def _settings_saved(self):
         values = self.services.preference_values()
         mode = (
