@@ -4,13 +4,13 @@
 
 [下载最新正式版](https://github.com/Syriii/browndust2-auto-fishing/releases/latest) · [使用指南](docs/user/usage.md) · [更新记录](CHANGELOG.md) · [完整文档](docs/README.md)
 
-**当前版本：0.4.8。** 日志旁显示本次鱼获的紧凑小图，目标可选择等待指定时段或持续钓鱼；修复神仙鱼、丝带鳗缺图及下拉框聚焦后文字消失，减少目标编辑和切页的重复刷新。645 项离线回归、实际 Tk 布局与本地 EXE 检查通过；正式附件与核验进度见[当前状态](docs/development/status.md)。
+**当前版本：0.4.8。** 日志旁显示本次鱼获的紧凑小图，目标可选择等待指定时段或持续钓鱼；修复神仙鱼、丝带鳗缺图及下拉框聚焦后文字消失，减少目标编辑和切页的重复刷新。645 项离线回归、实际 Tk 布局、本地与官方 EXE 检查通过；[正式附件](https://github.com/Syriii/browndust2-auto-fishing/releases/tag/v0.4.8) 已校验，详见[当前状态](docs/development/status.md)。
 
 支持图片多选、任意尺寸／MAX／MIN 目标、跨岛与昼夜等待，以及带图鱼获历史。红色 `Maximum Size`、黄色 `New Record`、等级与边框颜色分别记录；MIN 和彩色三级成功页尚缺实图验证，见[截图复核](docs/development/catch-markers-2026-09-14.md)。
 
 ![0.4.8 实际 Tk 界面：运行日志与紧凑鱼获小窗，鱼获为测试数据](docs/images/ui-0.4.8-run.png)
 
-![0.4.8 实际 EXE：密集图鉴和右侧固定详情](docs/images/ui-0.4.8-catalogue.png)
+![0.4.8 实际 EXE：密集图鉴和右侧固定详情](docs/images/ui-0.4.8-catalogue.jpg)
 
 ## 快速开始
 

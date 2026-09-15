@@ -45,7 +45,7 @@
 
 - `CatchesPage._reference` 在 UI 线程读证据、进行未知鱼图关联；历史首次加载可能阻塞。按记录 ID 后台解析并经主线程投递会更合适；仍需防旧筛选结果覆盖新筛选。
 - `FishingJournal.history` 以 julianday(caught_at) 排序，`history_dates` 对历史日期去重；目前没有覆盖该排序的索引，大量记录需要数据集基准与查询计划验证，不能凭小样本推断长年使用表现。
-- `SessionCatches.refresh` 每次新增鱼获仍重建最近 30 条，虽然有上限，也应按 ID 增量更新。
+- `SessionCatches.refresh` 重建最近 30 条的问题已在 0.4.8 改为按 ID 增量更新，回归覆盖已有卡片保留；其他大历史库性能风险仍保留。
 - `qte.py` 789 行、`FishingBot.wait_for_bite` 117 行，控制、恢复与取证修改耦合较高。分阶段抽取纯状态计算，保持 RunStopped(BaseException)、窗口保护、共享 OCR 锁与有界后台写入。
 - 当前 CI 包含离线回归、Ruff、架构及构建，但没有 UI 性能门槛；新增基准保留操作耗时，后续可在固定硬件单独执行。普通共享 CI 不宜把桌面渲染毫秒数设为硬门槛。
 
