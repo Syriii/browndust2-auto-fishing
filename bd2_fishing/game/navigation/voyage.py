@@ -90,8 +90,9 @@ class VoyageNavigator:
                 continue
             if isinstance(reading, str):
                 return self._finish_navigation(reading)
-            if not self.active and reading.page == "unknown":
-                return None  # 原有未知页面、结算和启动接续仍由 prepare_start 处理。
+            if not self.active and reading.page in ("unknown", "island"):
+                # 普通启动交给 prepare_start 确认待机；读到岛名不代表正在换岛。
+                return None
             self.active = True
             self.frames.setdefault("first.png", frame)
             if reading.page == "return_confirmation":

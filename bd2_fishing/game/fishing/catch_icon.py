@@ -8,7 +8,10 @@ from PIL import Image, ImageChops, ImageStat
 
 from bd2_fishing.game.fishing.catalogue import load_catalogue
 
-ICON_REFERENCES = {"fish_05_06": "assets/fish_05_06_reward.png"}
+ICON_REFERENCES = {
+    "fish_05_06": "assets/fish_05_06_reward.png",
+    "fish_05_12": "assets/fish_05_12_reward.png",
+}
 
 
 @lru_cache(maxsize=1)

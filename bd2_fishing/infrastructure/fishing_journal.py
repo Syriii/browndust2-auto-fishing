@@ -27,6 +27,7 @@ class FishingJournal:
             );
             CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
             CREATE INDEX IF NOT EXISTS catches_fish ON catches(fish_id);
+            CREATE INDEX IF NOT EXISTS catches_run ON catches(run_id);
         """)
         columns = {row[1] for row in self.db.execute("PRAGMA table_info(catches)")}
         for name, declaration in (
@@ -107,7 +108,7 @@ class FishingJournal:
         self.revision += 1
         return True
 
-    def history(self, category="all", before=None, limit=100, *, day=None):
+    def history(self, category="all", before=None, limit=100, *, day=None, run_id=None):
         filters = {
             "all": "1",
             "first": "first_catch=1",
@@ -117,6 +118,9 @@ class FishingJournal:
         }
         where = filters[category]
         parameters = []
+        if run_id is not None:
+            where += " AND run_id = ?"
+            parameters.append(run_id)
         if day == "unknown":
             where += " AND date(caught_at, 'localtime') IS NULL"
         elif day is not None:
@@ -144,6 +148,12 @@ class FishingJournal:
                     "SELECT DISTINCT date(caught_at, 'localtime') AS day FROM catches ORDER BY day DESC"
                 )
             ]
+
+    def run_count(self, run_id):
+        with self.lock:
+            return self.db.execute(
+                "SELECT count(*) FROM catches WHERE run_id=?", (run_id,)
+            ).fetchone()[0]
 
     def evidence(self, identity):
         with self.lock:

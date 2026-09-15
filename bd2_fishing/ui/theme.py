@@ -7,13 +7,13 @@ from tkinter import ttk
 
 from PIL import Image, ImageDraw, ImageTk
 
-BACKGROUND = "#edf2f4"
-SURFACE = "#ffffff"
-INK = "#203640"
-MUTED = "#627780"
-ACCENT = "#087f78"
-LINE = "#dce5e8"
-TINT = "#e2f2ef"
+BACKGROUND = "#eef0f5"
+SURFACE = "#fafbfd"
+INK = "#1d1d1f"
+MUTED = "#6e6e73"
+ACCENT = "#007aff"
+LINE = "#d9dde5"
+TINT = "#e5efff"
 FONT = "微软雅黑"
 
 
@@ -33,31 +33,29 @@ def apply_theme(root):
     style.configure("Page.TLabel", background=BACKGROUND)
     style.configure("PageHint.TLabel", background=BACKGROUND, foreground=MUTED, font=(FONT, 9))
     style.configure("Title.TLabel", background=BACKGROUND, font=(FONT, 18, "bold"))
-    style.configure("TLabelframe", background=SURFACE, bordercolor="#d4dfe2")
+    style.configure("TLabelframe", background=SURFACE, bordercolor="#d9dde5")
     style.configure("TLabelframe.Label", background=SURFACE, font=(FONT, 11, "bold"))
     style.configure("Section.TLabel", font=(FONT, 11, "bold"))
     style.configure("Heading.TLabel", background=BACKGROUND, font=(FONT, 17, "bold"))
     style.configure("CardTitle.TLabel", font=(FONT, 12, "bold"))
     style.configure("PageHint.TLabel", background=BACKGROUND, foreground=MUTED, font=(FONT, 10))
     style.configure("Advice.TLabel", foreground=ACCENT, font=(FONT, 9))
-    style.configure("TButton", padding=(14, 8), background="#f3f7f7", bordercolor="#d4dfe2")
-    style.map("TButton", background=[("active", "#e3eeed")])
+    style.configure("TButton", padding=(14, 8), background="#f6f7fa", bordercolor="#d9dde5")
+    style.map("TButton", background=[("active", "#e8edf5")])
     style.configure("Start.TButton", background=ACCENT, foreground="white", borderwidth=0)
     style.map(
         "Start.TButton",
-        background=[("disabled", "#d6e1e2"), ("active", "#056a65")],
-        foreground=[("disabled", "#7b8e94")],
+        background=[("disabled", "#e5e5ea"), ("active", "#0062cc")],
+        foreground=[("disabled", "#8e8e93")],
     )
-    style.configure("Stop.TButton", background="#b34249", foreground="white")
-    style.map("Stop.TButton", background=[("disabled", "#d6e1e2"), ("active", "#94333a")])
-    style.configure("TEntry", padding=6, fieldbackground=SURFACE, bordercolor="#c6d4d9")
-    style.configure("TCombobox", padding=5, arrowsize=14, bordercolor="#c6d4d9")
-    style.map("TCombobox", fieldbackground=[("readonly", SURFACE)])
-    style.configure("TCombobox", lightcolor=LINE, darkcolor=LINE, arrowcolor=MUTED)
+    style.configure("Stop.TButton", background="#d93b40", foreground="white")
+    style.map("Stop.TButton", background=[("disabled", "#e5e5ea"), ("active", "#b92e33")])
+    style.configure("TEntry", padding=6, fieldbackground=SURFACE, bordercolor="#c8ccd4")
+    _combobox_style(root, style)
     style.configure("TEntry", lightcolor=LINE, darkcolor=LINE)
     style.configure(
         "Vertical.TScrollbar",
-        background="#c5d3d8",
+        background="#b8bdc8",
         troughcolor=BACKGROUND,
         borderwidth=0,
         arrowsize=10,
@@ -75,15 +73,118 @@ def apply_theme(root):
         ],
     )
     _rounded_styles(root, style)
+    style.configure("Compact.TButton", padding=(6, 3), font=(FONT, 9))
     style.configure("TCheckbutton", background=SURFACE, padding=(0, 3))
     style.map("TCheckbutton", background=[("active", SURFACE)])
     _checkmark_style(root, style)
+    style.configure(
+        "Draft.Treeview",
+        background=SURFACE,
+        fieldbackground=SURFACE,
+        foreground=INK,
+        borderwidth=0,
+        rowheight=round(34 * root.winfo_fpixels("1i") / 96),
+    )
+    style.configure(
+        "Draft.Treeview.Heading",
+        background=SURFACE,
+        foreground=MUTED,
+        font=(FONT, 9),
+        relief="flat",
+    )
+    style.map("Draft.Treeview", background=[("selected", TINT)], foreground=[("selected", INK)])
+
+
+def _combobox_style(root, style):
+    """统一下拉框的焦点配色与箭头，继续使用 ttk 原生弹出和键盘行为。"""
+    scale = root.winfo_fpixels("1i") / 96
+    images = []
+    for color in (MUTED, ACCENT, "#aeaeb2"):
+        width, height = round(28 * scale), round(18 * scale)
+        bitmap = Image.new("RGBA", (width * 4, height * 4))
+        ImageDraw.Draw(bitmap).line(
+            [
+                (round(x * width * 4), round(y * height * 4))
+                for x, y in ((0.32, 0.4), (0.5, 0.65), (0.68, 0.4))
+            ],
+            fill=color,
+            width=max(4, round(6 * scale)),
+            joint="curve",
+        )
+        images.append(
+            ImageTk.PhotoImage(
+                bitmap.resize((width, height), Image.Resampling.LANCZOS), master=root
+            )
+        )
+    root._combobox_images = images
+    style.element_create("Select.field", "from", "clam", "Entry.field")
+    style.element_create(
+        "Select.downarrow",
+        "image",
+        images[0],
+        ("disabled", images[2]),
+        ("active", images[1]),
+        ("focus", images[1]),
+    )
+    style.layout(
+        "TCombobox",
+        [
+            (
+                "Select.field",
+                {
+                    "sticky": "nsew",
+                    "children": [
+                        ("Select.downarrow", {"side": "right", "sticky": ""}),
+                        (
+                            "Combobox.padding",
+                            {
+                                "sticky": "nsew",
+                                "children": [
+                                    ("Combobox.textarea", {"sticky": "nsew"}),
+                                ],
+                            },
+                        ),
+                    ],
+                },
+            ),
+        ],
+    )
+    style.configure(
+        "TCombobox",
+        padding=(8, 5),
+        bordercolor=LINE,
+        lightcolor=SURFACE,
+        darkcolor=SURFACE,
+        fieldbackground=SURFACE,
+        foreground=INK,
+        selectbackground=TINT,
+        selectforeground=INK,
+    )
+    # clam 的 readonly+focus 默认是白字，必须与自定义白底同时覆盖。
+    style.map(
+        "TCombobox",
+        foreground=[("disabled", MUTED), ("readonly", INK)],
+        fieldbackground=[("disabled", "#f2f2f7"), ("readonly", SURFACE)],
+        background=[("disabled", "#f2f2f7"), ("!disabled", SURFACE)],
+        bordercolor=[("disabled", LINE), ("focus", ACCENT), ("active", "#b4c8e8")],
+        selectforeground=[("disabled", MUTED), ("!disabled", INK)],
+        selectbackground=[("disabled", "#f2f2f7"), ("!disabled", TINT)],
+    )
+    for option, value in {
+        "background": SURFACE,
+        "foreground": INK,
+        "selectBackground": TINT,
+        "selectForeground": INK,
+        "relief": "flat",
+        "borderWidth": 0,
+    }.items():
+        root.option_add(f"*TCombobox*Listbox.{option}", value)
 
 
 def _rounded_styles(root, style):
     """九宫格圆角底图沿用 ttk 的禁用、焦点和键盘行为。"""
     scale = root.winfo_fpixels("1i") / 96
-    radius = max(6, round(7 * scale))
+    radius = max(8, round(10 * scale))
     # Tk 平铺中心而非拉伸。5px 中心铺满大面板会产生数万次原生绘图。
     # 宽高设为 0，让底图不参与控件最小尺寸计算。
     size = radius * 2 + 128
@@ -98,6 +199,14 @@ def _rounded_styles(root, style):
             outline=border,
             width=4,
         )
+        if fill == SURFACE:
+            draw = ImageDraw.Draw(bitmap)
+            draw.rounded_rectangle(
+                (6, 6, size * 4 - 7, size * 4 - 7),
+                radius=max(1, radius * 4 - 4),
+                outline="#ffffff",
+                width=4,
+            )
         photo = ImageTk.PhotoImage(
             bitmap.resize((size, size), Image.Resampling.LANCZOS), master=root
         )
@@ -105,11 +214,11 @@ def _rounded_styles(root, style):
         return photo
 
     palettes = {
-        "TButton": (SURFACE, LINE, "#f2f8f7", TINT, INK),
-        "Start.TButton": (ACCENT, ACCENT, "#096b66", "#096b66", "white"),
-        "Stop.TButton": ("#b34249", "#b34249", "#94333a", "#94333a", "white"),
-        "Nav.TButton": (SURFACE, SURFACE, "#f1f7f6", TINT, INK),
-        "View.TButton": (SURFACE, LINE, "#f1f7f6", TINT, INK),
+        "TButton": (SURFACE, LINE, "#f0f3f9", TINT, INK),
+        "Start.TButton": (ACCENT, ACCENT, "#0062cc", "#0062cc", "white"),
+        "Stop.TButton": ("#d93b40", "#d93b40", "#b92e33", "#b92e33", "white"),
+        "Nav.TButton": (SURFACE, SURFACE, "#f0f3f9", TINT, INK),
+        "View.TButton": (SURFACE, LINE, "#f0f3f9", TINT, INK),
     }
     for name, (fill, border, hover, selected, foreground) in palettes.items():
         element = "Rounded." + name
@@ -117,7 +226,7 @@ def _rounded_styles(root, style):
             element,
             "image",
             surface(fill, border, SURFACE if name == "Nav.TButton" else BACKGROUND),
-            ("disabled", surface("#eef2f3", LINE)),
+            ("disabled", surface("#f2f2f7", LINE)),
             ("pressed", surface(selected, ACCENT if name != "Nav.TButton" else TINT)),
             ("focus", surface(fill, ACCENT)),
             ("active", surface(hover, border)),
@@ -161,8 +270,8 @@ def _rounded_styles(root, style):
         )
         style.map(
             name,
-            background=[("disabled", "#eef2f3"), ("pressed", selected), ("active", hover)],
-            foreground=[("disabled", "#8b9da3"), ("pressed", foreground)],
+            background=[("disabled", "#f2f2f7"), ("pressed", selected), ("active", hover)],
+            foreground=[("disabled", "#8e8e93"), ("pressed", foreground)],
             bordercolor=[("focus", ACCENT), ("pressed", ACCENT)],
         )
     style.configure("Nav.TButton", anchor="w", padding=(14, 13))
@@ -188,8 +297,8 @@ def _checkmark_style(root, style):
     images = []
     for selected, disabled in ((False, False), (True, False), (False, True), (True, True)):
         image = tk.PhotoImage(master=root, width=size + round(6 * scale), height=size)
-        border = "#aab8bd" if disabled else ACCENT if selected else "#7b8e94"
-        fill = border if selected else "#f2f5f5" if disabled else SURFACE
+        border = "#c7c7cc" if disabled else ACCENT if selected else "#8e8e93"
+        fill = border if selected else "#f2f2f7" if disabled else SURFACE
         image.put(border, to=(0, 0, size, size))
         image.put(fill, to=(1, 1, size - 1, size - 1))
         if selected:

@@ -29,7 +29,7 @@ class FishPhotos:
                     ImageOps.fit(original, size)
                     if self.crop
                     else ImageOps.pad(
-                        original, size, method=Image.Resampling.LANCZOS, color="#f5f8fa"
+                        original, size, method=Image.Resampling.LANCZOS, color="#f2f3f7"
                     )
                 )
                 self.cache[key] = ImageTk.PhotoImage(

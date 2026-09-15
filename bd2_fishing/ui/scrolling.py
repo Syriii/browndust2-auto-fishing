@@ -29,22 +29,50 @@ class ScrollablePage(ttk.Frame):
         )
         self.item = self.canvas.create_window(0, 0, window=self.body, anchor="nw")
         self._wheel_delta = 0
+        self._layout_key = None
+        self._viewport_key = None
+        self._refresh_id = None
+        self._viewport_id = None
         self.canvas.bind("<Configure>", self._layout)
         self.body.bind("<Configure>", self._layout)
-        self.winfo_toplevel().bind("<MouseWheel>", self._wheel, add="+")
+        self._wheel_owner = self.winfo_toplevel()
+        self._wheel_binding = self._wheel_owner.bind("<MouseWheel>", self._wheel, add="+")
 
     def _scrolled(self, first, last):
         self.scrollbar.set(first, last)
+        key = first, last, self.canvas.winfo_width(), self.canvas.winfo_height()
+        if key != self._viewport_key:
+            self._viewport_key = key
+            if self._viewport_id is None:
+                self._viewport_id = self.after_idle(self._notify_viewport)
+
+    def _notify_viewport(self):
+        self._viewport_id = None
         self.canvas.event_generate("<<ViewportChanged>>", when="tail")
 
     def refresh(self):
-        """重建内容后先完成几何计算，再刷新范围；请求高度变化不一定触发 Configure。"""
-        self.update_idletasks()
+        """合并本轮变更，避免在点击回调中嵌套刷新整个窗口。"""
+        if self._refresh_id is None:
+            self._refresh_id = self.after_idle(self._refresh_layout)
+
+    def _refresh_layout(self):
+        self._refresh_id = None
         self._layout()
+
+    def destroy(self):
+        for callback in (self._refresh_id, self._viewport_id):
+            if callback is not None:
+                self.after_cancel(callback)
+        self._wheel_owner.unbind("<MouseWheel>", self._wheel_binding)
+        super().destroy()
 
     def _layout(self, event=None):
         width = self.canvas.winfo_width()
         height = max(self.canvas.winfo_height(), self.body.winfo_reqheight())
+        key = width, height, self.canvas.winfo_height()
+        if key == self._layout_key:
+            return
+        self._layout_key = key
         self.canvas.itemconfigure(self.item, width=width, height=height)
         self.canvas.configure(scrollregion=(0, 0, width, height))
         if height <= self.canvas.winfo_height():

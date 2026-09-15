@@ -2662,14 +2662,15 @@
     {
       "id": "fish_05_04",
       "island_id": "ATLANTIS",
-      "name_zh": "天使鱼",
+      "name_zh": "神仙鱼",
       "name_tw": "天使魚",
       "aliases": [
         "天使魚",
-        "天使鱼"
+        "天使鱼",
+        "神仙鱼"
       ],
-      "name_status": "converted_reference",
-      "client_name_verified": false,
+      "name_status": "client_verified",
+      "client_name_verified": true,
       "rarity": "common",
       "rarity_rank": 1,
       "availability": "day",
@@ -2698,7 +2699,9 @@
       "sources": [
         "bahamut"
       ],
-      "notes": []
+      "notes": [
+        "2026-09-15：客户端结算原图 catch-252 显示神仙鱼，14.2cm；外观与天使魚图鉴一致。"
+      ]
     },
     {
       "id": "fish_05_05",

@@ -13,6 +13,7 @@ from bd2_fishing.ui.collection_widgets import (
 )
 from bd2_fishing.ui.fish_tile import FishTile
 from bd2_fishing.ui.scrolling import ScrollablePage
+from bd2_fishing.ui.target_draft import TargetDraft
 
 
 class CataloguePage(ttk.Frame):
@@ -28,6 +29,7 @@ class CataloguePage(ttk.Frame):
         self._columns = 0
         self._render_key = None
         self._side_key = None
+        self._mode_key = None
         self.tiles = {}
         self.query = tk.StringVar()
         self.island = tk.StringVar(value="全部钓场")
@@ -104,14 +106,31 @@ class CataloguePage(ttk.Frame):
         )
         self.choose_target.pack(fill="x", pady=8)
         self.pick_details = ttk.Frame(self.side.body, style="Card.TFrame")
-        self.source_button = ttk.Button(self, text="资料说明", command=self.about)
-        self.source_button.pack(anchor="w", pady=(8, 0))
+        self.pick_count = ttk.Label(self.pick_details, style="Section.TLabel")
+        self.pick_count.pack(anchor="w")
+        self.pick_rows = TargetDraft(self.pick_details, self.service, self._update_draft)
+        self.pick_rows.pack(fill="x", pady=(12, 0))
+        self.pick_save = ttk.Button(
+            self.pick_details, text="保存并使用", command=self.save, style="Start.TButton"
+        )
+        self.pick_save.pack(fill="x", pady=16)
 
     def open(self):
         self.app.show_page("catalogue")
 
     def prepare(self):
         """在旧页面下面完成首屏绘制，列数调整也在显示前收敛。"""
+        if (
+            self._render_key is not None
+            and self._mode_key == self.picking
+            and self._resize_id is None
+            and (self.winfo_width(), self.winfo_height())
+            == (self.master.winfo_width(), self.master.winfo_height())
+        ):
+            previous = self._render_key
+            self.render()
+            if previous == self._render_key:
+                return
         self.update_idletasks()
         self.render()
         if self._resize_id is not None:
@@ -165,7 +184,6 @@ class CataloguePage(ttk.Frame):
                 next(k for k, label in CONDITIONS.items() if label == self.default_condition.get()),
             )
         self.app.show_page("target-picker" if origin == "targets" else "catalogue")
-        self.render()
 
     def choose(self, identity):
         if self.picking:
@@ -178,6 +196,14 @@ class CataloguePage(ttk.Frame):
         else:
             self.selected = identity
         self.render()
+
+    def _update_draft(self, identity, condition):
+        self.draft[identity] = condition
+
+    def _sync_picker(self):
+        self.pick_count.configure(text=f"已选 {len(self.draft)} 种鱼")
+        self.pick_rows.sync(self.draft)
+        self.pick_save.state(["!disabled"] if self.draft else ["disabled"])
 
     def cancel(self):
         self.close()
@@ -200,14 +226,26 @@ class CataloguePage(ttk.Frame):
         columns = gallery_columns(width, self.photos.scale) if self.view == "grid" else 1
         key = (
             self.view,
-            self.picking,
             self.query.get(),
             self.island.get(),
             self.time.get(),
             self.rarity.get(),
             columns,
         )
+        if self._mode_key != self.picking:
+            self._mode_key = self.picking
+            self.title.configure(text="选择目标鱼" if self.picking else "鱼种图鉴")
+            self.pick_button.configure(
+                text="取消选择" if self.picking else "选择目标",
+                command=self.cancel if self.picking else self.begin_pick,
+            )
+            if self.picking:
+                self.condition_bar.pack(before=self.count, fill="x", pady=(0, 8))
+            else:
+                self.condition_bar.pack_forget()
         if key == self._render_key:
+            if not self.picking and self.selected not in self.tiles:
+                self.selected = next(iter(self.tiles), None)
             self._sync_selection()
             self._render_side()
             if reset:
@@ -217,16 +255,7 @@ class CataloguePage(ttk.Frame):
         focus_identity = getattr(self.focus_get(), "fish_identity", None)
         self.tiles = {}
         position = self.browser.canvas.yview()[0]
-        self.title.configure(text="选择目标鱼" if self.picking else "鱼种图鉴")
-        self.pick_button.configure(
-            text="取消选择" if self.picking else "选择目标",
-            command=self.cancel if self.picking else self.begin_pick,
-        )
         self.views.select(self.view)
-        if self.picking:
-            self.condition_bar.pack(before=self.count, fill="x", pady=(0, 8))
-        else:
-            self.condition_bar.pack_forget()
         fish = self.service.search(
             self.query.get(),
             island=self.island.get(),
@@ -252,7 +281,6 @@ class CataloguePage(ttk.Frame):
         if not fish:
             ttk.Label(self.browser.body, text="没有符合条件的鱼").pack(pady=25)
         self._render_side()
-        self.side.refresh()
         self.browser.refresh()
         self.browser.canvas.yview_moveto(0 if reset else position)
         self._render_key = (*key[:-1], columns)
@@ -302,40 +330,13 @@ class CataloguePage(ttk.Frame):
         self._side_key = key
         if self.picking:
             self.detail_frame.pack_forget()
-            self.pick_details.pack(fill="x")
-            clear_children(self.pick_details)
-            ttk.Label(
-                self.pick_details, text=f"已选 {len(self.draft)} 种鱼", style="Section.TLabel"
-            ).pack(anchor="w")
-            for identity, condition in self.draft.items():
-                ttk.Label(self.pick_details, text=self.service.by_id[identity].name).pack(
-                    anchor="w", pady=(12, 4)
-                )
-                variable = tk.StringVar(value=CONDITIONS[condition])
-                box = ttk.Combobox(
-                    self.pick_details,
-                    values=list(CONDITIONS.values()),
-                    textvariable=variable,
-                    state="readonly",
-                    width=16,
-                )
-                box.pack(fill="x")
-                box.bind(
-                    "<<ComboboxSelected>>",
-                    lambda _, i=identity, v=variable: self.draft.update(
-                        {i: next(k for k, label in CONDITIONS.items() if label == v.get())}
-                    ),
-                )
-            ttk.Button(
-                self.pick_details,
-                text="保存并使用",
-                command=self.save,
-                state="normal" if self.draft else "disabled",
-                style="Start.TButton",
-            ).pack(fill="x", pady=16)
+            if not self.pick_details.winfo_manager():
+                self.pick_details.pack(fill="x")
+            self._sync_picker()
         else:
             self.pick_details.pack_forget()
-            self.detail_frame.pack(fill="x")
+            if not self.detail_frame.winfo_manager():
+                self.detail_frame.pack(fill="x")
             if self.selected:
                 fish = self.service.by_id[self.selected]
                 self.details.show(
@@ -346,13 +347,5 @@ class CataloguePage(ttk.Frame):
                 self.details.show("没有符合筛选条件的鱼", None, {"facts": (), "mechanisms": ()})
                 self.choose_target.state(["disabled"])
         self.side.refresh()
-        self.side.canvas.yview_moveto(0)
-
-    def about(self):
-        from tkinter import messagebox
-
-        messagebox.showinfo(
-            "资料说明",
-            "鱼图来自巴哈姆特，机制参考巴哈姆特和 GameKee。\n名称采用简体参考译名；资料冲突时保留两份记载。\n图鉴机制不代表助手已能自动解除全部机制。",
-            parent=self,
-        )
+        if not self.picking:
+            self.side.canvas.yview_moveto(0)

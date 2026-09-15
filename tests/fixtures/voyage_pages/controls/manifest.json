@@ -90,6 +90,23 @@
       "raw_unchanged": true,
       "capture_scope": "runtime_client_frame",
       "client_crop": null
+    },
+    {
+      "file": "island_night_start_20260915.png",
+      "width": 945,
+      "height": 532,
+      "sha256": "69ac8133e8c5f20853c16f677101ed699ac3b085a7d62f3eb015136fbdea43be",
+      "source_file": "dist/BD2_AutoFishing/screenshots/navigation/event_1789446762320263700_f85d5436.zip/latest.png",
+      "recorded_on": "2026-09-15",
+      "raw_unchanged": true,
+      "capture_scope": "native_game_client",
+      "client_crop": [
+        0,
+        0,
+        945,
+        532
+      ],
+      "observation": "启动被导航误拒；钟面亮月亮，岛名可读，但待机控件未确认。不代表已授权换岛或抛竿。"
     }
   ]
 }

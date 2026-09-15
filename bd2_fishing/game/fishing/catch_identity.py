@@ -51,12 +51,12 @@ def refine_reward_identity(engine, reward, texts, location):
     return None
 
 
-def choose_target(pending, catalogue, location, time_of_day):
-    """先当前岛，再其他可钓岛；未知时段只允许全天鱼。"""
+def choose_target(pending, catalogue, location, time_of_day, *, ignore_time=False):
+    """先当前岛，再其他目标岛；默认按时段筛选，持续模式明确忽略时段。"""
     available = [
         catalogue[identity]
         for identity, _ in pending
-        if catalogue[identity].availability in ("both", time_of_day)
+        if ignore_time or catalogue[identity].availability in ("both", time_of_day)
     ]
     return next(
         (f.location for f in available if f.location == location),

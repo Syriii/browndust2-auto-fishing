@@ -1,0 +1,13 @@
+{
+  "source": "2026-09-15 用户缺图反馈，鱼获数据库只读导出；94.0cm 和 114.6cm，两次结算均为丝带鳗；OCR 丝带x1 漏字。原记录不回写，图标仅用于展示关联。",
+  "samples": [
+    {
+      "file": "catch-233.jpg",
+      "sha256": "9090f7f38a48a696b7f38a3d2857389e64ebb8bbbcc9d8d829a65bc4bf7f6759"
+    },
+    {
+      "file": "catch-246.jpg",
+      "sha256": "83efd7c05749fce47c7e62e66082b46a4605df51dbce4ef6115d8d70de8418a2"
+    }
+  ]
+}

@@ -25,16 +25,19 @@ class FishTile(tk.Canvas):
     ):
         self.scale = parent.winfo_fpixels("1i") / 96
         self.is_list = view == "list"
-        self.is_icon = view == "icons"
+        self.is_compact = view == "compact"
+        self.is_icon = view in ("icons", "compact")
         super().__init__(
             parent,
-            background=BACKGROUND,
+            background=SURFACE if self.is_compact else BACKGROUND,
             highlightthickness=0,
             bd=0,
-            width=round((64 if self.is_icon else 140) * self.scale),
+            width=round((50 if self.is_compact else 64 if self.is_icon else 140) * self.scale),
             height=round(
                 (
-                    90
+                    58
+                    if self.is_compact
+                    else 90
                     if self.is_icon and footnote
                     else 72
                     if self.is_icon
@@ -110,9 +113,25 @@ class FishTile(tk.Canvas):
         key = width, height, self.selected, self.hover, self.focus_get() is self, self.badge
         if key == self._draw_key:
             return
-        self.delete("all")
-        self._background(width, height)
-        self._content(width, height)
+        # 悬停、焦点和选中态只改背景，保留 Canvas 图片与文字。
+        if (
+            self._draw_key is None
+            or key[:2] != self._draw_key[:2]
+            or self.badge != self._draw_key[-1]
+        ):
+            self.delete("all")
+            self._background(width, height)
+            self._content(width, height)
+        else:
+            edge = ACCENT if self.selected or self.focus_get() is self else LINE
+            if self.is_compact and not self.selected and self.focus_get() is not self:
+                edge = ""
+            self.itemconfigure(
+                "tile-background",
+                fill=TINT if self.selected else "#f4f6fa" if self.hover else SURFACE,
+                outline=edge,
+                width=2 if self.selected or self.focus_get() is self else 1,
+            )
         self._draw_key = key
 
     def _visible(self, height):
@@ -130,7 +149,9 @@ class FishTile(tk.Canvas):
         s = self.scale
         radius = 8 * s
         edge = ACCENT if self.selected or self.focus_get() is self else LINE
-        fill = TINT if self.selected else "#f5faf9" if self.hover else SURFACE
+        if self.is_compact and not self.selected and self.focus_get() is not self:
+            edge = ""
+        fill = TINT if self.selected else "#f4f6fa" if self.hover else SURFACE
         self.create_polygon(
             1,
             radius,
@@ -161,10 +182,14 @@ class FishTile(tk.Canvas):
             fill=fill,
             outline=edge,
             width=2 if self.selected or self.focus_get() is self else 1,
+            tags="tile-background",
         )
 
     def _content(self, width, height):
         s = self.scale
+        if self.is_compact:
+            self._compact_content(width)
+            return
         if self.is_icon:
             self._icon_content(width, height)
             return
@@ -205,9 +230,16 @@ class FishTile(tk.Canvas):
         if self.photo:
             self.create_image(width / 2, 36 * s, image=self.photo)
         else:
-            self.create_text(width / 2, 36 * s, text="?", fill=MUTED, font=(FONT, 18))
+            self.create_text(
+                width / 2,
+                36 * s,
+                text=self.name or "待识别",
+                fill=MUTED,
+                font=(FONT, 8),
+                width=max(20, width - 8 * s),
+            )
         if self.measurement:
-            self.create_rectangle(3 * s, 51 * s, width - 3 * s, 67 * s, fill="#e5efee", outline="")
+            self.create_rectangle(3 * s, 51 * s, width - 3 * s, 67 * s, fill="#e8ecf3", outline="")
             self.create_text(width / 2, 59 * s, text=self.measurement, fill=INK, font=(FONT, 8))
         if self.footnote:
             self.create_text(width / 2, 79 * s, text=self.footnote, fill=MUTED, font=(FONT, 8))
@@ -221,6 +253,31 @@ class FishTile(tk.Canvas):
                 self.create_oval(x - 4 * s, 5 * s, x, 9 * s, fill=color, outline=color)
         if self.badge:
             self.create_text(7 * s, height - 7 * s, text="✓", anchor="sw", fill=ACCENT)
+
+    def _compact_content(self, width):
+        s = self.scale
+        self.photo = self.photo_provider((max(20, round(width - 4 * s)), round(38 * s)))
+        if self.photo:
+            self.create_image(width / 2, 23 * s, image=self.photo)
+        else:
+            self.create_text(
+                width / 2,
+                23 * s,
+                text=self.name or "待识别",
+                width=max(20, width - 4 * s),
+                fill=MUTED,
+                font=(FONT, 8),
+            )
+        self.create_text(width / 2, 49 * s, text=self.measurement, fill=INK, font=(FONT, 8))
+        if self.rank in (1, 2, 3):
+            color = {1: "#65aa70", 2: "#5f9dd4", 3: "#a879bd"}[self.rank]
+            for index in range(self.rank):
+                x = width - (5 + index * 6) * s
+                self.create_oval(x - 3 * s, 2 * s, x, 5 * s, fill=color, outline="")
+        if self.marker:
+            self.create_text(
+                2 * s, 2 * s, text=self.marker, anchor="nw", fill=ACCENT, font=(FONT, 7, "bold")
+            )
 
     def _marks(self, width, height):
         s = self.scale

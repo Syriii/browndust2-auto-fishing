@@ -7,11 +7,25 @@ from bd2_fishing.game.islands.reading import detect_location_from_ocr
 from bd2_fishing.game.navigation.voyage import prepare_voyage
 from bd2_fishing.infrastructure.windows import window
 from bd2_fishing.runtime import control
+from bd2_fishing.runtime.context import get_logger
+
+log = get_logger(__name__)
+
+
+def _waiting_status(pending, catalogue, daytime):
+    names = "、".join(dict.fromkeys(catalogue[i].name for i, _ in pending))
+    if daytime == "unknown":
+        return f"等待确认游戏时段 · {names}"
+    needed = {catalogue[i].availability for i, _ in pending}
+    wait = "等待白天" if needed == {"day"} else "等待夜晚"
+    current = "白天" if daytime == "day" else "夜晚"
+    return f"{wait} · {names}（当前{current}）"
 
 
 def prepare_target_cast(bot, capture):
     collection = bot.collection
     guard = window.WindowGuard("BrownDust II", bot.region, require_foreground=True)
+    last_wait = None
     while True:
         control.checkpoint()
         guard()
@@ -24,25 +38,28 @@ def prepare_target_cast(bot, capture):
             continue
         bot.selected_location_name = actual
         # 两次新帧确认时段；过渡、遮挡与单帧闪光不能授权限定时段抛竿。
-        first = read_daytime(capture.grab(bot.region))
-        control.sleep(0.2)
-        guard()
-        second = read_daytime(capture.grab(bot.region))
-        daytime = first if first == second else "unknown"
+        daytime = "unknown"
+        if collection.wait_for_time:
+            first = read_daytime(capture.grab(bot.region))
+            control.sleep(0.2)
+            guard()
+            second = read_daytime(capture.grab(bot.region))
+            daytime = first if first == second else "unknown"
+        pending = collection.journal.targets()
         destination = choose_target(
-            collection.journal.targets(), collection.catalogue, actual, daytime
+            pending, collection.catalogue, actual, daytime, ignore_time=not collection.wait_for_time
         )
         if destination is None:
-            needed = {collection.catalogue[i].availability for i, _ in collection.journal.targets()}
-            control.set_status(
-                "等待夜晚"
-                if needed == {"night"}
-                else "等待白天"
-                if needed == {"day"}
-                else "等待确认游戏时段"
-            )
+            status = _waiting_status(pending, collection.catalogue, daytime)
+            control.set_status(status)
+            if status != last_wait:
+                log.info("目标尚未满足抛竿条件：%s", status)
+                last_wait = status
             control.sleep(3)
             continue
+        if last_wait is not None:
+            log.info("目标时段已满足，继续确认钓场与抛竿条件。")
+            last_wait = None
         if destination != actual:
             control.set_status(f"前往{destination.value}")
             arrived = prepare_voyage(
