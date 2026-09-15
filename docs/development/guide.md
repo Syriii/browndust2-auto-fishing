@@ -119,3 +119,5 @@ py -3.12 -m venv .venv
 ## 桌面视觉修改验收
 
 0.4.1 共用 theme、icons、fish_tile 和 collection_widgets 控制实际 UI 表现；修改后验证真实 Tk 窗口与 EXE，不能仅检查 HTML 原型。TkTextFont 控制输入框文字，需与 ttk 字体同步。图卡刷新保留键盘焦点，取消点击与选择模式共用入口；图片缓存有界。使用 smoke_catalogue.py --visible 检查键盘、鼠标、目标页返回及窗口高度，设置功能使用 smoke_ui.py 验证。
+
+0.4.5 选鱼不重建网格，详情使用保留控件并持有 PhotoImage。`smoke_gallery_refresh.py` 在真实 Tk 中检查全鱼图、卡片身份、缓存淘汰、回页和遮挡绘制；新增鱼获依 journal.revision 使展示缓存失效。测试只写临时数据，不操作游戏。

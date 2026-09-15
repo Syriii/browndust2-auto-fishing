@@ -80,6 +80,11 @@ class FishTile(tk.Canvas):
             self._viewport_binding = None
         super().destroy()
 
+    def set_selection(self, selected, badge=""):
+        if (self.selected, self.badge) != (selected, badge):
+            self.selected, self.badge = selected, badge
+            self.draw()
+
     def _hover(self, active):
         self.hover = active
         self.draw()

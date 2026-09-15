@@ -88,6 +88,69 @@ class ViewButtons(ttk.Frame):
             button.state(["pressed"] if name == view else ["!pressed"])
 
 
+class FishDetails(ttk.Frame):
+    """详情控件保留，只替换文字和图片；选鱼不清空侧栏。"""
+
+    def __init__(self, parent):
+        super().__init__(parent, style="Card.TFrame")
+        self.title = ttk.Label(self, style="Section.TLabel")
+        self.title.pack(anchor="w")
+        self.picture = ttk.Label(self)
+        self.picture.pack(pady=8)
+        self.facts = ttk.Frame(self, style="Card.TFrame")
+        self.facts.pack(fill="x", padx=12, pady=8)
+        self.facts.columnconfigure(1, weight=1)
+        self.fields = {}
+        self.mechanisms = ttk.Frame(self, style="Card.TFrame")
+        self.mechanisms.pack(fill="x")
+        self.mechanism_rows = {}
+        self.note = ttk.Label(self, style="Hint.TLabel", wraplength=180)
+        self.note.pack(fill="x", pady=8)
+        self.photo = None
+
+    def show(self, name, photo, details, *, note=""):
+        self.title.configure(text=name)
+        self.photo = photo
+        self.picture.configure(image=photo or "", text="" if photo else "暂无对应图片")
+        wanted = dict(details["facts"])
+        for label, widgets in self.fields.items():
+            if label not in wanted:
+                for widget in widgets:
+                    widget.grid_remove()
+        for row, (label, value) in enumerate(wanted.items()):
+            if label not in self.fields:
+                key = ttk.Label(self.facts, text=label, style="Hint.TLabel", width=8)
+                content = ttk.Label(self.facts, wraplength=150, justify="left")
+                content.bind("<Configure>", self._wrap)
+                self.fields[label] = key, content
+            key, content = self.fields[label]
+            key.grid(row=row, column=0, sticky="nw", pady=4)
+            content.configure(text=value)
+            content.grid(row=row, column=1, sticky="new", pady=4)
+        self._show_mechanisms(details["mechanisms"])
+        self.note.configure(text=note)
+
+    @staticmethod
+    def _wrap(event):
+        event.widget.configure(wraplength=max(40, event.width))
+
+    def _show_mechanisms(self, mechanisms):
+        wanted = dict(mechanisms)
+        for name, widgets in self.mechanism_rows.items():
+            if name not in wanted:
+                for widget in widgets:
+                    widget.pack_forget()
+        for name, text in mechanisms:
+            if name not in self.mechanism_rows:
+                title = ttk.Label(self.mechanisms, text=name, font=(FONT, 10, "bold"))
+                body = ttk.Label(self.mechanisms, wraplength=180, justify="left")
+                self.mechanism_rows[name] = title, body
+            title, body = self.mechanism_rows[name]
+            title.pack(anchor="w", padx=12, pady=(8, 2))
+            body.configure(text=text)
+            body.pack(fill="x", padx=12, pady=(0, 6))
+
+
 def show_facts(parent, service, identity, width=450, inset=12):
     details = service.details(identity)
     show_details(parent, details, width=width, inset=inset)

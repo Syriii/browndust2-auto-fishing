@@ -5,7 +5,6 @@ import tempfile
 import time
 import tkinter as tk
 from pathlib import Path
-from tkinter import ttk
 from unittest.mock import patch
 
 from bd2_fishing.app.desktop import DesktopServices
@@ -95,12 +94,7 @@ def main():
             assert panel.selected == first
             card = panel.browser.body.winfo_children()[0]
             assert len(card.winfo_children()) == 1
-            facts = [
-                label.cget("text")
-                for group in panel.side.body.winfo_children()
-                for label in group.winfo_children()
-                if isinstance(label, ttk.Label)
-            ]
+            facts = list(panel.details.fields)
             assert "稀有度" in facts and "钓场" in facts and "时段" in facts
             assert "别名" not in facts
             if args.visible:
@@ -200,12 +194,7 @@ def main():
                 for item in history:
                     catches.toggle(item["id"])
                     pump()
-                    facts = [
-                        label.cget("text")
-                        for group in catches.side.body.winfo_children()
-                        for label in group.winfo_children()
-                        if isinstance(label, ttk.Label)
-                    ]
+                    facts = list(catches.details.fields)
                     assert {"捕获时间", "尺寸", "等级", "稀有度", "钓场", "时段"} <= set(facts)
                     assert catches.expanded == item["id"]
             dates = app.collection.journal.history_dates()
