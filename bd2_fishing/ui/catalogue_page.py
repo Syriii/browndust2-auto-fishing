@@ -94,6 +94,18 @@ class CataloguePage(ttk.Frame):
     def open(self):
         self.app.show_page("catalogue")
 
+    def prepare(self):
+        """在旧页面下面完成首屏绘制，列数调整也在显示前收敛。"""
+        self.update_idletasks()
+        self.render()
+        if self._resize_id is not None:
+            self.after_cancel(self._resize_id)
+            self._finish_resize()
+        # 被旧页遮住时 Tk 不发送 Expose，显式准备可见鱼卡的 Canvas 内容。
+        for tile in self.tiles.values():
+            tile.draw()
+        self.update_idletasks()
+
     def close(self):
         self.picking = False
         self.draft.clear()
