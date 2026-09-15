@@ -5,11 +5,11 @@ from tkinter import ttk
 
 from bd2_fishing.app.fishing_collection import CONDITIONS
 from bd2_fishing.ui.collection_widgets import (
+    FishDetails,
     FishPhotos,
     ViewButtons,
     clear_children,
     gallery_columns,
-    show_facts,
 )
 from bd2_fishing.ui.fish_tile import FishTile
 from bd2_fishing.ui.scrolling import ScrollablePage
@@ -27,6 +27,7 @@ class CataloguePage(ttk.Frame):
         self._resize_id = None
         self._columns = 0
         self._render_key = None
+        self._side_key = None
         self.tiles = {}
         self.query = tk.StringVar()
         self.island = tk.StringVar(value="全部钓场")
@@ -95,6 +96,14 @@ class CataloguePage(ttk.Frame):
         self.side.configure(width=round(240 * self.photos.scale))
         self.side.grid_propagate(False)
         self.side.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
+        self.detail_frame = ttk.Frame(self.side.body, style="Card.TFrame")
+        self.details = FishDetails(self.detail_frame)
+        self.details.pack(fill="x")
+        self.choose_target = ttk.Button(
+            self.detail_frame, text="设为目标", command=lambda: self.begin_pick(self.selected)
+        )
+        self.choose_target.pack(fill="x", pady=8)
+        self.pick_details = ttk.Frame(self.side.body, style="Card.TFrame")
         self.source_button = ttk.Button(self, text="资料说明", command=self.about)
         self.source_button.pack(anchor="w", pady=(8, 0))
 
@@ -191,9 +200,7 @@ class CataloguePage(ttk.Frame):
         columns = gallery_columns(width, self.photos.scale) if self.view == "grid" else 1
         key = (
             self.view,
-            self.selected,
             self.picking,
-            tuple(self.draft.items()),
             self.query.get(),
             self.island.get(),
             self.time.get(),
@@ -201,6 +208,8 @@ class CataloguePage(ttk.Frame):
             columns,
         )
         if key == self._render_key:
+            self._sync_selection()
+            self._render_side()
             if reset:
                 self.browser.canvas.yview_moveto(0)
             return
@@ -229,7 +238,6 @@ class CataloguePage(ttk.Frame):
             self._render_key = None
         self.count.configure(text=f"{len(fish)} / {len(self.service.fish)} 种鱼")
         clear_children(self.browser.body)
-        clear_children(self.side.body)
         width = max(280, self.browser.canvas.winfo_width() - 8)
         columns = gallery_columns(width, self.photos.scale) if self.view == "grid" else 1
         self._columns = columns
@@ -247,7 +255,7 @@ class CataloguePage(ttk.Frame):
         self.side.refresh()
         self.browser.refresh()
         self.browser.canvas.yview_moveto(0 if reset else position)
-        self._render_key = (key[0], self.selected, *key[2:-1], columns)
+        self._render_key = (*key[:-1], columns)
         if focus_identity in self.tiles:
             self.tiles[focus_identity].focus_set()
 
@@ -282,18 +290,30 @@ class CataloguePage(ttk.Frame):
         self.tiles[item.id] = tile
         tile.pack(fill="x")
 
+    def _sync_selection(self):
+        for identity, tile in self.tiles.items():
+            selected = identity in self.draft if self.picking else identity == self.selected
+            tile.set_selection(selected, "已选" if self.picking and selected else "")
+
     def _render_side(self):
+        key = self.picking, self.selected, tuple(self.draft.items())
+        if key == self._side_key:
+            return
+        self._side_key = key
         if self.picking:
+            self.detail_frame.pack_forget()
+            self.pick_details.pack(fill="x")
+            clear_children(self.pick_details)
             ttk.Label(
-                self.side.body, text=f"已选 {len(self.draft)} 种鱼", style="Section.TLabel"
+                self.pick_details, text=f"已选 {len(self.draft)} 种鱼", style="Section.TLabel"
             ).pack(anchor="w")
             for identity, condition in self.draft.items():
-                ttk.Label(self.side.body, text=self.service.by_id[identity].name).pack(
+                ttk.Label(self.pick_details, text=self.service.by_id[identity].name).pack(
                     anchor="w", pady=(12, 4)
                 )
                 variable = tk.StringVar(value=CONDITIONS[condition])
                 box = ttk.Combobox(
-                    self.side.body,
+                    self.pick_details,
                     values=list(CONDITIONS.values()),
                     textvariable=variable,
                     state="readonly",
@@ -307,24 +327,26 @@ class CataloguePage(ttk.Frame):
                     ),
                 )
             ttk.Button(
-                self.side.body,
+                self.pick_details,
                 text="保存并使用",
                 command=self.save,
                 state="normal" if self.draft else "disabled",
                 style="Start.TButton",
             ).pack(fill="x", pady=16)
-        elif self.selected:
-            fish = self.service.by_id[self.selected]
-            ttk.Label(self.side.body, text=fish.name, style="Section.TLabel").pack(anchor="w")
-            ttk.Label(self.side.body, image=self.photos.get(fish.id, (185, 120)) or "").pack(pady=8)
-            show_facts(self.side.body, self.service, fish.id, width=180)
-            ttk.Button(
-                self.side.body, text="设为目标", command=lambda: self.begin_pick(self.selected)
-            ).pack(fill="x", pady=8)
         else:
-            ttk.Label(self.side.body, text="没有符合筛选条件的鱼", style="Hint.TLabel").pack(
-                pady=16
-            )
+            self.pick_details.pack_forget()
+            self.detail_frame.pack(fill="x")
+            if self.selected:
+                fish = self.service.by_id[self.selected]
+                self.details.show(
+                    fish.name, self.photos.get(fish.id, (185, 120)), self.service.details(fish.id)
+                )
+                self.choose_target.state(["!disabled"])
+            else:
+                self.details.show("没有符合筛选条件的鱼", None, {"facts": (), "mechanisms": ()})
+                self.choose_target.state(["disabled"])
+        self.side.refresh()
+        self.side.canvas.yview_moveto(0)
 
     def about(self):
         from tkinter import messagebox

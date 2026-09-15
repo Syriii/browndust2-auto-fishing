@@ -7,11 +7,11 @@ from tkinter import ttk
 
 from bd2_fishing.app.fishing_collection import CONDITIONS
 from bd2_fishing.ui.collection_widgets import (
+    FishDetails,
     FishPhotos,
     ViewButtons,
     clear_children,
     gallery_columns,
-    show_details,
 )
 from bd2_fishing.ui.fish_tile import FishTile
 from bd2_fishing.ui.scrolling import ScrollablePage
@@ -23,6 +23,7 @@ class TargetsPage(ttk.Frame):
         self.app = app
         self.service = app.services.fish_catalogue_service()
         self.photos = FishPhotos(self.service, self)
+        self._render_key = None
         header = ttk.Frame(self)
         header.pack(fill="x", pady=(0, 14))
         ttk.Label(header, text="钓鱼目标", style="Heading.TLabel").pack(side="left")
@@ -52,12 +53,17 @@ class TargetsPage(ttk.Frame):
         selected = self.app.collection.selected()
         selected[identity] = next(k for k, label in CONDITIONS.items() if label == value)
         if not self.app.save_targets(selected):
+            self._render_key = None
             self.render()
 
     def render(self):
-        clear_children(self.scroll.body)
         selected = self.app.collection.selected()
         active = self.app.controller.running
+        key = tuple(selected.items()), active
+        if key == self._render_key:
+            return
+        self._render_key = key
+        clear_children(self.scroll.body)
         self.edit.configure(state="disabled" if active else "normal")
         for identity, condition in selected.items():
             fish = self.service.by_id[identity]
@@ -113,6 +119,9 @@ class CatchesPage(ttk.Frame):
         self._resize_id = None
         self.tiles = {}
         self._references = OrderedDict()
+        self._render_key = None
+        self._detail_key = None
+        self._visible_rows = {}
         self.day = tk.StringVar(value="全部日期")
         toolbar = ttk.Frame(self)
         toolbar.pack(fill="x", pady=(0, 12))
@@ -143,9 +152,21 @@ class CatchesPage(ttk.Frame):
         self.side.configure(width=round(240 * self.photos.scale))
         self.side.grid_propagate(False)
         self.side.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
+        self.details = FishDetails(self.side.body)
+        self.details.pack(fill="x")
         self.more = ttk.Button(self, text="加载更早记录", command=self.load_more)
         self.notice = ttk.Label(self, style="PageHint.TLabel")
         self.notice.pack(fill="x", pady=(10, 0))
+
+    def prepare(self):
+        self.update_idletasks()
+        self.render()
+        if self._resize_id is not None:
+            self.after_cancel(self._resize_id)
+            self._finish_resize()
+        for tile in self.tiles.values():
+            tile.draw()
+        self.update_idletasks()
 
     def resize_cards(self, event):
         if not self.winfo_ismapped():
@@ -182,9 +203,25 @@ class CatchesPage(ttk.Frame):
         self.render()
 
     def render(self, reset=False):
+        width = self.scroll.canvas.winfo_width() - 8
+        columns = gallery_columns(width, self.photos.scale) if self.view == "grid" else 1
+        key = (
+            self.category,
+            self.view,
+            self.day.get(),
+            self.limit,
+            self.app.collection.journal.revision,
+            columns,
+            datetime.now().date(),
+        )
+        if key == self._render_key:
+            self._show_selected()
+            if reset:
+                self.scroll.canvas.yview_moveto(0)
+            return
+        self._render_key = key
         position = self.scroll.canvas.yview()[0]
         clear_children(self.scroll.body)
-        clear_children(self.side.body)
         self.tiles = {}
         self.views.select(self.view)
         for key, button in self.tabs.items():
@@ -202,11 +239,25 @@ class CatchesPage(ttk.Frame):
             day=None if day == "全部日期" else "unknown" if day == "日期未确认" else day,
         )
         visible = rows[: self.limit]
+        self._visible_rows = {item["id"]: item for item in visible}
         if self.expanded not in {item["id"] for item in visible}:
             self.expanded = visible[0]["id"] if visible else None
         width = self.scroll.canvas.winfo_width() - 8
         columns = gallery_columns(width, self.photos.scale) if self.view == "grid" else 1
         self._columns = columns
+        self._render_groups(visible, columns)
+        if not rows:
+            ttk.Label(self.scroll.body, text="暂无这类鱼获", style="Section.TLabel").grid(pady=35)
+        if len(rows) > self.limit:
+            self.more.pack(before=self.notice, pady=8)
+        else:
+            self.more.pack_forget()
+        self.notice.configure(text=f"已显示 {min(len(rows), self.limit)} 条")
+        self._show_selected()
+        self.scroll.refresh()
+        self.scroll.canvas.yview_moveto(0 if reset else position)
+
+    def _render_groups(self, visible, columns):
         for col in range(12):
             self.scroll.body.columnconfigure(
                 col, weight=1 if col < columns else 0, uniform="fish" if col < columns else ""
@@ -225,19 +276,6 @@ class CatchesPage(ttk.Frame):
             for index, item in enumerate(items):
                 self._render_catch(item, index, columns, row + 1)
             row += 1 + (len(items) + columns - 1) // columns
-        if not rows:
-            ttk.Label(self.scroll.body, text="暂无这类鱼获", style="Section.TLabel").grid(pady=35)
-            ttk.Label(self.side.body, text="捕获后可在这里查看详情", style="Hint.TLabel").pack(
-                pady=16
-            )
-        if len(rows) > self.limit:
-            self.more.pack(before=self.notice, pady=8)
-        else:
-            self.more.pack_forget()
-        self.notice.configure(text=f"已显示 {min(len(rows), self.limit)} 条")
-        self.side.refresh()
-        self.scroll.refresh()
-        self.scroll.canvas.yview_moveto(0 if reset else position)
 
     @staticmethod
     def _caught_at(item):
@@ -302,15 +340,29 @@ class CatchesPage(ttk.Frame):
         )
         self.tiles[item["id"]] = tile
         tile.pack(fill="x")
-        if self.expanded == item["id"]:
+
+    def _show_selected(self):
+        for identity, tile in self.tiles.items():
+            tile.set_selection(identity == self.expanded)
+        key = self.expanded, self.app.collection.journal.revision
+        if key == self._detail_key:
+            return
+        self._detail_key = key
+        item = self._visible_rows.get(self.expanded)
+        if item:
+            fish, source = self._reference(item)
+            name = fish.name if fish else self.service.catch_name(item["name"])
             self._show_details(item, fish, name, source)
+        else:
+            self.details.show(
+                "暂无这类鱼获", None, {"facts": (), "mechanisms": ()}, note="捕获后可在这里查看详情"
+            )
+        self.side.refresh()
+        self.side.canvas.yview_moveto(0)
 
     def _show_details(self, item, fish, name, source):
-        panel = self.side.body
-        ttk.Label(panel, text=name, style="Section.TLabel").pack(anchor="w")
         photo = self.photos.get(fish.id, (185, 120)) if fish else None
         self.detail_photo = photo
-        ttk.Label(panel, image=photo or "", text="" if photo else "待补充图鉴资料").pack(pady=8)
         timestamp = self._caught_at(item)
         caught_at = timestamp.strftime("%Y-%m-%d %H:%M:%S") if timestamp else item["caught_at"]
         details = (
@@ -331,13 +383,11 @@ class CatchesPage(ttk.Frame):
             details["facts"] += (("尺寸成就", item["size_kind"].upper()),)
         if item["new_record"]:
             details["facts"] += (("个人纪录", "新纪录"),)
-        show_details(panel, details, width=150)
+        note = ""
         if not item["fish_id"]:
-            ttk.Label(
-                panel,
-                text=("图鉴按鱼获图像匹配" if source == "image" else "图鉴按记录名称匹配")
+            note = (
+                ("图鉴按鱼获图像匹配" if source == "image" else "图鉴按记录名称匹配")
                 if fish
-                else "鱼种尚未确认，暂无对应图鉴资料。",
-                style="Hint.TLabel",
-                wraplength=180,
-            ).pack(fill="x", pady=8)
+                else "鱼种尚未确认，暂无对应图鉴资料。"
+            )
+        self.details.show(name, photo, details, note=note)

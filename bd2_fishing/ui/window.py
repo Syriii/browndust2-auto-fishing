@@ -103,6 +103,13 @@ class FishingApp:
         if page in ("catalogue", "target-picker"):
             # 先在旧页下面完成首屏布局和鱼图绘制，再切换，避免露出空白内容区。
             self.catalogue.prepare()
+        elif page == "catches":
+            self.catches_page.prepare()
+        elif page == "targets":
+            self.targets_page.render()
+            target.update_idletasks()
+        elif target is not previous:
+            target.update_idletasks()
         target.tkraise()
         for key, widget in self.pages.items():
             if key != visible:
@@ -115,10 +122,6 @@ class FishingApp:
                 if key == ("targets" if page == "target-picker" else page)
                 else ["!pressed"]
             )
-        if page == "targets":
-            self.targets_page.render()
-        elif page == "catches":
-            self.catches_page.render()
 
     def _settings_saved(self):
         values = self.services.preference_values()
