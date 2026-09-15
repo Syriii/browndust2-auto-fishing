@@ -32,6 +32,8 @@ def main():
         pump()
         draft.edit("fish")
         editor = draft.editor
+        root.tk.call("focus", "-force", str(editor))
+        pump()
         root.tk.call("ttk::combobox::Post", str(editor))
         popup = str(root.tk.call("ttk::combobox::PopdownWindow", str(editor)))
         listbox = popup + ".f.l"
